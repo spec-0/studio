@@ -167,6 +167,22 @@ jobs:
           spctl --assess --type execute --verbose=4 "$APP"
           hdiutil detach "$MNT" -quiet
 
+      # Tauri names the image `spec0 Studio_<version>_universal.dmg`. That is the
+      # right name to archive, but it is the wrong name to link to: GitHub's
+      # permanent URL is /releases/latest/download/<exact-asset-name>, so a
+      # version in the filename means every download link on the website breaks
+      # the day we ship the next release. The space becomes %20 as well.
+      #
+      # So we attach a second, identically-signed copy under a fixed name. The
+      # website links to that one and never needs updating again.
+      - name: Stable-named copy for the permanent download URL
+        run: |
+          BUNDLE=src-tauri/target/universal-apple-darwin/release/bundle
+          cd "$BUNDLE/dmg"
+          cp "$(ls *.dmg | head -1)" spec0-studio-macos-universal.dmg
+          # Copying preserves the stapled ticket, but prove it rather than assume.
+          xcrun stapler validate spec0-studio-macos-universal.dmg
+
       - name: Checksums
         run: |
           BUNDLE=src-tauri/target/universal-apple-darwin/release/bundle
