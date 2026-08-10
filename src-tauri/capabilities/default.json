@@ -1,0 +1,27 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Open local specs and sign in through the browser. Outbound HTTP is our own reqwest command, not the http plugin \u2014 see src/http.rs.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    {
+      "comment": "Sign-in hands {appUrl}/cli-auth to the default browser. Listed as a bare permission this allows nothing \u2014 the scope has to be explicit, which is what produced 'Not allowed to open url'. Kept host-wide because appUrl is configurable (stage, self-hosted), and handing a URL to the user's own browser is a low-risk operation the user initiated.",
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://**"
+        },
+        {
+          "url": "http://localhost/**"
+        },
+        {
+          "url": "http://127.0.0.1/**"
+        }
+      ]
+    }
+  ]
+}
