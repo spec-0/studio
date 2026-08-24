@@ -187,7 +187,22 @@ export default function App() {
   const [publishing, setPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
-  const [replay, setReplay] = useState<{ headers: Record<string, string>; body?: string } | null>(null);
+  const [replay, setReplay] = useState<{
+    headers: Record<string, string>;
+    body?: string;
+    pathParams?: Record<string, string>;
+    queryParams?: Record<string, string>;
+  } | null>(null);
+  /**
+   * The history entry currently on screen, if the panes are showing a record
+   * rather than something just sent.
+   *
+   * Without this the two are indistinguishable: replayed values are merged into
+   * the live editors and the recorded response fills the inspector, so a result
+   * from three weeks ago looks exactly like one from three seconds ago. The
+   * banner is the only thing that says which you are reading.
+   */
+  const [viewingRecord, setViewingRecord] = useState<HistoryEntry | null>(null);
 
   const [server, setServer] = useState("");
   const [auth, setAuth] = useState<AuthState | null>(null);
@@ -1024,6 +1039,8 @@ export default function App() {
     setRequestError(null);
     setResult(null);
     setValidation(null);
+    // Whatever comes back is live, so the panes are no longer showing a record.
+    setViewingRecord(null);
     try {
       const { pathParams, queryParams, headerParams, body } = values.current;
       // An OAuth "value" isn't typed by the user — it's the acquired token,
@@ -1245,7 +1262,12 @@ export default function App() {
         return;
       }
       setOperation(found);
-      setReplay({ headers: entry.headers, body: entry.body });
+      // Path and query values live only inside the recorded URL; without pulling
+      // them back out the form shows blank fields beside the response they
+      // produced.
+      const { pathParams, queryParams } = history.paramsFromEntry(entry, found.path);
+      setReplay({ headers: entry.headers, body: entry.body, pathParams, queryParams });
+      setViewingRecord(entry);
       setTab("operations");
       setView("operation");
       try {
@@ -1619,6 +1641,7 @@ export default function App() {
               onSelectOperation={(op) => {
                 setOperation(op);
                 setReplay(null);
+                setViewingRecord(null);
                 setView("operation");
               }}
               selectedSchema={schemaName}
@@ -1737,6 +1760,33 @@ export default function App() {
                         apiName={current?.title ?? "this API"}
                         onSave={(key) => void saveMockKey(key)}
                       />
+                    )}
+                    {viewingRecord && (
+                      /*
+                       * Says plainly that these panes are a record, not a live
+                       * result. Without it a replayed 200 from three weeks ago
+                       * is indistinguishable from one just sent, and the request
+                       * fields — restored from what was recorded — look like
+                       * values the developer typed. Sending, or picking another
+                       * operation, clears it.
+                       */
+                      <div className="record-bar" role="status">
+                        <span className="record-bar-dot" aria-hidden="true" />
+                        <span className="record-bar-text">
+                          Showing a recorded request from{" "}
+                          <strong>{history.relativeTime(viewingRecord.at)}</strong> — returned{" "}
+                          <strong>{viewingRecord.status}</strong> in {viewingRecord.ms}ms
+                          {viewingRecord.mock ? " from a mock" : ""}. Send to run it again.
+                        </span>
+                        <button
+                          className="record-bar-close"
+                          onClick={() => setViewingRecord(null)}
+                          aria-label="Dismiss"
+                          title="Dismiss"
+                        >
+                          ×
+                        </button>
+                      </div>
                     )}
                     <div className="split">
                       <section className="pane request">
