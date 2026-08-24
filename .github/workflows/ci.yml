@@ -4,11 +4,6 @@
 # threw on every request for two weeks, and nothing ran that would have noticed:
 # `release.yml` only fires on a tag, so the first execution of the test suite
 # was during the release that published the bug.
-#
-# Deliberately fast and dependency-light — it runs the JavaScript checks only.
-# The Rust shell is compiled by the release workflow; changes to it are rarer,
-# and making every push wait on a Tauri toolchain build would be the kind of
-# slow check people learn to ignore.
 
 name: CI
 
@@ -22,6 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Fast feedback: everything that needs neither a browser nor a Rust toolchain.
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -45,3 +41,53 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # The check the unit suite structurally cannot perform.
+  #
+  # Vitest runs in Node, which has no content security policy, so a dependency
+  # that needs `eval` passes every test and fails in the shipped app. That is
+  # precisely how validation stayed broken through a release. This runs the
+  # built bundle in a real browser under the real policy.
+  csp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          chrome-version: stable
+
+      - run: npm ci
+
+      - name: Run the app under its content security policy
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        run: npm run test:csp
+
+  # The Rust shell has had tests since the first release and none of them had
+  # ever run in CI. macOS rather than Linux: the app ships for macOS only, and
+  # building Tauri here needs no system packages, so this tests the platform the
+  # code actually runs on instead of one it never will.
+  rust:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Tests only. `cargo fmt --check` and `clippy -D warnings` both fail on the
+      # existing code, and reformatting the shell to satisfy a linter does not
+      # belong in a change about tests — it would bury the thing under review.
+      # Worth adopting on its own, deliberately.
+      - name: Test
+        working-directory: src-tauri
+        run: cargo test
