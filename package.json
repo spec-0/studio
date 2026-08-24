@@ -1,6 +1,6 @@
 {
   "name": "@spec0/studio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "A desktop API client where the OpenAPI spec is the organising primitive.",
@@ -29,7 +29,7 @@
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@scalar/api-reference-react": "^0.9.41",
-    "@spec0/schema-graph": "^0.1.0",
+    "@spec0/schema-graph": "^0.1.1",
     "@tauri-apps/api": "^2.9.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
     "@tauri-apps/plugin-fs": "^2.4.2",
