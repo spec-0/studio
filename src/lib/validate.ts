@@ -1,5 +1,4 @@
-import Ajv, { type ErrorObject } from "ajv";
-import addFormats from "ajv-formats";
+import { Validator, type OutputUnit } from "@cfworker/json-schema";
 import { deref, type Json } from "./spec";
 
 /**
@@ -7,10 +6,22 @@ import { deref, type Json } from "./spec";
  * code — drift detection at the single-request level.
  *
  * Two passes, because they answer different questions:
- *  - Ajv catches what the schema forbids (missing required, wrong type).
+ *  - The schema validator catches what the schema forbids (missing required,
+ *    wrong type).
  *  - A manual walk catches what the schema never mentioned — undeclared fields.
- *    Specs almost never set `additionalProperties: false`, so Ajv stays silent on
- *    exactly the drift a developer most wants to see.
+ *    Specs almost never set `additionalProperties: false`, so a validator stays
+ *    silent on exactly the drift a developer most wants to see.
+ *
+ * **The validator must not compile schemas to JavaScript.** Ajv was the obvious
+ * choice and shipped here first, but it builds validators with `new Function`,
+ * which the webview's content security policy forbids — so every response came
+ * back `Couldn't validate` with a wall of CSP text where the schema check should
+ * have been. Relaxing the policy to `unsafe-eval` would have fixed it in one
+ * line and been the wrong trade: the schemas fed to this function come from
+ * whatever document was opened, so that combination hands a code generator
+ * attacker-controllable input. This validator interprets the schema instead of
+ * compiling it, so there is nothing to eval. `test/validate.test.ts` asserts the
+ * dependency stays that way.
  */
 
 export type FindingKind = "extra_field" | "missing_required" | "type_mismatch" | "other";
@@ -27,7 +38,7 @@ export interface ValidationResult {
   note?: string;
 }
 
-/** OpenAPI 3.0 dialect → something Ajv (2020-12/draft-07) will compile. */
+/** OpenAPI 3.0 dialect → the 2020-12 dialect the validator speaks. */
 function sanitize(node: unknown, seen = new WeakSet<object>()): any {
   if (Array.isArray(node)) return node.map((n) => sanitize(n, seen));
   if (!node || typeof node !== "object") return node;
@@ -37,7 +48,7 @@ function sanitize(node: unknown, seen = new WeakSet<object>()): any {
   const src = node as Json;
   const out: Json = {};
   for (const [key, value] of Object.entries(src)) {
-    // Annotation-only keywords Ajv either rejects or wastes time on.
+    // Annotation-only keywords a validator either rejects or wastes time on.
     if (["example", "examples", "discriminator", "xml", "externalDocs", "deprecated"].includes(key)) {
       continue;
     }
@@ -108,24 +119,81 @@ function findExtraFields(
   }
 }
 
-function describe(error: ErrorObject): Finding {
-  const path = `$${error.instancePath.replace(/\//g, ".")}` || "$";
+/**
+ * Keywords whose failure only means "something below me failed".
+ *
+ * The validator reports the whole chain: a wrong field type arrives as a `type`
+ * error *and* a `properties` error above it *and* a `$ref` error above that.
+ * Showing all three lists one problem three times and buries the one line that
+ * says what is actually wrong, so the wrappers are dropped and the specific
+ * error is kept.
+ */
+const WRAPPER_KEYWORDS = new Set([
+  "properties",
+  "patternProperties",
+  "additionalProperties",
+  "unevaluatedProperties",
+  "items",
+  "prefixItems",
+  "additionalItems",
+  "unevaluatedItems",
+  "contains",
+  "$ref",
+  "$recursiveRef",
+  "allOf",
+  "dependentSchemas",
+  "if",
+  "then",
+  "else",
+]);
+
+/** `#/customer/email` → `$.customer.email`, undoing JSON-pointer escaping. */
+function pointerToPath(location: string): string {
+  const body = location.replace(/^#/, "");
+  if (!body) return "$";
+  const segments = body
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~"));
+  return segments.length ? `$.${segments.join(".")}` : "$";
+}
+
+function describe(error: OutputUnit): Finding {
+  const path = pointerToPath(error.instanceLocation);
+
   if (error.keyword === "required") {
-    const missing = (error.params as { missingProperty?: string }).missingProperty;
-    return {
-      kind: "missing_required",
-      path: `${path}.${missing}`,
-      message: `Required field \`${missing}\` is missing from the response.`,
-    };
+    // The property name is inside the message rather than a structured field,
+    // so it is read back out — and if the wording ever changes, the generic
+    // message below is still true rather than wrong.
+    const missing = /"([^"]+)"/.exec(error.error)?.[1];
+    return missing
+      ? {
+          kind: "missing_required",
+          path: `${path === "$" ? "$" : path}.${missing}`,
+          message: `Required field \`${missing}\` is missing from the response.`,
+        }
+      : { kind: "missing_required", path, message: error.error };
   }
+
   if (error.keyword === "type") {
+    const expected = /Expected "([^"]+)"/.exec(error.error)?.[1];
     return {
       kind: "type_mismatch",
       path,
-      message: `Expected ${(error.params as { type?: string }).type}, got a different type.`,
+      message: expected
+        ? `Expected ${expected}, got a different type.`
+        : error.error,
     };
   }
-  return { kind: "other", path, message: `${error.keyword}: ${error.message ?? "failed"}` };
+
+  return { kind: "other", path, message: `${error.keyword}: ${error.error}` };
+}
+
+/** First line of an error, capped — never a whole stack or policy dump. */
+function brief(error: unknown, limit = 160): string {
+  const raw = (error instanceof Error ? error.message : String(error)).trim();
+  const firstLine = raw.split("\n")[0];
+  return firstLine.length > limit ? `${firstLine.slice(0, limit - 1)}…` : firstLine;
 }
 
 export function validateResponse(
@@ -145,31 +213,27 @@ export function validateResponse(
   }
 
   try {
-    // `logger: false` matters on real specs — Stripe declares custom formats
-    // (`unix-time`, `currency`) and Ajv warns once per occurrence, thousands of times.
-    const ajv = new Ajv({
-      strict: false,
-      allErrors: true,
-      allowUnionTypes: true,
-      validateFormats: true,
-      logger: false,
-    });
-    addFormats(ajv);
-
-    // Carry `components` into the compiled schema so internal
-    // `#/components/schemas/…` pointers still resolve after we detach the subtree.
+    // Carry `components` into the schema so internal `#/components/schemas/…`
+    // pointers still resolve after the subtree is detached from the document.
     const wrapped = {
       ...sanitize(schema),
       components: sanitize({ schemas: doc.components?.schemas ?? {} }),
     };
 
-    const validate = ajv.compile(wrapped);
-    const valid = validate(body);
+    // `shortCircuit: false` — every failure is wanted, not just the first, or a
+    // response with three problems reports one and looks nearly correct.
+    const result = new Validator(wrapped, "2020-12", false).validate(body);
 
-    const findings: Finding[] = valid ? [] : (validate.errors ?? []).map(describe);
+    const specific = result.errors.filter((e) => !WRAPPER_KEYWORDS.has(e.keyword));
+    // Composition keywords are wrappers when a branch failed underneath them and
+    // the whole story when none did — so they are only dropped if something more
+    // specific survived. An invalid response must never report zero findings.
+    const reported = specific.length ? specific : result.errors;
+
+    const findings: Finding[] = result.valid ? [] : reported.map(describe);
     findExtraFields(doc, schema, body, "$", findings);
 
-    // Ajv reports one error per failing branch of a union; collapse duplicates.
+    // A union reports one error per failing branch; collapse duplicates.
     const seen = new Set<string>();
     const unique = findings.filter((f) => {
       const key = `${f.kind}:${f.path}`;
@@ -180,10 +244,10 @@ export function validateResponse(
 
     return { status: unique.length ? "mismatch" : "ok", findings: unique.slice(0, 40) };
   } catch (error) {
-    return {
-      status: "error",
-      findings: [],
-      note: `Couldn't validate: ${error instanceof Error ? error.message : String(error)}`,
-    };
+    // Kept short on purpose. This used to interpolate the raw error, and when
+    // the CSP blocked Ajv's `new Function` the browser's several-hundred-character
+    // policy dump landed in the response pane where the schema check belongs.
+    // Whatever goes wrong next, the pane stays readable.
+    return { status: "error", findings: [], note: `Couldn't validate: ${brief(error)}` };
   }
 }
