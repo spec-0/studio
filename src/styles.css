@@ -1468,3 +1468,52 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   opacity: 0.75;
 }
 .btn.tight { padding: 4px 10px; font-size: 11.5px; }
+
+/*
+ * "You are looking at a record."
+ *
+ * Sits above both panes because it qualifies both of them: the response is one
+ * that already happened, and the request fields were restored from it rather
+ * than typed. Deliberately quiet — it is a statement of context, not a warning,
+ * and an alarming bar over an ordinary act (clicking history) would be noise
+ * within a day. Tokens only; no colour is restated here.
+ */
+.record-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--accent-soft));
+  color: hsl(var(--ink-2));
+  font-size: 12px;
+}
+.record-bar-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+}
+.record-bar-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.record-bar-text strong {
+  color: hsl(var(--ink));
+  font-weight: 600;
+}
+.record-bar-close {
+  flex: none;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: hsl(var(--ink-3));
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.record-bar-close:hover { color: hsl(var(--ink)); }

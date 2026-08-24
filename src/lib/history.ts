@@ -108,3 +108,58 @@ export function relativeTime(iso: string): string {
   if (hours < 24) return `${hours}h ago`;
   return `${Math.round(hours / 24)}d ago`;
 }
+
+/**
+ * Recover the parameter values a recorded request was sent with.
+ *
+ * History stores the URL that went out, not the values that built it, so
+ * replaying an entry used to restore headers and body but leave every path and
+ * query field empty — `GET /accounts/{accountId}` came back with a blank
+ * `accountId` sitting next to the 200 it returned, which reads as a bug in the
+ * app rather than a gap in what was recorded.
+ *
+ * The operation's path template is matched against the end of the recorded
+ * path, so a server with its own base path (`https://api.example.com/v1`) lines
+ * up correctly. If the literal segments don't agree the template isn't the one
+ * that produced this URL, and path values are left empty rather than guessed —
+ * a wrong value silently placed in a field is worse than an empty one. Query
+ * parameters are unambiguous, so they are returned either way.
+ */
+export function paramsFromEntry(
+  entry: Pick<HistoryEntry, "url">,
+  pathTemplate: string,
+): { pathParams: Record<string, string>; queryParams: Record<string, string> } {
+  const queryParams: Record<string, string> = {};
+  let url: URL;
+  try {
+    url = new URL(entry.url);
+  } catch {
+    return { pathParams: {}, queryParams };
+  }
+  for (const [key, value] of url.searchParams) queryParams[key] = value;
+
+  const template = pathTemplate.split("/").filter(Boolean);
+  const actual = url.pathname.split("/").filter(Boolean);
+  if (template.length === 0 || actual.length < template.length) {
+    return { pathParams: {}, queryParams };
+  }
+
+  // The template is the tail of the path; anything before it is the base path.
+  const offset = actual.length - template.length;
+  const pathParams: Record<string, string> = {};
+  for (let i = 0; i < template.length; i += 1) {
+    const segment = template[i];
+    const got = actual[offset + i];
+    const placeholder = /^\{(.+)\}$/.exec(segment);
+    if (placeholder) {
+      try {
+        pathParams[placeholder[1]] = decodeURIComponent(got);
+      } catch {
+        pathParams[placeholder[1]] = got;
+      }
+    } else if (segment !== got) {
+      return { pathParams: {}, queryParams };
+    }
+  }
+  return { pathParams, queryParams };
+}

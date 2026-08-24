@@ -1,0 +1,47 @@
+# Type-check, test and build on every push and pull request.
+#
+# This exists because a headline feature shipped broken. Response validation
+# threw on every request for two weeks, and nothing ran that would have noticed:
+# `release.yml` only fires on a tag, so the first execution of the test suite
+# was during the release that published the bug.
+#
+# Deliberately fast and dependency-light — it runs the JavaScript checks only.
+# The Rust shell is compiled by the release workflow; changes to it are rarer,
+# and making every push wait on a Tauri toolchain build would be the kind of
+# slow check people learn to ignore.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check
+        run: npm run type-check
+
+      # Vitest transpiles without type-checking, so a test can compile in the
+      # runner and still be wrong. The step above is what catches that, and it
+      # runs first on purpose.
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

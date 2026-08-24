@@ -23,8 +23,18 @@ interface Props {
   onConfigureOAuth?: (schemeName?: string) => void;
   /** One line on whether a usable token is currently held. */
   oauthStatus?: { ok: boolean; label: string } | null;
-  /** Values captured from a replayed history entry, applied once on mount. */
-  replay?: { headers: Record<string, string>; body?: string } | null;
+  /**
+   * Values captured from a replayed history entry, applied once on mount.
+   *
+   * Path and query values are recovered from the recorded URL — without them a
+   * replayed request shows empty fields beside the response it produced.
+   */
+  replay?: {
+    headers: Record<string, string>;
+    body?: string;
+    pathParams?: Record<string, string>;
+    queryParams?: Record<string, string>;
+  } | null;
 }
 
 export interface RequestValues {
@@ -75,8 +85,10 @@ export function OperationView({
           .filter((p) => p.in === where)
           .map((p) => [p.name, p.required ? exampleParam(spec.doc, p.schema, p.name) : ""]),
       );
-    setPathParams(seed("path"));
-    setQueryParams(seed("query"));
+    // A replayed entry supplies the values that were actually sent; only fall
+    // back to generated examples when there is nothing recorded to restore.
+    setPathParams(replay?.pathParams ?? seed("path"));
+    setQueryParams(replay?.queryParams ?? seed("query"));
     setHeaderParams(replay?.headers ?? seed("header"));
     setBody(replay?.body ?? (op.requestBody ? exampleBody(spec.doc, op.requestBody.schema) : ""));
     // Seed form fields and multipart parts from the names the schema declares, so
