@@ -21,6 +21,7 @@
     "app": "tauri dev",
     "app:build": "tauri build",
     "test": "vitest run",
+    "test:csp": "npm run build && node scripts/csp-check.mjs",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
