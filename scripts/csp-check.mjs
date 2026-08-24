@@ -99,7 +99,17 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((done) => server.listen(PORT, "127.0.0.1", done));
 
-const browser = await puppeteer.launch({ executablePath: CHROME, headless: true });
+// GitHub's Linux runners ship Chrome without a correctly-owned SUID sandbox
+// helper, and Chrome aborts rather than run unsandboxed. The sandbox is process
+// isolation and has nothing to do with the policy under test, so dropping it on
+// a throwaway CI container changes what this script measures not at all — but it
+// stays on everywhere else, because a browser loading a local build is not a
+// reason to disable it on a developer's machine.
+const browser = await puppeteer.launch({
+  executablePath: CHROME,
+  headless: true,
+  args: process.env.CI ? ["--no-sandbox", "--disable-setuid-sandbox"] : [],
+});
 let failures = 0;
 
 const openPage = async () => {
