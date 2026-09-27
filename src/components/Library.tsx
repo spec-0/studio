@@ -17,6 +17,7 @@ import {
 import { mockIsBehind } from "../lib/sync";
 import { relativeTime, sourceLabel, type ApiSource, type LibraryEntry } from "../lib/library";
 import { Wordmark } from "./Logo";
+import { shortcut } from "../lib/platform";
 
 function SourceIcon({ kind }: { kind: ApiSource["kind"] }) {
   const size = 11;
@@ -102,7 +103,7 @@ export function Library({
           Browse operations and schemas as a real structure. Fire requests against your API or a
           mock. No account, no workspace — just the spec.
         </p>
-        <div className="drop">Drop an OpenAPI file here, or ⌘O to add one</div>
+        <div className="drop">Drop an OpenAPI file here, or {shortcut("O")} to add one</div>
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
           <button className="btn primary" onClick={onAdd}>
             <Plus size={13} /> Add an API
@@ -146,7 +147,7 @@ export function Library({
           </button>
         )}
         <button className="btn primary" onClick={onAdd}>
-          <Plus size={13} /> Add API <span className="kbd">⌘O</span>
+          <Plus size={13} /> Add API <span className="kbd">{shortcut("O")}</span>
         </button>
       </div>
 

@@ -25,6 +25,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 cookie_store = "0.22"
 url = "2"
 base64 = "0.23.1"
+tauri-plugin-updater = "2"
 
 [profile.release]
 codegen-units = 1

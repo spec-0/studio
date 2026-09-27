@@ -5,7 +5,11 @@ import ReactDOM from "react-dom/client";
 import "@fontsource-variable/geist";
 import "@fontsource-variable/jetbrains-mono";
 import App from "./App";
+import { isMac } from "./lib/platform";
 import "./styles.css";
+
+// Lets the stylesheet leave room for the macOS traffic lights only where they exist.
+document.documentElement.classList.add(isMac ? "platform-mac" : "platform-other");
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
