@@ -36,7 +36,7 @@ import {
   type ResponseResult,
 } from "./lib/request";
 import { validateResponse, type ValidationResult } from "./lib/validate";
-import { interpolate, loadEnvironments } from "./lib/env";
+import { interpolate } from "./lib/env";
 import * as history from "./lib/history";
 import type { HistoryEntry } from "./lib/history";
 import * as library from "./lib/library";
@@ -44,17 +44,11 @@ import type { ApiSource, LibraryEntry } from "./lib/library";
 import {
   pickSaveTarget,
   pickSpecFile,
-  readStore,
   saveResponseTo,
-  STORE,
 } from "./lib/store";
 import {
-  DEFAULT_CONNECTION,
   hostOf,
-  loadConnection,
-  saveConnection,
   transportFor,
-  type ConnectionSettings,
 } from "./lib/connection";
 import {
   apiIdFromRef,
@@ -64,22 +58,15 @@ import {
   type ApiConsumers,
   fetchTeamApiSpec,
   listApiEnvironments,
-  loadSession,
   refreshMock,
-  saveSession,
   upstreamVersions,
-  type Session,
 } from "./lib/spec0";
 import {
-  EMPTY_PAD,
   SCRATCH_OPERATION_ID,
   SCRATCH_TITLE,
   buildScratchPlan,
-  loadScratch,
   padFromHistory,
-  saveScratch,
   scratchPath,
-  type ScratchPad,
 } from "./lib/scratch";
 import { describeExpiry } from "./lib/oauth";
 import {
@@ -95,13 +82,17 @@ import {
   storedResponseBody,
   suggestedFileName,
 } from "./lib/response";
-import { DEFAULT_SETTINGS, useSettings, type Settings } from "./hooks/useSettings";
+import {  useSettings } from "./hooks/useSettings";
 import { useTargeting } from "./hooks/useTargeting";
 import { useBulkRun } from "./hooks/useBulkRun";
 import { usePublish } from "./hooks/usePublish";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
+import { useBoot } from "./hooks/useBoot";
+import { useConnectionSettings } from "./hooks/useConnectionSettings";
+import { useScratchPad } from "./hooks/useScratchPad";
+import { useSession } from "./hooks/useSession";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import {
   describeImpact,
@@ -168,7 +159,7 @@ export default function App() {
   const { settings, setSettings, patchSettings } = useSettings();
   const { envFile, setEnvFile, saveEnvFile, activeEnv, vars, saveTarget } = useEnvironments();
   const [requests, setRequests] = useState<HistoryEntry[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
+  const { session, setSession, updateSession } = useSession();
 
   const [showOpen, setShowOpen] = useState(false);
   const [openTab, setOpenTab] = useState<"file" | "url" | "spec0">("file");
@@ -176,10 +167,10 @@ export default function App() {
   const [showConnection, setShowConnection] = useState(false);
   const [showRun, setShowRun] = useState(false);
   const [showOAuth, setShowOAuth] = useState<{ prefill?: string } | null>(null);
-  const [connection, setConnection] = useState<ConnectionSettings>(DEFAULT_CONNECTION);
+  const { connection, setConnection, saveConnectionSettings } = useConnectionSettings();
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [pad, setPad] = useState<ScratchPad>(EMPTY_PAD);
+  const { pad, setPad, updatePad } = useScratchPad();
   const [syncReport, setSyncReport] = useState<{ title: string; lines: string[] } | null>(null);
 
   const { oauthToken, oauthBusy, oauthError, setOauthError, acquireToken, usableToken, clearToken } =
@@ -218,26 +209,15 @@ export default function App() {
   }, []);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // ── boot ─────────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    void (async () => {
-      setSettings(await readStore<Settings>(STORE.settings, DEFAULT_SETTINGS));
-      setEnvFile(await loadEnvironments());
-      // Secrets are known now; strip any that older versions wrote into history.
-      await history.scrubHistory();
-      setRequests(await history.loadHistory());
-      setSession(await loadSession());
-      setEntries(await library.loadLibrary());
-      setPad(await loadScratch());
-      setConnection(await loadConnection());
-    })();
-  }, []);
-
-  const saveConnectionSettings = useCallback((next: ConnectionSettings) => {
-    setConnection(next);
-    void saveConnection(next);
-  }, []);
+  useBoot({
+    settings: setSettings,
+    envFile: setEnvFile,
+    requests: setRequests,
+    session: setSession,
+    entries: setEntries,
+    pad: setPad,
+    connection: setConnection,
+  });
 
   /**
    * Rebuild the mock against the spec we now hold.
@@ -726,11 +706,6 @@ export default function App() {
       setRequestError(error instanceof Error ? error.message : String(error));
     }
   }, [result]);
-
-  const updatePad = useCallback((next: ScratchPad) => {
-    setPad(next);
-    void saveScratch(next);
-  }, []);
 
   /**
    * Send the scratch request.
@@ -1283,10 +1258,7 @@ export default function App() {
         <OpenDialog
           initialSource={openTab}
           session={session}
-          onSession={(next) => {
-            setSession(next);
-            void saveSession(next);
-          }}
+          onSession={updateSession}
           onOpenFile={() => void openFile()}
           onOpenUrl={(url) => void openUrl(url)}
           onOpenSpec0={(text, name, source, mock) => {
