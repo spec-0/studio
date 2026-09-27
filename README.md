@@ -1,11 +1,23 @@
-# spec0 Studio
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/spec0-studio-dark.svg">
+    <img alt="spec0 Studio" src=".github/assets/spec0-studio-light.svg" width="340">
+  </picture>
+</h1>
+
+<p align="center">
+  <a href="https://github.com/spec-0/studio/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/spec-0/studio?label=release&color=5B4CF5"></a>
+  <a href="https://github.com/spec-0/studio/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/spec-0/studio/ci.yml?branch=main&label=CI"></a>
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/spec-0/studio?color=52525B"></a>
+</p>
 
 spec0 Studio is a desktop app for calling and testing APIs, for developers who
 already have an OpenAPI spec (the YAML or JSON file that describes an API).
 
 Instead of building a collection of requests by hand, you open the spec and
-Studio builds the requests from it. It then checks each response against what
-the spec says, so you notice when the API and its description drift apart.
+Studio builds the requests from it. It then checks each JSON response against the
+schema the spec declares for that status code, so you notice when the API and
+its description drift apart.
 Studio is young, and we'd like to hear what breaks.
 
 Free and open source (MIT). Works without an account.
@@ -136,6 +148,8 @@ and nothing is lost.
 
 ## Known limitations
 
+- **Only JSON response bodies are checked against the spec.** Headers, content
+  types, and status codes the spec doesn't list aren't checked yet.
 - **The Windows and Linux builds are new** and have had much less use than the
   Mac build. Please [open an issue](https://github.com/spec-0/studio/issues) if
   something looks or works wrong.
