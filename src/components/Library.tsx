@@ -19,8 +19,7 @@ import { relativeTime, sourceLabel, spec0ApiIdOf, type ApiSource, type LibraryEn
 import { journeyAvailable } from "../lib/mockJourney";
 import { Wordmark } from "./Logo";
 import { shortcut } from "../lib/platform";
-import { SWAGGER2_CONVERT_COMMAND, SWAGGER2_ISSUE_URL } from "../lib/spec";
-import { openInBrowser } from "../lib/store";
+import { SWAGGER2_CONVERT_COMMAND } from "../lib/spec";
 
 function SourceIcon({ kind }: { kind: ApiSource["kind"] }) {
   const size = 11;
@@ -31,8 +30,8 @@ function SourceIcon({ kind }: { kind: ApiSource["kind"] }) {
 }
 
 /**
- * The library's load error. A Swagger 2.0 document gets two small actions: copy the
- * local conversion command, and open the tracking issue in the browser.
+ * The library's load error. A Swagger 2.0 document Studio couldn't convert gets
+ * one small action: copy the command that converts it locally.
  */
 function LoadError({ error, style }: { error: string; style?: CSSProperties }) {
   const swagger2 = error.includes(SWAGGER2_CONVERT_COMMAND);
@@ -46,9 +45,6 @@ function LoadError({ error, style }: { error: string; style?: CSSProperties }) {
             onClick={() => void navigator.clipboard.writeText(SWAGGER2_CONVERT_COMMAND)}
           >
             Copy command
-          </button>
-          <button className="btn" onClick={() => void openInBrowser(SWAGGER2_ISSUE_URL)}>
-            Swagger 2.0 support on GitHub
           </button>
         </div>
       )}

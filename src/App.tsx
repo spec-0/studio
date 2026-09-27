@@ -67,7 +67,7 @@ import { canPublish, whyNotPublishable } from "./lib/publish";
 import { toMarkdown } from "./lib/runner";
 import { sendTargetFor } from "./lib/shortcuts";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
-import type { ParsedSpec } from "./lib/spec";
+import { openapiText, type ParsedSpec } from "./lib/spec";
 import { apiIdFromRef, apiUrl, consumersUrl, DEFAULT_API_URL, DEFAULT_APP_URL } from "./lib/spec0";
 import { openInBrowser } from "./lib/store";
 
@@ -457,6 +457,7 @@ export default function App() {
           title={spec!.title || current?.title || "Untitled API"}
           version={spec!.version}
           source={current?.source.kind}
+          converted={spec!.converted}
           mock={
             current && (current.mockUrl || journeyAvailable(targetOf(current, session?.apiUrl ?? DEFAULT_API_URL)))
               ? {
@@ -690,6 +691,9 @@ export default function App() {
                   title={spec!.title || current?.title || "Document"}
                   version={spec!.version}
                   text={docText}
+                  converted={
+                    spec!.converted ? { text: openapiText(spec!), notes: spec!.converted.notes } : null
+                  }
                   dark={settings.dark}
                   tab={docTab}
                   onTabChange={setDocTab}
@@ -894,7 +898,8 @@ export default function App() {
           }}
           title={spec.title || current.title}
           version={spec.version}
-          text={docText}
+          text={spec.converted ? openapiText(spec) : docText}
+          convertedFrom={spec.converted?.from}
           git={git}
           teams={teams}
           teamsError={teamsError}

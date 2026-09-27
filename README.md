@@ -90,6 +90,9 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
 
 - **Three sources.** Add an API from a local file, a URL, or a Spec0 account.
   OpenAPI 3.0 and 3.1, YAML or JSON.
+- **Swagger 2.0 too.** Studio converts a Swagger 2.0 spec to OpenAPI 3.0 when you
+  open it, on your computer, and says so on the API. The Raw tab still shows the
+  file as imported.
 - **Kept locally.** Studio keeps a copy of the spec's text, so it opens quickly,
   works offline and still works if the file moves.
 - **Operations and schemas.** Browse operations by tag, and browse schemas (the
@@ -99,11 +102,6 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
   a readable API reference. Both work offline.
 - **Git details.** If the spec file is in a git repository, Studio shows its
   branch, commit, and whether the file has changed since that commit.
-
-> [!TIP]
-> Studio doesn't open Swagger 2.0 specs yet ([#33](https://github.com/spec-0/studio/issues/33)).
-> You can convert one to OpenAPI 3 on your machine first:
-> `npx swagger2openapi swagger.json -o openapi.json`
 
 ### Sending requests
 
@@ -255,8 +253,6 @@ server runs only while Studio is open.
 ## Known limitations
 
 - **Only JSON response bodies are checked** (see [Checking responses](#checking-responses)).
-- **Swagger 2.0 isn't supported yet.** Studio shows the conversion command when you
-  open one; see [#33](https://github.com/spec-0/studio/issues/33).
 - **The Windows and Linux builds are new** and have had much less use than the
   Mac build. Please [open an issue](https://github.com/spec-0/studio/issues) if
   something looks or works wrong.

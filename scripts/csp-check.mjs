@@ -195,6 +195,18 @@ const openPage = async () => {
       }
     }
     if (!failures) console.log("✓ response validation runs and reports findings under the policy");
+
+    const swagger = results.swagger2 ?? {};
+    const swaggerOk =
+      swagger.converted === "Swagger 2.0" &&
+      swagger.operations === 1 &&
+      swagger.text === true &&
+      swagger.validation === "mismatch";
+    if (swaggerOk) console.log("✓ a Swagger 2.0 spec converts and its responses are checked under the policy");
+    else {
+      failures += 1;
+      console.error(`✗ opening a Swagger 2.0 spec failed under the policy: ${JSON.stringify(swagger).slice(0, 300)}`);
+    }
   }
   await page.close();
 }

@@ -28,7 +28,10 @@ interface Props {
   onSignIn: () => void;
   title: string;
   version: string;
+  /** What gets published: the document as OpenAPI 3 text. */
   text: string;
+  /** Set when the file was converted on opening, e.g. "Swagger 2.0". */
+  convertedFrom?: string;
   git: GitInfo | null;
   teams: TeamSummary[];
   teamsError: string | null;
@@ -46,6 +49,7 @@ export function PublishDialog({
   title,
   version,
   text,
+  convertedFrom,
   git,
   teams,
   teamsError,
@@ -165,6 +169,15 @@ export function PublishDialog({
                   build id.
                 </span>
               </label>
+
+              {/* Spec0 takes OpenAPI 3.0 and 3.1, so a converted spec is
+                  published as the conversion, and the dialog says so. */}
+              {convertedFrom && (
+                <p className="meta" style={{ marginTop: 4 }}>
+                  This file is {convertedFrom}. Spec0 accepts OpenAPI 3.0 and 3.1, so Studio publishes
+                  the OpenAPI 3.0 version it converted when the file was opened, not the file itself.
+                </p>
+              )}
 
               {/* Said here rather than discovered afterwards: a dirty file is
                   published as it stands on disk, and the commit id is withheld

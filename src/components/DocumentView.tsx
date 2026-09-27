@@ -22,6 +22,7 @@ import { Check, Copy, ExternalLink, GitBranch, Upload, Users } from "lucide-reac
 import { blockScalarMask, detectSyntax, tokenizeLine } from "../lib/highlight";
 import { describeGit, refLabel, type GitInfo } from "../lib/git";
 import type { ApiConsumers } from "../lib/spec0";
+import { CONVERTED_LABEL, describeConversion } from "../lib/swagger2";
 
 const ScalarReference = lazy(() => import("./ScalarReference"));
 
@@ -30,7 +31,13 @@ export type DocumentTab = "raw" | "reference";
 interface Props {
   title: string;
   version: string;
+  /** The document as imported, which the Raw tab shows. */
   text: string;
+  /**
+   * Present when the file was Swagger 2.0: the OpenAPI 3.0 conversion Studio
+   * uses, which the Reference tab renders so it agrees with the rest of Studio.
+   */
+  converted?: { text: string; notes: string[] } | null;
   dark: boolean;
   tab: DocumentTab;
   onTabChange: (tab: DocumentTab) => void;
@@ -55,6 +62,7 @@ export function DocumentView({
   title,
   version,
   text,
+  converted,
   dark,
   tab,
   onTabChange,
@@ -105,12 +113,22 @@ export function DocumentView({
         </div>
       </header>
 
+      {converted && (
+        <p className="doc-note" title={describeConversion(converted.notes)}>
+          {CONVERTED_LABEL}. Raw shows the Swagger 2.0 file as imported; Reference and the rest of
+          Studio use the OpenAPI 3.0 conversion.
+          {converted.notes.map((note) => (
+            <span key={note}> {note}</span>
+          ))}
+        </p>
+      )}
+
       {tab === "raw" ? (
         <RawPane text={text} />
       ) : (
         <div className="doc-reference">
           <Suspense fallback={<p className="empty">Rendering the reference…</p>}>
-            <ScalarReference text={text} dark={dark} />
+            <ScalarReference text={converted?.text ?? text} dark={dark} />
           </Suspense>
         </div>
       )}
