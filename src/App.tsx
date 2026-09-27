@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sidebar, type SidebarTab } from "./components/Sidebar";
 import { DocumentView, type DocumentTab } from "./components/DocumentView";
-import { readGitInfo, type GitInfo } from "./lib/git";
 import { PublishDialog } from "./components/PublishDialog";
 import { canPublish, whyNotPublishable } from "./lib/publish";
 import { OperationView, type RequestValues } from "./components/OperationView";
@@ -52,10 +51,8 @@ import {
 } from "./lib/connection";
 import {
   apiIdFromRef,
-  getApiConsumers,
   consumersUrl,
   apiUrl,
-  type ApiConsumers,
   fetchTeamApiSpec,
   listApiEnvironments,
   refreshMock,
@@ -90,6 +87,7 @@ import { useShortcuts } from "./hooks/useShortcuts";
 import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { useBoot } from "./hooks/useBoot";
+import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
 import { useScratchPad } from "./hooks/useScratchPad";
 import { useSession } from "./hooks/useSession";
@@ -123,12 +121,9 @@ export default function App() {
   const [graphFocus, setGraphFocus] = useState<string | null>(null);
 
   // The document itself: the text as imported, plus the two facts about
-  // it that Studio can't read out of the spec — where the file came from, and
-  // who depends on the API. Both are optional and neither gates the view.
+  // it that Studio can't read out of the spec (see useDocumentFacts).
   const [docText, setDocText] = useState("");
   const [docTab, setDocTab] = useState<DocumentTab>("reference");
-  const [git, setGit] = useState<GitInfo | null>(null);
-  const [consumers, setConsumers] = useState<ApiConsumers | null>(null);
 
   const [replay, setReplay] = useState<{
     headers: Record<string, string>;
@@ -209,6 +204,8 @@ export default function App() {
   }, []);
   const fileInput = useRef<HTMLInputElement>(null);
 
+  const { git, consumers, resetDocumentFacts } = useDocumentFacts(route, current, session);
+
   useBoot({
     settings: setSettings,
     envFile: setEnvFile,
@@ -270,49 +267,6 @@ export default function App() {
     });
   }, [route, current, server, envFile.activeId, operation, tab, auth?.schemeName, docTab]);
 
-  /**
-   * Where the open document came from, when it came from a file in a repo.
-   *
-   * Read live rather than cached on the entry: a branch you switched twenty
-   * minutes ago is worse than no branch at all, and the read is local and cheap.
-   * A spec from a URL or from spec0 has no repository behind it and reports
-   * nothing, which is the ordinary case rather than a failure.
-   */
-  useEffect(() => {
-    if (route !== "api" || !current) return;
-    let live = true;
-    void readGitInfo(current.source).then((info) => {
-      if (live) setGit(info);
-    });
-    return () => {
-      live = false;
-    };
-  }, [route, current]);
-
-  /**
-   * How many consumers the platform knows about.
-   *
-   * The only part of this view that needs a session. It is additive by
-   * construction: no session, no endpoint, or a token that has stopped working
-   * all leave the count absent and everything else on screen untouched.
-   */
-  useEffect(() => {
-    if (route !== "api" || !session || current?.source.kind !== "spec0") return;
-    const apiId = apiIdFromRef(current.source.ref);
-    if (!apiId) return;
-    let live = true;
-    void getApiConsumers(session, apiId)
-      .then((found) => {
-        if (live) setConsumers(found);
-      })
-      .catch(() => {
-        if (live) setConsumers(null);
-      });
-    return () => {
-      live = false;
-    };
-  }, [route, session, current]);
-
   // ── opening ──────────────────────────────────────────────────────────────────
 
   const applySpec = useCallback(
@@ -328,8 +282,7 @@ export default function App() {
       // the two can never disagree about what the spec says.
       setDocText(text);
       setDocTab(state.docTab ?? "reference");
-      setGit(null);
-      setConsumers(null);
+      resetDocumentFacts();
 
       const restoredOperation =
         parsed.operations.find((op) => op.id === state.lastOperationId) ?? parsed.operations[0] ?? null;
@@ -349,7 +302,7 @@ export default function App() {
 
       setAuth(initialAuth(parsed.securitySchemes, state.authScheme));
     },
-    [envFile.activeId],
+    [envFile.activeId, resetDocumentFacts],
   );
 
   /** Parse, add to the library, and open it. Every entry point funnels through here. */
