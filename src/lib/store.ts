@@ -13,6 +13,10 @@ import { inTauri } from "./request";
 export const STORE = {
   settings: "settings.json",
   environments: "environments.json",
+  /**
+   * Secret values that couldn't go to the OS credential store — the fallback,
+   * and the file older versions kept every secret in. See `secrets.ts`.
+   */
   secrets: "secrets.json",
   history: "history.json",
   session: "session.json",
@@ -52,6 +56,15 @@ export async function writeStore<T>(name: StoreName, value: T): Promise<void> {
     else window.localStorage.setItem(`studio:${name}`, contents);
   } catch {
     // Persistence failing shouldn't take the session down with it.
+  }
+}
+
+export async function deleteStore(name: StoreName): Promise<void> {
+  try {
+    if (inTauri) await invoke("store_delete", { name });
+    else window.localStorage.removeItem(`studio:${name}`);
+  } catch {
+    // Same as writing: a failure here must not take the session down.
   }
 }
 

@@ -26,6 +26,20 @@ cookie_store = "0.22"
 url = "2"
 base64 = "0.23.1"
 
+# Secret environment values go to the OS credential store (see src/secrets.rs).
+# `keyring` needs one native backend per platform, so the features are gated by
+# target: a Linux build must not try to link the macOS Security framework.
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3.6", features = ["apple-native"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3.6", features = ["windows-native"] }
+
+# Secret Service over D-Bus. `vendored` builds libdbus from source so the build
+# doesn't need libdbus-1-dev installed; `crypto-rust` avoids OpenSSL.
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3.6", features = ["sync-secret-service", "crypto-rust", "vendored"] }
+
 [profile.release]
 codegen-units = 1
 lto = true

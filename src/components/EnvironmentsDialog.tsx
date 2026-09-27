@@ -6,6 +6,7 @@ import {
   type Variable,
 } from "../lib/env";
 import { storeLocation } from "../lib/store";
+import { describeSecretStorage, secrets } from "../lib/secrets";
 
 interface Props {
   file: EnvironmentFile;
@@ -19,6 +20,8 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
     file.activeId ?? file.environments[0]?.id ?? null,
   );
   const [location, setLocation] = useState("");
+  // Read once on open: environments have loaded by the time this can be shown.
+  const [storage] = useState(() => describeSecretStorage(secrets.status()));
 
   useEffect(() => {
     void storeLocation().then(setLocation);
@@ -92,6 +95,22 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
           </div>
 
           <div className="env-detail">
+            {storage.notice && (
+              <div className="verdict warn" role="status" style={{ display: "block", lineHeight: 1.6 }}>
+                {storage.notice.text}
+                {storage.notice.fix && (
+                  <>
+                    <br />
+                    {storage.notice.fix}
+                  </>
+                )}
+                {storage.notice.details && (
+                  <div className="meta" style={{ marginTop: 4 }}>
+                    Details: {storage.notice.details}
+                  </div>
+                )}
+              </div>
+            )}
             {!selected ? (
               <p className="meta">
                 No environments yet. Create one to hold `{"{{baseUrl}}"}`, tokens, and per-stage
@@ -183,11 +202,8 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
                   where a request goes is chosen in the address bar. A <code>baseUrl</code> variable
                   is a good habit, and it&apos;s an ordinary variable like any other.
                   <br />
-                  Secret values are written to a separate local file, so{" "}
-                  <code>environments.json</code> stays safe to commit — it records that a variable
-                  is secret, not its value.{" "}
-                  <strong>That file is not encrypted at rest</strong> (Tauri ships no first-party
-                  keychain plugin).
+                  {storage.where} <code>environments.json</code> records only that a variable is
+                  secret, never its value, so it stays safe to commit.
                   {location && (
                     <>
                       <br />

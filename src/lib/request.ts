@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { OperationSpec } from "./spec";
 import { interpolate } from "./env";
+import { redact } from "./redact";
 
 /**
  * Request execution.
@@ -331,6 +332,18 @@ export async function send(
       redirects: (response as unknown as Record<symbol, string[]>)[REDIRECTS] ?? [],
       binary: (response as unknown as Record<symbol, ResponseResult["binary"]>)[BINARY] ?? null,
     };
+  } catch (error) {
+    // Transport errors often quote the URL, and an API key can sit in its query.
+    // The message is shown on screen and can end up in a run report.
+    if (error instanceof Error) {
+      const message = redact(error.message);
+      if (message !== error.message) {
+        const hidden = new Error(message);
+        hidden.name = error.name;
+        throw hidden;
+      }
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }
