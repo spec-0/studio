@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useReducer, useRef, type Dispatch, type SetStateAction } from "react";
 import type { RequestValues } from "../components/OperationView";
 import { transportFor, type ConnectionSettings } from "../lib/connection";
 import * as history from "../lib/history";
@@ -10,7 +10,6 @@ import {
   send,
   toCurl,
   type AuthState,
-  type ResponseResult,
 } from "../lib/request";
 import {
   declaredResponse,
@@ -25,13 +24,17 @@ import {
   scratchPath,
   type ScratchPad,
 } from "../lib/scratch";
+import type { Route } from "../lib/navigation";
+import { EMPTY_PANE, paneOwner, paneReducer, visiblePane } from "../lib/responsePane";
 import type { OperationSpec, ParsedSpec } from "../lib/spec";
 import { pickSaveTarget, saveResponseTo } from "../lib/store";
 import { sentToMock } from "../lib/targets";
-import { validateResponse, type ValidationResult } from "../lib/validate";
+import { validateResponse } from "../lib/validate";
 import type { Settings } from "./useSettings";
 
 interface Options {
+  /** The screen on show; the pane belongs to the scratch pad or to one operation. */
+  route: Route;
   spec: ParsedSpec | null;
   operation: OperationSpec | null;
   server: string;
@@ -61,8 +64,13 @@ interface Options {
  * Owns the response pane: the result, its schema check, the error, the curl
  * line. Spec requests and the scratch request write to it; recorded requests
  * never do — they are read in their own view.
+ *
+ * The pane belongs to one request. Picking another operation, another API or
+ * the scratch pad empties it, and a send still in flight when that happens
+ * lands in History only (see `src/lib/responsePane.ts`).
  */
 export function useRequestSender({
+  route,
   spec,
   operation,
   server,
@@ -80,11 +88,12 @@ export function useRequestSender({
   setRequests,
   setCopiedFrom,
 }: Options) {
-  const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<ResponseResult | null>(null);
-  const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [curl, setCurl] = useState<string | null>(null);
+  const [pane, dispatch] = useReducer(paneReducer, EMPTY_PANE);
+  const owner = paneOwner(route, currentId, operation?.id);
+  useEffect(() => dispatch({ type: "show", owner }), [owner]);
+  const { sending, result, validation, error: requestError, curl } = visiblePane(pane, owner);
+
+  const nextSendId = useRef(0);
 
   const values = useRef<RequestValues>({ pathParams: {}, queryParams: {}, headerParams: {}, body: "" });
   const onValuesChange = useCallback((next: RequestValues) => {
@@ -93,18 +102,13 @@ export function useRequestSender({
 
   /** Empty the response pane. The curl line stays unless `curl` is set. */
   const clearResponse = useCallback(({ curl = false }: { curl?: boolean } = {}) => {
-    setResult(null);
-    setValidation(null);
-    setRequestError(null);
-    if (curl) setCurl(null);
+    dispatch({ type: "clear", curl });
   }, []);
 
   const doSend = useCallback(async () => {
     if (!spec || !operation || !server.trim()) return;
-    setSending(true);
-    setRequestError(null);
-    setResult(null);
-    setValidation(null);
+    const sendId = ++nextSendId.current;
+    dispatch({ type: "start", sendId });
     setCopiedFrom(null);
     try {
       const { pathParams, queryParams, headerParams, body } = values.current;
@@ -123,18 +127,16 @@ export function useRequestSender({
         vars,
         mock,
       );
-      setCurl(toCurl(plan));
+      dispatch({ type: "curl", sendId, curl: toCurl(plan) });
       const response = await send(plan, {
         ...transportFor(connection, plan.url),
         // Cookies are per-API, keyed by the library entry, so a session picked
         // up here is never offered to a different API's host.
         jar: currentId,
       });
-      setResult(response);
-
       const declared = declaredResponse(operation.responses, response.status);
       const verdict = validateResponse(spec.doc, declared?.schema, response.json);
-      setValidation(verdict);
+      dispatch({ type: "response", sendId, result: response, validation: verdict });
       patchSettings({ inspectorOpen: true });
 
       setRequests(
@@ -160,9 +162,9 @@ export function useRequestSender({
         }),
       );
     } catch (error) {
-      setRequestError(describeSendError(error, inTauri));
+      dispatch({ type: "fail", sendId, error: describeSendError(error, inTauri) });
     } finally {
-      setSending(false);
+      dispatch({ type: "done", sendId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec, operation, server, auth, vars, mockUrl, mock, connection, currentId, usableToken, environmentName, specFingerprint]);
@@ -182,7 +184,7 @@ export function useRequestSender({
     try {
       await saveResponseTo(path, target);
     } catch (error) {
-      setRequestError(error instanceof Error ? error.message : String(error));
+      dispatch({ type: "error", error: error instanceof Error ? error.message : String(error) });
     }
   }, [result]);
 
@@ -195,18 +197,16 @@ export function useRequestSender({
    * mean threading "…unless there's no spec" through all of it.
    */
   const doScratchSend = useCallback(async () => {
-    setSending(true);
-    setRequestError(null);
-    setResult(null);
-    setValidation(null);
+    const sendId = ++nextSendId.current;
+    dispatch({ type: "start", sendId });
     setCopiedFrom(null);
     try {
       const plan = buildScratchPlan(pad, vars);
-      setCurl(toCurl(plan));
+      dispatch({ type: "curl", sendId, curl: toCurl(plan) });
       // The scratch pad gets its own jar: it isn't an API and shouldn't borrow
       // one's session, nor leak a login it performed into a real API's.
       const response = await send(plan, { ...transportFor(connection, plan.url), jar: "__scratch__" });
-      setResult(response);
+      dispatch({ type: "response", sendId, result: response, validation: null });
       patchSettings({ inspectorOpen: true });
 
       setRequests(
@@ -230,9 +230,9 @@ export function useRequestSender({
         }),
       );
     } catch (error) {
-      setRequestError(describeSendError(error, inTauri));
+      dispatch({ type: "fail", sendId, error: describeSendError(error, inTauri) });
     } finally {
-      setSending(false);
+      dispatch({ type: "done", sendId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pad, vars, connection, environmentName]);

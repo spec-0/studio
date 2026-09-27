@@ -171,6 +171,13 @@ to a temporary file and only previewed, with a size limit, so *Save as…* copie
 the file instead of downloading it again, and `history.json` doesn't fill up with
 response bodies.
 
+**The response pane only shows the answer to the request on screen.** Picking
+another operation, another API or the scratch pad empties it, and a send still in
+flight when you move goes to History only. There is deliberately no
+per-operation cache: a response next to a request that wasn't sent reads as that
+request's answer. The last response for an operation is in History, with the
+time it ran.
+
 **The content type picks the body editor.** The spec already says whether an
 endpoint takes JSON, a form or a file, so Studio doesn't ask. But don't trust the
 content type when *reading* a response: servers often label responses wrongly,
