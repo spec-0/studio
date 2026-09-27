@@ -1,4 +1,4 @@
-import { useCallback,  useMemo,  useState } from "react";
+import { useCallback,    useState } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { DocumentView } from "./components/DocumentView";
 import { PublishDialog } from "./components/PublishDialog";
@@ -23,8 +23,6 @@ import { GraphView } from "./components/GraphView";
 import { RecordBar } from "./components/RecordBar";
 import {   type ParsedSpec } from "./lib/spec";
 import { interpolate } from "./lib/env";
-import * as history from "./lib/history";
-import type { HistoryEntry } from "./lib/history";
 import * as library from "./lib/library";
 import type {  LibraryEntry } from "./lib/library";
 import {
@@ -35,9 +33,6 @@ import {
   consumersUrl,
   apiUrl,
 } from "./lib/spec0";
-import {
-  SCRATCH_OPERATION_ID,
-} from "./lib/scratch";
 import { describeExpiry } from "./lib/oauth";
 import {
   toMarkdown,
@@ -57,6 +52,8 @@ import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
 import { useScratchPad } from "./hooks/useScratchPad";
 import { useSession } from "./hooks/useSession";
+import { useDialogs } from "./hooks/useDialogs";
+import { useRequestHistory } from "./hooks/useRequestHistory";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 
 export default function App() {
@@ -98,17 +95,28 @@ export default function App() {
     showSpec,
     closeApi,
   } = useWorkspace(envFile.activeId, setEnvFile);
-  const [requests, setRequests] = useState<HistoryEntry[]>([]);
+  const { requests, setRequests, clearHistory, scratchHistory } = useRequestHistory();
   const { session, setSession, updateSession } = useSession();
 
-  const [showOpen, setShowOpen] = useState(false);
-  const [openTab, setOpenTab] = useState<"file" | "url" | "spec0">("file");
-  const [showEnvs, setShowEnvs] = useState(false);
-  const [showConnection, setShowConnection] = useState(false);
-  const [showRun, setShowRun] = useState(false);
-  const [showOAuth, setShowOAuth] = useState<{ prefill?: string } | null>(null);
+  const {
+    showOpen,
+    setShowOpen,
+    openTab,
+    showEnvs,
+    setShowEnvs,
+    showConnection,
+    setShowConnection,
+    showRun,
+    setShowRun,
+    showOAuth,
+    setShowOAuth,
+    showSwitcher,
+    setShowSwitcher,
+    openSignIn,
+    closeOpen,
+    closeOnEscape,
+  } = useDialogs();
   const { connection, setConnection, saveConnectionSettings } = useConnectionSettings();
-  const [showSwitcher, setShowSwitcher] = useState(false);
   const { pad, setPad, updatePad } = useScratchPad();
 
   const { oauthToken, oauthBusy, oauthError, setOauthError, acquireToken, usableToken, clearToken } =
@@ -226,7 +234,7 @@ export default function App() {
   const goLibrary = useCallback(() => {
     setRoute("library");
     setShowSwitcher(false);
-  }, []);
+  }, [setRoute, setShowSwitcher]);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
@@ -236,12 +244,6 @@ export default function App() {
       if (file) void file.text().then((text) => ingest(text, file.name, { kind: "file", ref: file.name }));
     },
     [ingest],
-  );
-
-  /** Scratch history only — spec-driven calls belong with their API. */
-  const scratchHistory = useMemo(
-    () => requests.filter((entry) => entry.operationId === SCRATCH_OPERATION_ID),
-    [requests],
   );
 
   const openScratch = useCallback(() => {
@@ -260,11 +262,7 @@ export default function App() {
     toggleInspector: () => patchSettings({ inspectorOpen: !settings.inspectorOpen }),
     showTab: setTab,
     toggleTheme: () => patchSettings({ dark: !settings.dark }),
-    closeDialogs: () => {
-      setShowOpen(false);
-      setShowEnvs(false);
-      setShowSwitcher(false);
-    },
+    closeDialogs: closeOnEscape,
   });
 
   /** Jump to an operation by id from a schema view. */
@@ -325,10 +323,7 @@ export default function App() {
         onToggleTheme={() => patchSettings({ dark: !settings.dark })}
         onGoLibrary={goLibrary}
         onSwitchApi={() => setShowSwitcher(true)}
-        onSignIn={() => {
-          setOpenTab("spec0");
-          setShowOpen(true);
-        }}
+        onSignIn={openSignIn}
         onOpenConnection={() => setShowConnection(true)}
         onRun={() => setShowRun(true)}
         onAddApi={() => setShowOpen(true)}
@@ -415,10 +410,7 @@ export default function App() {
               }}
               history={requests}
               onReplay={doReplay}
-              onClearHistory={() => {
-                void history.clearHistory();
-                setRequests([]);
-              }}
+              onClearHistory={clearHistory}
             />
 
             <div className="workarea">
@@ -635,8 +627,7 @@ export default function App() {
           signedIn={Boolean(session)}
           onSignIn={() => {
             setShowPublish(false);
-            setOpenTab("spec0");
-            setShowOpen(true);
+            openSignIn();
           }}
           title={spec.title || current.title}
           version={spec.version}
@@ -672,10 +663,7 @@ export default function App() {
             void ingest(text, name, { kind: "spec0", ref: source }, mock);
           }}
           onTrySample={() => void ingest(SAMPLE_SPEC, SAMPLE_NAME, { kind: "sample", ref: "sample" })}
-          onClose={() => {
-            setShowOpen(false);
-            setOpenTab("file");
-          }}
+          onClose={closeOpen}
         />
       )}
 
