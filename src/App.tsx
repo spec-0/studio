@@ -1,8 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SchemaGraphView } from "@spec0/schema-graph/react";
-import {
-  X,
-} from "lucide-react";
 import { Sidebar, type SidebarTab } from "./components/Sidebar";
 import { DocumentView, type DocumentTab } from "./components/DocumentView";
 import { readGitInfo, type GitInfo } from "./lib/git";
@@ -13,7 +9,6 @@ import { Inspector } from "./components/Inspector";
 import { SchemaView } from "./components/SchemaView";
 import { UrlBar } from "./components/UrlBar";
 import { MockKeyBar } from "./components/MockKeyBar";
-import { Resizer } from "./components/Resizer";
 import { EnvironmentsDialog } from "./components/EnvironmentsDialog";
 import { ConnectionDialog } from "./components/ConnectionDialog";
 import { OAuthDialog } from "./components/OAuthDialog";
@@ -25,6 +20,7 @@ import { ApiSwitcher } from "./components/ApiSwitcher";
 import { Updater } from "./components/UpdateDialog";
 import { TitleBar } from "./components/TitleBar";
 import { StatusBar } from "./components/StatusBar";
+import { GraphView } from "./components/GraphView";
 import { fileName } from "./lib/platform";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import {
@@ -888,6 +884,16 @@ export default function App() {
     },
   });
 
+  /** Jump to an operation by id from a schema view. */
+  const showOperation = (id: string) => {
+    const found = spec?.operations.find((op) => op.id === id);
+    if (found) {
+      setOperation(found);
+      setTab("operations");
+      setView("operation");
+    }
+  };
+
   const showGraph = view === "graph";
   const showDocument = view === "document";
   const inspectorVisible = settings.inspectorOpen && !showGraph && !showDocument;
@@ -1055,61 +1061,14 @@ export default function App() {
               )}
 
               {showGraph && (
-                <div className="split graph-split">
-                  {/* The canvas keeps every pixel the panel isn't using — the detail
-                      panel is a narrow, draggable, dismissible sidecar, not a second
-                      half of the screen. */}
-                  <div className="graph-wrap">
-                    <SchemaGraphView
-                      key={spec!.sourceName}
-                      spec={spec!.doc}
-                      initialSchema={graphFocus ?? undefined}
-                      height="100%"
-                      hidePanel
-                      onSelectSchema={setGraphFocus}
-                    />
-                  </div>
-                  {graphFocus && (
-                    <>
-                      <Resizer
-                        width={settings.graphPanel}
-                        onChange={(graphPanel) => patchSettings({ graphPanel })}
-                        min={260}
-                        max={620}
-                      />
-                      <section
-                        className="pane detail"
-                        style={{ width: settings.graphPanel, flex: `0 0 ${settings.graphPanel}px` }}
-                      >
-                        <div className="detail-head">
-                          <span className="meta">Schema</span>
-                          <span className="spacer" />
-                          <button
-                            className="icon-btn tight"
-                            onClick={() => setGraphFocus(null)}
-                            title="Close panel"
-                            aria-label="Close schema panel"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                        <SchemaView
-                          spec={spec!}
-                          name={graphFocus}
-                          onSelectSchema={setGraphFocus}
-                          onSelectOperation={(id) => {
-                            const found = spec!.operations.find((op) => op.id === id);
-                            if (found) {
-                              setOperation(found);
-                              setTab("operations");
-                              setView("operation");
-                            }
-                          }}
-                        />
-                      </section>
-                    </>
-                  )}
-                </div>
+                <GraphView
+                  spec={spec!}
+                  focus={graphFocus}
+                  onFocus={setGraphFocus}
+                  panelWidth={settings.graphPanel}
+                  onPanelWidth={(graphPanel) => patchSettings({ graphPanel })}
+                  onSelectOperation={showOperation}
+                />
               )}
 
               {view === "operation" &&
@@ -1217,14 +1176,7 @@ export default function App() {
                       setTab("schemas");
                       setView("schema");
                     }}
-                    onSelectOperation={(id) => {
-                      const found = spec!.operations.find((op) => op.id === id);
-                      if (found) {
-                        setOperation(found);
-                        setTab("operations");
-                        setView("operation");
-                      }
-                    }}
+                    onSelectOperation={showOperation}
                   />
                 ) : (
                   <div className="empty">
