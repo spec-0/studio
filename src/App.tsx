@@ -21,6 +21,7 @@ import { Updater } from "./components/UpdateDialog";
 import { TitleBar } from "./components/TitleBar";
 import { StatusBar } from "./components/StatusBar";
 import { GraphView } from "./components/GraphView";
+import { RecordBar } from "./components/RecordBar";
 import { fileName } from "./lib/platform";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import {
@@ -1096,31 +1097,7 @@ export default function App() {
                       />
                     )}
                     {viewingRecord && (
-                      /*
-                       * Says plainly that these panes are a record, not a live
-                       * result. Without it a replayed 200 from three weeks ago
-                       * is indistinguishable from one just sent, and the request
-                       * fields — restored from what was recorded — look like
-                       * values the developer typed. Sending, or picking another
-                       * operation, clears it.
-                       */
-                      <div className="record-bar" role="status">
-                        <span className="record-bar-dot" aria-hidden="true" />
-                        <span className="record-bar-text">
-                          Showing a recorded request from{" "}
-                          <strong>{history.relativeTime(viewingRecord.at)}</strong> — returned{" "}
-                          <strong>{viewingRecord.status}</strong> in {viewingRecord.ms}ms
-                          {viewingRecord.mock ? " from a mock" : ""}. Send to run it again.
-                        </span>
-                        <button
-                          className="record-bar-close"
-                          onClick={() => setViewingRecord(null)}
-                          aria-label="Dismiss"
-                          title="Dismiss"
-                        >
-                          ×
-                        </button>
-                      </div>
+                      <RecordBar entry={viewingRecord} onDismiss={() => setViewingRecord(null)} />
                     )}
                     <div className="split">
                       <section className="pane request">
