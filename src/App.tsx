@@ -101,10 +101,7 @@ import {
 } from "./lib/scratch";
 import { describeExpiry } from "./lib/oauth";
 import {
-  planRun,
   toMarkdown,
-  type RunOptions,
-  type RunResult,
 } from "./lib/runner";
 import {
   sentToMock,
@@ -118,6 +115,7 @@ import {
 } from "./lib/response";
 import { DEFAULT_SETTINGS, useSettings, type Settings } from "./hooks/useSettings";
 import { useTargeting } from "./hooks/useTargeting";
+import { useBulkRun } from "./hooks/useBulkRun";
 import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
@@ -202,10 +200,6 @@ export default function App() {
   const [showEnvs, setShowEnvs] = useState(false);
   const [showConnection, setShowConnection] = useState(false);
   const [showRun, setShowRun] = useState(false);
-  const [runResults, setRunResults] = useState<RunResult[]>([]);
-  const [runningOp, setRunningOp] = useState<OperationSpec | null>(null);
-  const [runScope, setRunScope] = useState("");
-  const runCancel = useRef(false);
   const [showOAuth, setShowOAuth] = useState<{ prefill?: string } | null>(null);
   const [connection, setConnection] = useState<ConnectionSettings>(DEFAULT_CONNECTION);
   const [showSwitcher, setShowSwitcher] = useState(false);
@@ -218,6 +212,18 @@ export default function App() {
 
   const { mockUrl, mock, mockBehind, unverifiedTarget, targetingMock, targets, envVersionSkew } =
     useTargeting({ session, current, spec, server, vars, connection });
+
+  const { runResults, runningOp, runScope, runOperations, cancelRun } = useBulkRun({
+    spec,
+    server,
+    auth,
+    vars,
+    mock,
+    mockUrl,
+    connection,
+    currentId: current?.id,
+    setRequests,
+  });
 
   const values = useRef<RequestValues>({ pathParams: {}, queryParams: {}, headerParams: {}, body: "" });
   const onValuesChange = useCallback((next: RequestValues) => {
@@ -274,94 +280,6 @@ export default function App() {
       setLoading(null);
     }
   }, [session, current]);
-
-  /**
-   * Run a set of operations and check each response against the spec.
-   *
-   * Sequential on purpose: a burst of concurrent requests at an internal service
-   * is a load test nobody asked for. Results stream in as they land, so a long
-   * run is watchable and can be stopped with partial results kept — an aborted
-   * run that discarded what it had learned would be worse than not stopping.
-   */
-  const runOperations = useCallback(
-    async (operations: OperationSpec[], options: RunOptions, scope: string) => {
-      if (!spec) return;
-      runCancel.current = false;
-      setRunScope(scope);
-      setRunResults([]);
-      const runId = `run_${Date.now().toString(36)}`;
-      const planned = planRun(operations, vars, options);
-      const collected: RunResult[] = [];
-
-      for (const item of planned) {
-        if (runCancel.current) break;
-        if (item.skip) {
-          collected.push({ operation: item.operation, verdict: "skipped", skip: item.skip });
-          setRunResults([...collected]);
-          continue;
-        }
-
-        setRunningOp(item.operation);
-        try {
-          const plan = buildPlan(
-            item.operation,
-            server,
-            item.pathParams,
-            item.queryParams,
-            {},
-            auth,
-            "",
-            vars,
-            mock,
-          );
-          const response = await send(plan, {
-            ...transportFor(connection, plan.url),
-            jar: current?.id,
-          });
-          const declared = declaredResponse(item.operation.responses, response.status);
-          const verdict = validateResponse(spec.doc, declared?.schema, response.json);
-          collected.push({
-            operation: item.operation,
-            verdict: verdict.status,
-            status: response.status,
-            ms: response.ms,
-            validation: verdict,
-          });
-
-          await history.record({
-            method: item.operation.method,
-            path: item.operation.path,
-            url: plan.url,
-            status: response.status,
-            ms: response.ms,
-            bytes: response.bytes,
-            specTitle: spec.title,
-            operationId: item.operation.id,
-            headers: plan.headers,
-            body: describeBody(plan.body),
-            bodyKind: plan.body?.kind,
-            validation: verdict.status,
-            mock: sentToMock(plan.url, mockUrl),
-            statusText: response.statusText,
-            responseHeaders: response.headers,
-            responseBody: response.binary ? "(binary — not stored)" : response.bodyText,
-            runId,
-          });
-        } catch (error) {
-          collected.push({
-            operation: item.operation,
-            verdict: "error",
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-        setRunResults([...collected]);
-      }
-
-      setRunningOp(null);
-      setRequests(await history.loadHistory());
-    },
-    [spec, server, auth, vars, mock, mockUrl, connection, current?.id],
-  );
 
   const saveMockKey = useCallback(
     async (key: string) => {
@@ -1574,9 +1492,7 @@ export default function App() {
           results={runResults}
           current={runningOp}
           onRun={(operations, options, scope) => void runOperations(operations, options, scope)}
-          onCancel={() => {
-            runCancel.current = true;
-          }}
+          onCancel={cancelRun}
           onCopyReport={() =>
             void navigator.clipboard.writeText(
               toMarkdown(runResults, {
