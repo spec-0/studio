@@ -66,15 +66,12 @@ import {
 import {
   DEFAULT_CONNECTION,
   hostOf,
-  isUnverified,
   loadConnection,
   saveConnection,
   transportFor,
   type ConnectionSettings,
 } from "./lib/connection";
 import {
-  DEFAULT_API_URL,
-  absoluteMockUrl,
   apiIdFromRef,
   getApiConsumers,
   consumersUrl,
@@ -110,10 +107,6 @@ import {
   type RunResult,
 } from "./lib/runner";
 import {
-  buildTargets,
-  environmentFor,
-  isTargetingMock,
-  mockCredentials,
   sentToMock,
 } from "./lib/targets";
 import {
@@ -124,6 +117,7 @@ import {
   suggestedFileName,
 } from "./lib/response";
 import { DEFAULT_SETTINGS, useSettings, type Settings } from "./hooks/useSettings";
+import { useTargeting } from "./hooks/useTargeting";
 import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
@@ -131,9 +125,7 @@ import {
   describeImpact,
   describeMockRefresh,
   diffSpecs,
-  environmentSkew,
   isNoteworthy,
-  mockIsBehind,
   updateMarks,
 } from "./lib/sync";
 
@@ -224,6 +216,9 @@ export default function App() {
   const { oauthToken, oauthBusy, oauthError, setOauthError, acquireToken, usableToken, clearToken } =
     useOAuth(current, envFile.activeId, vars, connection);
 
+  const { mockUrl, mock, mockBehind, unverifiedTarget, targetingMock, targets, envVersionSkew } =
+    useTargeting({ session, current, spec, server, vars, connection });
+
   const values = useRef<RequestValues>({ pathParams: {}, queryParams: {}, headerParams: {}, body: "" });
   const onValuesChange = useCallback((next: RequestValues) => {
     values.current = next;
@@ -251,35 +246,6 @@ export default function App() {
     setConnection(next);
     void saveConnection(next);
   }, []);
-
-  /**
-   * Resolve on read, not just on import: entries added before mock URLs were
-   * absolutised still hold a bare path, and a stale library row shouldn't leave
-   * the target selector inserting something that can't be sent.
-   */
-  const mockUrl = useMemo(
-    () => absoluteMockUrl(session?.apiUrl ?? DEFAULT_API_URL, current?.mockUrl) ?? null,
-    [current?.mockUrl, session?.apiUrl],
-  );
-  /** True when the mock serves an older contract than the spec we hold. */
-  const mockBehind = useMemo(() => mockIsBehind(current ?? {}), [current]);
-
-  /** Is the request about to be sent somewhere we've stopped verifying? */
-  const unverifiedTarget = useMemo(
-    () => isUnverified(connection, interpolate(server, vars)),
-    [connection, server, vars],
-  );
-
-  const mock = useMemo(
-    () => mockCredentials(mockUrl, current?.mockApiKey, session),
-    [mockUrl, current?.mockApiKey, session],
-  );
-
-  /** True while the address bar is aimed at the mock — drives the key prompt. */
-  const targetingMock = useMemo(
-    () => isTargetingMock(interpolate(server, vars), mockUrl),
-    [server, vars, mockUrl],
-  );
 
   /**
    * Rebuild the mock against the spec we now hold.
@@ -405,30 +371,6 @@ export default function App() {
       setCurrent(next.find((entry) => entry.id === current.id) ?? current);
     },
     [current],
-  );
-
-  /** What the address bar can point at — see `buildTargets`. */
-  const targets = useMemo(
-    () => buildTargets(spec?.servers ?? [], mockUrl, current?.environments ?? []),
-    [spec, mockUrl, current?.environments],
-  );
-
-  /** The platform environment currently being targeted, if any. */
-  const activeEnvTarget = useMemo(
-    () => environmentFor(current?.environments ?? [], interpolate(server, vars)),
-    [current?.environments, server, vars],
-  );
-
-  /**
-   * The environment serves a different version than the spec we hold.
-   *
-   * Worth saying plainly, because it explains a whole class of confusing results: a
-   * request built from 1.5.0's schema against a host still running 1.4.0 can fail in
-   * ways that look like the client is wrong.
-   */
-  const envVersionSkew = useMemo(
-    () => environmentSkew(activeEnvTarget, spec?.version),
-    [activeEnvTarget, spec?.version],
   );
 
   // Remember where you were in each API, so coming back doesn't mean re-entering everything.
