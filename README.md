@@ -11,7 +11,7 @@
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/spec-0/studio?color=52525B"></a>
 </p>
 
-spec0 Studio is a desktop app for calling and testing APIs, for developers who
+**spec0 Studio** is a desktop app for calling and testing APIs, for developers who
 already have an OpenAPI spec (the YAML or JSON file that describes an API).
 
 Instead of building a collection of requests by hand, you open the spec and
