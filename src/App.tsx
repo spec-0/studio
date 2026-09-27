@@ -1,61 +1,58 @@
-import { useCallback,    useState } from "react";
-import { Sidebar } from "./components/Sidebar";
-import { DocumentView } from "./components/DocumentView";
-import { PublishDialog } from "./components/PublishDialog";
-import { canPublish, whyNotPublishable } from "./lib/publish";
-import { OperationView } from "./components/OperationView";
-import { Inspector } from "./components/Inspector";
-import { SchemaView } from "./components/SchemaView";
-import { UrlBar } from "./components/UrlBar";
-import { MockKeyBar } from "./components/MockKeyBar";
-import { EnvironmentsDialog } from "./components/EnvironmentsDialog";
-import { ConnectionDialog } from "./components/ConnectionDialog";
-import { OAuthDialog } from "./components/OAuthDialog";
-import { RunDialog } from "./components/RunDialog";
-import { OpenDialog } from "./components/OpenDialog";
-import { Library } from "./components/Library";
-import { ScratchView } from "./components/ScratchView";
+import { useCallback, useState } from "react";
 import { ApiSwitcher } from "./components/ApiSwitcher";
-import { Updater } from "./components/UpdateDialog";
-import { TitleBar } from "./components/TitleBar";
-import { StatusBar } from "./components/StatusBar";
+import { ConnectionDialog } from "./components/ConnectionDialog";
+import { DocumentView } from "./components/DocumentView";
+import { EnvironmentsDialog } from "./components/EnvironmentsDialog";
 import { GraphView } from "./components/GraphView";
+import { Inspector } from "./components/Inspector";
+import { Library } from "./components/Library";
+import { MockKeyBar } from "./components/MockKeyBar";
+import { OAuthDialog } from "./components/OAuthDialog";
+import { OpenDialog } from "./components/OpenDialog";
+import { OperationView } from "./components/OperationView";
+import { PublishDialog } from "./components/PublishDialog";
 import { RecordBar } from "./components/RecordBar";
-import {   type ParsedSpec } from "./lib/spec";
-import { interpolate } from "./lib/env";
-import * as library from "./lib/library";
-import type {  LibraryEntry } from "./lib/library";
-import {
-  hostOf,
-} from "./lib/connection";
-import {
-  apiIdFromRef,
-  consumersUrl,
-  apiUrl,
-} from "./lib/spec0";
-import { describeExpiry } from "./lib/oauth";
-import {
-  toMarkdown,
-} from "./lib/runner";
-import {  useSettings } from "./hooks/useSettings";
-import { useTargeting } from "./hooks/useTargeting";
-import { useBulkRun } from "./hooks/useBulkRun";
-import { usePublish } from "./hooks/usePublish";
-import { useShortcuts } from "./hooks/useShortcuts";
-import { useOAuth } from "./hooks/useOAuth";
-import { useEnvironments } from "./hooks/useEnvironments";
+import { RunDialog } from "./components/RunDialog";
+import { SchemaView } from "./components/SchemaView";
+import { ScratchView } from "./components/ScratchView";
+import { Sidebar } from "./components/Sidebar";
+import { StatusBar } from "./components/StatusBar";
+import { TitleBar } from "./components/TitleBar";
+import { Updater } from "./components/UpdateDialog";
+import { UrlBar } from "./components/UrlBar";
 import { useBoot } from "./hooks/useBoot";
-import { useWorkspace } from "./hooks/useWorkspace";
-import { useLibrary } from "./hooks/useLibrary";
-import { useRequestSender } from "./hooks/useRequestSender";
-import { useDocumentFacts } from "./hooks/useDocumentFacts";
+import { useBulkRun } from "./hooks/useBulkRun";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
+import { useDialogs } from "./hooks/useDialogs";
+import { useDocumentFacts } from "./hooks/useDocumentFacts";
+import { useEnvironments } from "./hooks/useEnvironments";
+import { useLibrary } from "./hooks/useLibrary";
+import { useOAuth } from "./hooks/useOAuth";
+import { usePublish } from "./hooks/usePublish";
+import { useRequestHistory } from "./hooks/useRequestHistory";
+import { useRequestSender } from "./hooks/useRequestSender";
 import { useScratchPad } from "./hooks/useScratchPad";
 import { useSession } from "./hooks/useSession";
-import { useDialogs } from "./hooks/useDialogs";
-import { useRequestHistory } from "./hooks/useRequestHistory";
+import { useSettings } from "./hooks/useSettings";
+import { useShortcuts } from "./hooks/useShortcuts";
+import { useTargeting } from "./hooks/useTargeting";
+import { useWorkspace } from "./hooks/useWorkspace";
+import { hostOf } from "./lib/connection";
+import { interpolate } from "./lib/env";
+import * as library from "./lib/library";
+import type { LibraryEntry } from "./lib/library";
+import { describeExpiry } from "./lib/oauth";
+import { canPublish, whyNotPublishable } from "./lib/publish";
+import { toMarkdown } from "./lib/runner";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
+import type { ParsedSpec } from "./lib/spec";
+import { apiIdFromRef, apiUrl, consumersUrl } from "./lib/spec0";
 
+/**
+ * The composition root: wires the hooks in `src/hooks` to the components in
+ * `src/components`. State and behaviour live in the hooks; logic that doesn't
+ * need React lives in `src/lib`.
+ */
 export default function App() {
   const [dragging, setDragging] = useState(false);
 
@@ -175,9 +172,7 @@ export default function App() {
 
   const { git, consumers, resetDocumentFacts } = useDocumentFacts(route, current, session);
 
-
-  // ── opening ──────────────────────────────────────────────────────────────────
-
+  /** Show a parsed spec, with a clean response pane and no facts from the last document. */
   const applySpec = useCallback(
     (parsed: ParsedSpec, entry: LibraryEntry, text: string) => {
       showSpec(parsed, entry, text);
@@ -229,7 +224,6 @@ export default function App() {
     pad: setPad,
     connection: setConnection,
   });
-
 
   const goLibrary = useCallback(() => {
     setRoute("library");

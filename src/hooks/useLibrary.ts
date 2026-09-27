@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import type { HistoryEntry } from "../lib/history";
 import * as library from "../lib/library";
 import type { ApiSource, LibraryEntry } from "../lib/library";
 import { fileName } from "../lib/platform";
@@ -20,7 +21,6 @@ import {
   isNoteworthy,
   updateMarks,
 } from "../lib/sync";
-import type { HistoryEntry } from "../lib/history";
 
 /**
  * The library of APIs: adding, opening, refreshing and removing entries,
