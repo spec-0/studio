@@ -380,10 +380,12 @@ export interface EnvTarget {
  * The array's order is the promotion order the platform holds — there is no field
  * to sort by, deliberately — so it is preserved as received.
  *
- * A platform without this endpoint answers 404, and so does an API the caller
- * can't see. Both come back as "no environments" rather than an error: this
- * enriches an API that already opened fine, and failing the open over it would
- * trade a working client for a missing convenience.
+ * A 404 comes back as "no environments" rather than an error, on purpose. It
+ * can mean the API has been removed or isn't visible to this org, or a platform
+ * that doesn't serve this route. In every case there are no targets to offer,
+ * and this only enriches an API that already opened fine — failing the open
+ * over it would trade a working client for a missing convenience. (Unlike
+ * `refreshMock`, there is no action here the user could be told to take.)
  */
 export async function listApiEnvironments(
   session: Session,
@@ -724,8 +726,11 @@ export async function refreshMock(session: Session, mockServerId: string): Promi
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     if (response.status === 404) {
+      // Every platform serves this route now, so a 404 means the mock itself is
+      // gone (deleted, or not visible to this org). The mock id cached on the
+      // library entry is what went stale; re-pulling the API replaces it.
       throw new Spec0Error(
-        "This platform doesn't support refreshing mocks yet — it needs a release that includes the refresh endpoint.",
+        "That mock server no longer exists — it may have been deleted. Re-pull the API from spec0 to pick up its current mock.",
         404,
         url,
         body,
