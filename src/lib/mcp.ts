@@ -11,6 +11,7 @@ import {
   MOCK_KEY_HEADER,
   Spec0Error,
   type CreatedMock,
+  type MockKey,
   type MockServer,
   type RefreshedMock,
   type Session,
@@ -63,6 +64,8 @@ export interface ToolDeps {
   listMocks: (session: Session) => Promise<MockServer[]>;
   createMock: (session: Session, apiId: string) => Promise<CreatedMock>;
   refreshMock: (session: Session, mockServerId: string) => Promise<RefreshedMock>;
+  /** A mock's key from Spec0, or null when it won't say (404, older platform). */
+  getMockApiKey: (session: Session, mockServerId: string) => Promise<MockKey | null>;
   setMock: (
     id: string,
     mock: {
@@ -522,6 +525,8 @@ async function publishedApi(
     const apiId = apiIdFromRef(entry.source.ref);
     return apiId ? { apiId, matchedByName: false } : null;
   }
+  // Published from Studio: the link was recorded then.
+  if (entry.spec0ApiId) return { apiId: entry.spec0ApiId, matchedByName: false };
   // A spec published from a file keeps its file source; match it by the name
   // Studio suggests when publishing it.
   const name = deriveApiName(entry.title);
@@ -533,10 +538,9 @@ async function publishedApi(
 
 function notPublished(entry: LibraryEntry): string {
   const how =
-    entry.source.kind === "file"
-      ? "The user can publish it from Studio: open the API and choose Publish."
-      : "Studio can publish specs opened from a file; this one came from " +
-        (entry.source.kind === "url" ? "a URL." : "the bundled sample.");
+    entry.source.kind === "file" || entry.source.kind === "url"
+      ? "The user can publish it from Studio: open the API and choose Create mock, or Publish."
+      : "This is the bundled sample, which isn't a real API and can't be published.";
   return `${entry.title} isn't published to Spec0 yet, so it has no hosted mock. ${how}`;
 }
 
@@ -556,6 +560,27 @@ async function operationsOf(entry: LibraryEntry, deps: ToolDeps): Promise<Operat
   } catch {
     return [];
   }
+}
+
+const NO_KEY_NOTE =
+  "Studio doesn't have this mock's key and Spec0 didn't return it. The user can copy it from the Spec0 dashboard and paste it into Studio, which asks for it when a request is pointed at the mock.";
+
+/**
+ * Ask Spec0 for a key Studio doesn't have, and keep it. Null when Spec0 won't
+ * give it (404 or unreachable); the caller then falls back to the note above.
+ */
+async function fetchMissingKey(
+  entry: LibraryEntry,
+  mockServerId: string | undefined,
+  session: Session,
+  deps: ToolDeps,
+): Promise<string | undefined> {
+  if (!mockServerId) return undefined;
+  const found = await deps.getMockApiKey(session, mockServerId).catch(() => null);
+  if (!found) return undefined;
+  await deps.setMock(entry.id, { mockApiKey: found.apiKey, mockServerId });
+  deps.libraryChanged();
+  return found.apiKey;
 }
 
 const getMockServer: Tool = async (args, deps) => {
@@ -579,7 +604,9 @@ const getMockServer: Tool = async (args, deps) => {
       `${entry.title} has no hosted mock. Create one with create_mock_server (the API has to be published to Spec0).`,
     );
   }
-  const key = entry.mockApiKey;
+  const key =
+    entry.mockApiKey ??
+    (await fetchMissingKey(entry, entry.mockServerId ?? mock?.mockServerId, session, deps));
   const specVersion = mock?.specVersion ?? entry.mockSpecVersion ?? null;
   return text({
     api: { id: entry.id, title: entry.title, versionInStudio: entry.version },
@@ -591,12 +618,7 @@ const getMockServer: Tool = async (args, deps) => {
       ? { versionNote: `The mock serves ${specVersion}; Studio holds ${entry.version}. refresh_mock_server rebuilds it from the latest published version.` }
       : {}),
     curl: curlExample(mockUrl, key, await operationsOf(entry, deps)),
-    ...(key
-      ? {}
-      : {
-          note:
-            "Studio doesn't have this mock's key. Spec0 shows a key only when the mock is created. The user can copy it from the Spec0 dashboard and paste it into Studio, which asks for it when a request is pointed at the mock.",
-        }),
+    ...(key ? {} : { note: NO_KEY_NOTE }),
   });
 };
 
@@ -625,7 +647,10 @@ const createMockServer: Tool = async (args, deps) => {
   });
   deps.libraryChanged();
 
-  const key = created.apiKey ?? entry.mockApiKey ?? undefined;
+  const key =
+    created.apiKey ??
+    entry.mockApiKey ??
+    (await fetchMissingKey(entry, created.mockServerId, session, deps));
   return text({
     api: { id: entry.id, title: entry.title },
     ...(published.matchedByName ? { spec0Api: published.apiName } : {}),
@@ -636,10 +661,7 @@ const createMockServer: Tool = async (args, deps) => {
     ...(created.mockUrl ? { curl: curlExample(created.mockUrl, key, await operationsOf(entry, deps)) } : {}),
     ...(key
       ? { note: "Studio saved the mock and its key; get_mock_server returns them later." }
-      : {
-          note:
-            "This API already had a mock, and Spec0 only shows a key when a mock is first created. The user can copy the key from the Spec0 dashboard and paste it into Studio.",
-        }),
+      : { note: NO_KEY_NOTE }),
   });
 };
 

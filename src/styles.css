@@ -1937,3 +1937,143 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .mocks-table td.mock-url { white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
 .mocks-table td.mock-api { white-space: nowrap; }
 .mocks-table td.mock-actions { width: 36px; text-align: right; }
+
+/* ─── Create a mock server ────────────────────────────────────────────────── */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Buttons inside a library card sit above the card-wide "open" overlay. */
+.api-card button:not(.api-card-open),
+.api-card input { position: relative; z-index: 1; }
+.api-card .card-mock { padding: 2px 8px; font-size: 11px; }
+.api-card .btn.card-mock:not(.ghost) { color: hsl(var(--primary)); border-color: hsl(var(--primary) / 0.45); }
+
+/* In the Open dialog's catalog: an action at the end of the row. */
+.row .row-action { margin-left: 8px; padding: 2px 8px; font-size: 11px; color: hsl(var(--primary)); }
+
+.modal.journey { width: min(720px, 100%); }
+.modal.journey .journey-api { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px; }
+.journey-body { display: flex; min-height: 320px; flex: 1; overflow: hidden; }
+
+.journey-steps {
+  list-style: none;
+  flex: 0 0 214px;
+  padding: 16px 14px;
+  border-right: 1px solid hsl(var(--border));
+  background: hsl(var(--surface));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.journey-step { display: flex; gap: 10px; align-items: flex-start; color: hsl(var(--ink-3)); }
+.journey-step-text { display: grid; gap: 1px; min-width: 0; }
+.journey-step-text .field-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.journey-dot {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  border: 1px solid hsl(var(--border-strong));
+  background: hsl(var(--bg));
+}
+.journey-step.current { color: hsl(var(--ink)); font-weight: 500; }
+.journey-step.current .journey-dot {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-fg));
+}
+.journey-step.done { color: hsl(var(--ink-2)); }
+.journey-step.done .journey-dot,
+.journey-step.skipped .journey-dot {
+  border-color: hsl(var(--success) / 0.5);
+  color: hsl(var(--success));
+}
+.journey-step.skipped > .journey-step-text > span:first-child { text-decoration: line-through; text-decoration-color: hsl(var(--ink-3) / 0.6); }
+
+.journey-main { flex: 1; min-width: 0; padding: 18px 20px 20px; overflow-y: auto; }
+.journey-main:focus { outline: none; }
+.journey-heading { font-size: 15px; font-weight: 600; letter-spacing: -0.005em; margin-bottom: 6px; }
+.journey-lead { color: hsl(var(--ink-2)); max-width: 460px; }
+.journey-usage { margin-top: 12px; }
+.journey-note { margin-top: 8px; max-width: 460px; }
+.journey-notice { margin-top: 12px; color: hsl(var(--ink-2)); }
+.journey-busy { margin-top: 12px; display: flex; align-items: center; gap: 6px; }
+.journey-problem { margin-top: 12px; max-width: 460px; align-items: flex-start; }
+.journey-problem p + p { margin-top: 2px; }
+
+.journey-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.journey-actions.column { flex-direction: column; align-items: stretch; max-width: 280px; }
+
+.journey-field { display: grid; gap: 4px; margin-top: 14px; max-width: 360px; }
+.journey-field > span:first-child { font-weight: 500; }
+.journey-field input,
+.journey-field select { max-width: none; width: 100%; padding: 5px 8px; font-size: 12.5px; }
+.journey-field input { font-family: var(--font-mono); }
+.field-meta.warn { color: hsl(var(--warning)); }
+
+.journey-kv {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--surface));
+}
+.journey-k { flex: 0 0 56px; color: hsl(var(--ink-3)); font-size: 11.5px; }
+.journey-v { flex: 1; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.journey-paste { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.journey-paste .field-meta { flex-basis: 100%; }
+.journey-paste .mock-key-field input { width: 200px; }
+
+.journey-pick { list-style: none; margin-top: 12px; display: grid; gap: 2px; }
+.journey-pick .row { width: 100%; }
+
+.mocks-table td.mock-key { white-space: nowrap; }
+.mock-key-cell { display: flex; align-items: center; gap: 2px; }
+.mock-key-cell code { font-size: 11.5px; margin-right: 6px; }
+.mock-key-confirm { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: hsl(var(--warning)); white-space: normal; }
+.mock-key-confirm .btn { padding: 2px 8px; font-size: 11px; }
+.modal.journey:focus { outline: none; }
+
+/* The open API's name gets a row of its own, above its views and actions. */
+.apihead { flex: none; display: flex; flex-direction: column; min-width: 0; }
+.apibar-title {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 8px;
+  background: hsl(var(--bg));
+  min-width: 0;
+}
+.apibar-title .api-switch { min-width: 0; max-width: none; flex: 0 1 auto; }
+.apibar-title .spec-name { font-weight: 600; font-size: 13.5px; letter-spacing: -0.005em; }
+.apibar-title .spec-version {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: hsl(var(--ink-3));
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.apibar-title .tag { flex: none; }
+.apibar.tools { height: 38px; flex-basis: 38px; padding-left: 12px; }
+.apibar.tools .segmented { margin-left: 0; }
+/* Anchored near the top rather than centred, so the buttons don't move under
+   the pointer when a result appears above them. */
+.scrim.journey-scrim { align-items: start; padding-top: min(12vh, 96px); }

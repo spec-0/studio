@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Check, Copy, Plus, RefreshCw, Server } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, KeyRound, Plus, RefreshCw, Server } from "lucide-react";
 import type { MockRow } from "../lib/spec0";
+import { maskKey } from "../lib/mockJourney";
+import type { MockKeyState } from "../hooks/useMocks";
 
 interface Props {
   signedIn: boolean;
@@ -10,6 +12,11 @@ interface Props {
   error: string | null;
   onRefresh: () => void;
   onSignIn: () => void;
+  /** Start "Create a mock server" — it asks which API. */
+  onCreate: () => void;
+  keys: Record<string, MockKeyState>;
+  onLoadKey: (mockServerId: string) => Promise<string | null>;
+  onRegenerateKey: (mockServerId: string) => void;
 }
 
 /**
@@ -18,13 +25,27 @@ interface Props {
  * Signed out, it explains what a hosted mock is and offers a way to sign in.
  * Nothing on this page is needed for the rest of Studio to work.
  */
-export function MocksView({ signedIn, orgName, mocks, loading, error, onRefresh, onSignIn }: Props) {
+export function MocksView({
+  signedIn,
+  orgName,
+  mocks,
+  loading,
+  error,
+  onRefresh,
+  onSignIn,
+  onCreate,
+  keys,
+  onLoadKey,
+  onRegenerateKey,
+}: Props) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
 
-  const copy = (url: string) => {
-    void navigator.clipboard?.writeText(url).then(() => {
-      setCopied(url);
-      window.setTimeout(() => setCopied((prev) => (prev === url ? null : prev)), 1400);
+  const copy = (value: string, tag = value) => {
+    void navigator.clipboard?.writeText(value).then(() => {
+      setCopied(tag);
+      window.setTimeout(() => setCopied((prev) => (prev === tag ? null : prev)), 1400);
     });
   };
 
@@ -35,7 +56,7 @@ export function MocksView({ signedIn, orgName, mocks, loading, error, onRefresh,
           <div>
             <h1>Mocks</h1>
             <p className="page-sub">
-              Hosted mock servers answer with examples from the spec, so you can call an API before
+              Hosted mock servers answer with example data generated from the spec, so you can call an API before
               it exists.
             </p>
           </div>
@@ -45,11 +66,9 @@ export function MocksView({ signedIn, orgName, mocks, loading, error, onRefresh,
               <button className="btn" onClick={onRefresh} disabled={loading}>
                 <RefreshCw size={12} className={loading ? "spin" : undefined} /> Refresh
               </button>
-              <span title="Coming soon">
-                <button className="btn primary" disabled aria-disabled>
-                  <Plus size={13} /> Create a mock server
-                </button>
-              </span>
+              <button className="btn primary" onClick={onCreate}>
+                <Plus size={13} /> Create a mock server
+              </button>
             </>
           )}
         </div>
@@ -81,7 +100,13 @@ export function MocksView({ signedIn, orgName, mocks, loading, error, onRefresh,
         {signedIn && !error && mocks && mocks.length === 0 && (
           <div className="placeholder-card">
             <Server size={18} aria-hidden />
-            <p>No hosted mocks in {orgName ?? "your organisation"} yet.</p>
+            <div>
+              <p>No hosted mocks in {orgName ?? "your organisation"} yet.</p>
+              <p className="field-meta">
+                Create one from any API in your library. Studio publishes it to your organisation
+                first if it isn&apos;t there yet.
+              </p>
+            </div>
           </div>
         )}
 
@@ -92,6 +117,7 @@ export function MocksView({ signedIn, orgName, mocks, loading, error, onRefresh,
                 <th>API</th>
                 <th>URL</th>
                 <th>Spec version</th>
+                <th>Key</th>
                 <th aria-label="Actions" />
               </tr>
             </thead>
@@ -104,6 +130,36 @@ export function MocksView({ signedIn, orgName, mocks, loading, error, onRefresh,
                   </td>
                   <td className="name mock-url">{mock.url}</td>
                   <td className="meta">{mock.specVersion ?? "—"}</td>
+                  <td className="mock-key">
+                    {mock.mockServerId ? (
+                      <KeyCell
+                        id={mock.mockServerId}
+                        apiName={mock.apiName}
+                        state={keys[mock.mockServerId]}
+                        revealed={revealed === mock.mockServerId}
+                        confirming={confirming === mock.mockServerId}
+                        copied={copied === `key:${mock.mockServerId}`}
+                        onReveal={async () => {
+                          const id = mock.mockServerId!;
+                          if (revealed === id) return setRevealed(null);
+                          if ((await onLoadKey(id)) !== null) setRevealed(id);
+                        }}
+                        onCopy={async () => {
+                          const key = await onLoadKey(mock.mockServerId!);
+                          if (key) copy(key, `key:${mock.mockServerId}`);
+                        }}
+                        onAskRegenerate={() => setConfirming(mock.mockServerId)}
+                        onCancelRegenerate={() => setConfirming(null)}
+                        onRegenerate={() => {
+                          setConfirming(null);
+                          setRevealed(mock.mockServerId);
+                          onRegenerateKey(mock.mockServerId!);
+                        }}
+                      />
+                    ) : (
+                      <span className="meta">—</span>
+                    )}
+                  </td>
                   <td className="mock-actions">
                     <button
                       className="icon-btn"
@@ -122,6 +178,86 @@ export function MocksView({ signedIn, orgName, mocks, loading, error, onRefresh,
 
         {signedIn && loading && !mocks && <p className="meta">Loading mocks…</p>}
       </div>
+    </div>
+  );
+}
+
+/** One mock's key: masked until asked for, with copy and a confirmed regenerate. */
+function KeyCell({
+  apiName,
+  state,
+  revealed,
+  confirming,
+  copied,
+  onReveal,
+  onCopy,
+  onAskRegenerate,
+  onCancelRegenerate,
+  onRegenerate,
+}: {
+  id: string;
+  apiName: string;
+  state: MockKeyState | undefined;
+  revealed: boolean;
+  confirming: boolean;
+  copied: boolean;
+  onReveal: () => void;
+  onCopy: () => void;
+  onAskRegenerate: () => void;
+  onCancelRegenerate: () => void;
+  onRegenerate: () => void;
+}) {
+  if (confirming) {
+    return (
+      <div className="mock-key-confirm" role="alert">
+        <span>The current key stops working straight away.</span>
+        <button className="btn" onClick={onRegenerate}>
+          Make a new key
+        </button>
+        <button className="btn ghost" onClick={onCancelRegenerate}>
+          Keep
+        </button>
+      </div>
+    );
+  }
+  const known = state?.status === "known" ? state.key : null;
+  return (
+    <div className="mock-key-cell">
+      <code className="meta" title={state?.status === "unavailable" ? state.message : undefined}>
+        {state?.status === "loading"
+          ? "…"
+          : known
+            ? revealed
+              ? known
+              : maskKey(known)
+            : state?.status === "unavailable"
+              ? "not available"
+              : "••••••••"}
+      </code>
+      <button
+        className="icon-btn tight"
+        onClick={onReveal}
+        aria-label={revealed ? `Hide the ${apiName} mock key` : `Show the ${apiName} mock key`}
+        title={revealed ? "Hide key" : "Show key"}
+      >
+        {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
+      </button>
+      <button
+        className="icon-btn tight"
+        onClick={onCopy}
+        aria-label={`Copy the ${apiName} mock key`}
+        title="Copy key"
+      >
+        {copied ? <Check size={13} /> : <Copy size={13} />}
+      </button>
+      <button
+        className="icon-btn tight"
+        onClick={onAskRegenerate}
+        aria-label={`Regenerate the ${apiName} mock key`}
+        title="Regenerate key"
+      >
+        <KeyRound size={13} />
+      </button>
     </div>
   );
 }

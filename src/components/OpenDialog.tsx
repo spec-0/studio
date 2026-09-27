@@ -5,7 +5,9 @@ import {
   adoptCliSession,
   createMock,
   fetchTeamApiSpec,
+  getMockApiKey,
   loadCatalog as fetchCatalog,
+  SignInCancelled,
   signInViaBrowser,
   verify,
   type CatalogEntry,
@@ -71,6 +73,10 @@ export function OpenDialog({
    */
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState("");
+  /** What the last create did, shown until the next action. */
+  const [created, setCreated] = useState<string | null>(null);
+  /** A neutral note, such as a cancelled sign-in. */
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!inTauri) return;
@@ -97,6 +103,8 @@ export function OpenDialog({
   const connect = async (make: () => Promise<Session | null>, label: string) => {
     setBusy(label);
     setError(null);
+    setCreated(null);
+    setNotice(null);
     try {
       const next = await make();
       if (!next) throw new Error("No session was returned.");
@@ -104,7 +112,9 @@ export function OpenDialog({
       onSession(next);
       await loadCatalog(next);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      // Pressing Cancel on the sign-in page is a choice, not a failure.
+      if (caught instanceof SignInCancelled) setNotice("Sign-in cancelled.");
+      else setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setBusy(null);
     }
@@ -136,9 +146,16 @@ export function OpenDialog({
     if (!session) return;
     setBusy(`Creating a mock for ${entry.apiName}…`);
     setError(null);
+    setCreated(null);
     try {
       const created = await createMock(session, entry.apiId);
-      if (created.apiKey) setKeys((prev) => ({ ...prev, [entry.apiId]: created.apiKey! }));
+      // An existing mock doesn't return its key on create; ask for it.
+      const apiKey =
+        created.apiKey ??
+        (created.mockServerId
+          ? ((await getMockApiKey(session, created.mockServerId).catch(() => null))?.apiKey ?? null)
+          : null);
+      if (apiKey) setKeys((prev) => ({ ...prev, [entry.apiId]: apiKey }));
       setCatalog((prev) =>
         prev.map((row) =>
           row.apiId === entry.apiId
@@ -151,13 +168,11 @@ export function OpenDialog({
             : row,
         ),
       );
-      if (!created.apiKey) {
-        setError(
-          `Mock ready at ${created.mockUrl}. Its API key isn't returned for an existing mock — ` +
-            `copy it from the spec0 dashboard and paste it into the Auth section as an ` +
-            `X-Mock-API-Key header if requests come back 401.`,
-        );
-      }
+      setCreated(
+        apiKey
+          ? `Mock ready at ${created.mockUrl}. Its key is saved and used when you open ${entry.apiName}.`
+          : `Mock ready at ${created.mockUrl}. Spec0 didn't return its key; Studio asks for it when you send a request to the mock.`,
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -194,6 +209,17 @@ export function OpenDialog({
 
         <div className="modal-body">
           {busy && <div className="verdict none">{busy}</div>}
+          {notice && !busy && (
+            <p className="meta" role="status">
+              {notice}
+            </p>
+          )}
+          {created && !busy && (
+            <div className="verdict ok" role="status">
+              <span className="glyph">✓</span>
+              <span>{created}</span>
+            </div>
+          )}
           {error && (
             <div className="error-box">
               <div className="error-head">
@@ -398,29 +424,7 @@ export function OpenDialog({
                           {entry.description ? ` · ${entry.description}` : ""}
                         </span>
                       </span>
-                      {entry.mockUrl ? (
-                        <span className="tag mock">mock</span>
-                      ) : (
-                        <span
-                          className="tag add-mock"
-                          role="button"
-                          tabIndex={0}
-                          title="Create a mock server for this API"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void provisionMock(entry);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.stopPropagation();
-                              void provisionMock(entry);
-                            }
-                          }}
-                        >
-                          <Plus size={10} />
-                          mock
-                        </span>
-                      )}
+                      {entry.mockUrl && <span className="tag mock">mock</span>}
                       {entry.isPublic && (
                         <span className="tag src-spec0" title="Also published to the public registry">
                           <Globe size={11} />
@@ -428,6 +432,29 @@ export function OpenDialog({
                         </span>
                       )}
                       {entry.version && <span className="count">{entry.version}</span>}
+                      {!entry.mockUrl && (
+                        /* An action, so it looks like one: a real button, at the
+                           end of the row, not a tag where the "mock" tag goes. */
+                        <span
+                          className="btn row-action"
+                          role="button"
+                          tabIndex={0}
+                          title="Create a hosted mock server for this API"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void provisionMock(entry);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void provisionMock(entry);
+                            }
+                          }}
+                        >
+                          <Plus size={11} /> Create mock
+                        </span>
+                      )}
                     </button>
                   ))}
                 {catalog.length === 0 && !busy && (
