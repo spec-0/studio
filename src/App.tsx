@@ -3,7 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { DocumentView } from "./components/DocumentView";
 import { PublishDialog } from "./components/PublishDialog";
 import { canPublish, whyNotPublishable } from "./lib/publish";
-import { OperationView, type RequestValues } from "./components/OperationView";
+import { OperationView } from "./components/OperationView";
 import { Inspector } from "./components/Inspector";
 import { SchemaView } from "./components/SchemaView";
 import { UrlBar } from "./components/UrlBar";
@@ -25,27 +25,18 @@ import { fileName } from "./lib/platform";
 import { parseSpec,  type ParsedSpec } from "./lib/spec";
 import {
   appFetch,
-  buildPlan,
   inTauri,
-  send,
-  describeBody,
-  toCurl,
-  type ResponseResult,
 } from "./lib/request";
-import { validateResponse, type ValidationResult } from "./lib/validate";
 import { interpolate } from "./lib/env";
 import * as history from "./lib/history";
 import type { HistoryEntry } from "./lib/history";
 import * as library from "./lib/library";
 import type { ApiSource, LibraryEntry } from "./lib/library";
 import {
-  pickSaveTarget,
   pickSpecFile,
-  saveResponseTo,
 } from "./lib/store";
 import {
   hostOf,
-  transportFor,
 } from "./lib/connection";
 import {
   apiIdFromRef,
@@ -58,25 +49,11 @@ import {
 } from "./lib/spec0";
 import {
   SCRATCH_OPERATION_ID,
-  SCRATCH_TITLE,
-  buildScratchPlan,
-  padFromHistory,
-  scratchPath,
 } from "./lib/scratch";
 import { describeExpiry } from "./lib/oauth";
 import {
   toMarkdown,
 } from "./lib/runner";
-import {
-  sentToMock,
-} from "./lib/targets";
-import {
-  declaredResponse,
-  describeSendError,
-  responseFromHistory,
-  storedResponseBody,
-  suggestedFileName,
-} from "./lib/response";
 import {  useSettings } from "./hooks/useSettings";
 import { useTargeting } from "./hooks/useTargeting";
 import { useBulkRun } from "./hooks/useBulkRun";
@@ -86,6 +63,7 @@ import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { useBoot } from "./hooks/useBoot";
 import { useWorkspace } from "./hooks/useWorkspace";
+import { useRequestSender } from "./hooks/useRequestSender";
 import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
 import { useScratchPad } from "./hooks/useScratchPad";
@@ -105,11 +83,6 @@ export default function App() {
   const [loading, setLoading] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<ResponseResult | null>(null);
-  const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [curl, setCurl] = useState<string | null>(null);
   const [hookDismissed, setHookDismissed] = useState(false);
 
   const { settings, setSettings, patchSettings } = useSettings();
@@ -191,10 +164,42 @@ export default function App() {
     doPublish,
   } = usePublish(session, current, setEntries);
 
-  const values = useRef<RequestValues>({ pathParams: {}, queryParams: {}, headerParams: {}, body: "" });
-  const onValuesChange = useCallback((next: RequestValues) => {
-    values.current = next;
-  }, []);
+  const {
+    sending,
+    result,
+    validation,
+    requestError,
+    curl,
+    onValuesChange,
+    clearResponse,
+    doSend,
+    saveResponseBody,
+    doScratchSend,
+    replayScratch,
+    doReplay,
+  } = useRequestSender({
+    spec,
+    operation,
+    server,
+    auth,
+    vars,
+    mock,
+    mockUrl,
+    connection,
+    currentId: current?.id,
+    usableToken,
+    pad,
+    updatePad,
+    patchSettings,
+    setRequests,
+    setOperation,
+    setReplay,
+    setViewingRecord,
+    setTab,
+    setView,
+    setServer,
+  });
+
   const fileInput = useRef<HTMLInputElement>(null);
 
   const { git, consumers, resetDocumentFacts } = useDocumentFacts(route, current, session);
@@ -254,11 +259,9 @@ export default function App() {
       showSpec(parsed, entry, text);
       setLoadError(null);
       resetDocumentFacts();
-      setResult(null);
-      setValidation(null);
-      setRequestError(null);
+      clearResponse();
     },
-    [showSpec, resetDocumentFacts],
+    [showSpec, resetDocumentFacts, clearResponse],
   );
 
   /** Parse, add to the library, and open it. Every entry point funnels through here. */
@@ -526,228 +529,16 @@ export default function App() {
     [ingest],
   );
 
-  // ── sending ──────────────────────────────────────────────────────────────────
-
-  const doSend = useCallback(async () => {
-    if (!spec || !operation || !server.trim()) return;
-    setSending(true);
-    setRequestError(null);
-    setResult(null);
-    setValidation(null);
-    // Whatever comes back is live, so the panes are no longer showing a record.
-    setViewingRecord(null);
-    try {
-      const { pathParams, queryParams, headerParams, body } = values.current;
-      // An OAuth "value" isn't typed by the user — it's the acquired token,
-      // resolved (and renewed if needed) at the moment of sending.
-      const effectiveAuth =
-        auth?.type === "oauth2" ? { ...auth, value: await usableToken() } : auth;
-      const plan = buildPlan(
-        operation,
-        server,
-        pathParams,
-        queryParams,
-        headerParams,
-        effectiveAuth,
-        body,
-        vars,
-        mock,
-      );
-      setCurl(toCurl(plan));
-      const response = await send(plan, {
-        ...transportFor(connection, plan.url),
-        // Cookies are per-API, keyed by the library entry, so a session picked
-        // up here is never offered to a different API's host.
-        jar: current?.id,
-      });
-      setResult(response);
-
-      const declared = declaredResponse(operation.responses, response.status);
-      const verdict = validateResponse(spec.doc, declared?.schema, response.json);
-      setValidation(verdict);
-      patchSettings({ inspectorOpen: true });
-
-      setRequests(
-        await history.record({
-          method: operation.method,
-          path: operation.path,
-          url: plan.url,
-          status: response.status,
-          ms: response.ms,
-          bytes: response.bytes,
-          specTitle: spec.title,
-          operationId: operation.id,
-          headers: plan.headers,
-          body: describeBody(plan.body),
-          bodyKind: plan.body?.kind,
-          validation: verdict.status,
-          mock: sentToMock(plan.url, mockUrl),
-          statusText: response.statusText,
-          responseHeaders: response.headers,
-          responseBody: storedResponseBody(response),
-        }),
-      );
-    } catch (error) {
-      setRequestError(describeSendError(error, inTauri));
-    } finally {
-      setSending(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, operation, server, auth, vars, mockUrl, mock, connection, current?.id, usableToken]);
-
-  /**
-   * Write the held response body wherever the user asks.
-   *
-   * A copy of the temp file Rust already wrote, not a second request — the bytes
-   * were kept precisely so saving them doesn't mean fetching them again.
-   */
-  const saveResponseBody = useCallback(async (contentType: string) => {
-    const path = result?.binary?.path;
-    if (!path) return;
-    const disposition = result?.headers?.["content-disposition"] ?? "";
-    const target = await pickSaveTarget(suggestedFileName(disposition, contentType));
-    if (!target) return;
-    try {
-      await saveResponseTo(path, target);
-    } catch (error) {
-      setRequestError(error instanceof Error ? error.message : String(error));
-    }
-  }, [result]);
-
-  /**
-   * Send the scratch request.
-   *
-   * Deliberately a sibling of `doSend` rather than a branch inside it: there is
-   * no operation, no declared response and nothing to validate, so every step
-   * that makes `doSend` worth having is absent here. Folding them together would
-   * mean threading "…unless there's no spec" through all of it.
-   */
-  const doScratchSend = useCallback(async () => {
-    setSending(true);
-    setRequestError(null);
-    setResult(null);
-    setValidation(null);
-    try {
-      const plan = buildScratchPlan(pad, vars);
-      setCurl(toCurl(plan));
-      // The scratch pad gets its own jar: it isn't an API and shouldn't borrow
-      // one's session, nor leak a login it performed into a real API's.
-      const response = await send(plan, { ...transportFor(connection, plan.url), jar: "__scratch__" });
-      setResult(response);
-      patchSettings({ inspectorOpen: true });
-
-      setRequests(
-        await history.record({
-          method: plan.method,
-          path: scratchPath(plan.url),
-          url: plan.url,
-          status: response.status,
-          ms: response.ms,
-          bytes: response.bytes,
-          specTitle: SCRATCH_TITLE,
-          operationId: SCRATCH_OPERATION_ID,
-          headers: plan.headers,
-          body: describeBody(plan.body),
-          bodyKind: plan.body?.kind,
-          validation: "no_schema",
-          statusText: response.statusText,
-          responseHeaders: response.headers,
-          responseBody: storedResponseBody(response),
-        }),
-      );
-    } catch (error) {
-      setRequestError(describeSendError(error, inTauri));
-    } finally {
-      setSending(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pad, vars, connection]);
-
   /** Scratch history only — spec-driven calls belong with their API. */
   const scratchHistory = useMemo(
     () => requests.filter((entry) => entry.operationId === SCRATCH_OPERATION_ID),
     [requests],
   );
 
-  const replayScratch = useCallback(
-    (entry: HistoryEntry) => {
-      updatePad(padFromHistory(entry));
-      setRequestError(null);
-      setValidation(null);
-      setResult(responseFromHistory(entry));
-    },
-    [updatePad],
-  );
-
   const openScratch = useCallback(() => {
     setRoute("scratch");
-    setResult(null);
-    setValidation(null);
-    setRequestError(null);
-    setCurl(null);
-  }, []);
-
-  /**
-   * Open a recorded call: restore the request *and* show what came back.
-   *
-   * Clicking history used to jump to the operation with the inputs restored but
-   * an empty response pane, which loses the thing you clicked for. The recorded
-   * response is re-rendered — including its schema check — and the entry stays
-   * one Send away from being run again.
-   */
-  const doReplay = useCallback(
-    (entry: HistoryEntry) => {
-      if (!spec) return;
-      const found = spec.operations.find((op) => op.id === entry.operationId);
-      if (!found) {
-        // Used to `return` silently, so clicking the row did nothing at all and
-        // looked broken. A spec sync makes this ordinary rather than rare.
-        setRequestError(
-          `${entry.operationId} is no longer in this spec, so it can't be replayed. ` +
-            `It was recorded on ${new Date(entry.at).toLocaleString()} and returned ${entry.status}.`,
-        );
-        setResult(null);
-        setValidation(null);
-        patchSettings({ inspectorOpen: true });
-        return;
-      }
-      setOperation(found);
-      // Path and query values live only inside the recorded URL; without pulling
-      // them back out the form shows blank fields beside the response they
-      // produced.
-      const { pathParams, queryParams } = history.paramsFromEntry(entry, found.path);
-      setReplay({ headers: entry.headers, body: entry.body, pathParams, queryParams });
-      setViewingRecord(entry);
-      setTab("operations");
-      setView("operation");
-      try {
-        const parsed = new URL(entry.url);
-        setServer(`${parsed.protocol}//${parsed.host}`);
-      } catch {
-        /* keep the current base URL */
-      }
-
-      const recorded = responseFromHistory(entry);
-      if (!recorded) {
-        // Recorded before responses were stored — say so instead of showing nothing.
-        setResult(null);
-        setValidation(null);
-        setRequestError(
-          `Recorded ${entry.status} in ${entry.ms}ms, but this entry predates response capture. Send again to see the body.`,
-        );
-        return;
-      }
-
-      setRequestError(null);
-      setResult(recorded);
-
-      const declared = declaredResponse(found.responses, entry.status, { ranges: false });
-      setValidation(validateResponse(spec.doc, declared?.schema, recorded.json));
-      patchSettings({ inspectorOpen: true });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [spec],
-  );
+    clearResponse({ curl: true });
+  }, [setRoute, clearResponse]);
 
   useShortcuts({
     send: () => void doSend(),
