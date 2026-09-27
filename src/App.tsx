@@ -70,7 +70,6 @@ import {
   pickSpecFile,
   readStore,
   saveResponseTo,
-  writeStore,
   STORE,
 } from "./lib/store";
 import {
@@ -146,6 +145,7 @@ import {
   storedResponseBody,
   suggestedFileName,
 } from "./lib/response";
+import { DEFAULT_SETTINGS, useSettings, type Settings } from "./hooks/useSettings";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import {
   describeImpact,
@@ -159,15 +159,6 @@ import {
 
 type MainView = "operation" | "schema" | "graph" | "document";
 type Route = "library" | "api" | "scratch";
-
-interface Settings {
-  dark: boolean;
-  inspectorOpen: boolean;
-  /** Width of the schema detail panel in the graph view. */
-  graphPanel: number;
-}
-
-const DEFAULT_SETTINGS: Settings = { dark: true, inspectorOpen: true, graphPanel: 340 };
 
 export default function App() {
   const [route, setRoute] = useState<Route>("library");
@@ -229,7 +220,7 @@ export default function App() {
   const [curl, setCurl] = useState<string | null>(null);
   const [hookDismissed, setHookDismissed] = useState(false);
 
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const { settings, setSettings, patchSettings } = useSettings();
   const [envFile, setEnvFile] = useState<EnvironmentFile>({ environments: [], activeId: null });
   const [requests, setRequests] = useState<HistoryEntry[]>([]);
   const [session, setSession] = useState<Session | null>(null);
@@ -276,21 +267,10 @@ export default function App() {
     })();
   }, []);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", settings.dark);
-  }, [settings.dark]);
-
   const saveConnectionSettings = useCallback((next: ConnectionSettings) => {
     setConnection(next);
     void saveConnection(next);
   }, []);
-
-  const patchSettings = (patch: Partial<Settings>) =>
-    setSettings((prev) => {
-      const next = { ...prev, ...patch };
-      void writeStore(STORE.settings, next);
-      return next;
-    });
 
   const activeEnv = envFile.environments.find((env) => env.id === envFile.activeId) ?? null;
   const vars = useMemo(() => variableMap(activeEnv), [activeEnv]);
