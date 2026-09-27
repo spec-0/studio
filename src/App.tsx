@@ -24,6 +24,7 @@ import { ScratchView } from "./components/ScratchView";
 import { ApiSwitcher } from "./components/ApiSwitcher";
 import { Updater } from "./components/UpdateDialog";
 import { TitleBar } from "./components/TitleBar";
+import { StatusBar } from "./components/StatusBar";
 import { fileName } from "./lib/platform";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import {
@@ -970,18 +971,11 @@ export default function App() {
               )
             }
           />
-          <div className="statusbar">
-            <span>Scratch · one ad-hoc request, not saved</span>
-            {activeEnv && <span>env: {activeEnv.name}</span>}
-            <span style={{ marginLeft: "auto" }}>
-              {inTauri ? "requests via Rust · no CORS" : "browser preview · CORS applies"}
-            </span>
-            {result && (
-              <span>
-                {result.status} · {result.ms}ms
-              </span>
-            )}
-          </div>
+          <StatusBar
+            summary="Scratch · one ad-hoc request, not saved"
+            envName={activeEnv?.name}
+            result={result}
+          />
         </>
       ) : !onApi ? (
         <Library
@@ -1240,21 +1234,16 @@ export default function App() {
             </div>
           </div>
 
-          <div className="statusbar">
-            <span>
-              {spec!.operations.length} operations · {spec!.schemas.length} schemas · {spec!.tags.length} tags
-            </span>
-            {activeEnv && <span>env: {activeEnv.name}</span>}
-            {session && <span>spec0: {session.orgName}</span>}
-            <span style={{ marginLeft: "auto" }}>
-              {inTauri ? "requests via Rust · no CORS" : "browser preview · CORS applies"}
-            </span>
-            {result && (
-              <span>
-                {result.status} · {result.ms}ms
-              </span>
-            )}
-          </div>
+          <StatusBar
+            summary={
+              <>
+                {spec!.operations.length} operations · {spec!.schemas.length} schemas · {spec!.tags.length} tags
+              </>
+            }
+            envName={activeEnv?.name}
+            orgName={session?.orgName}
+            result={result}
+          />
         </>
       )}
 
