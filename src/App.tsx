@@ -1,18 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SchemaGraphView } from "@spec0/schema-graph/react";
 import {
-  Cable,
-  ChevronDown,
-  Play,
-  ChevronLeft,
-  Layers,
-  Moon,
-  FileText,
-  PanelRightClose,
-  PanelRightOpen,
-  Plus,
-  Sun,
-  Waypoints,
   X,
 } from "lucide-react";
 import { Sidebar, type SidebarTab } from "./components/Sidebar";
@@ -24,9 +12,7 @@ import { OperationView, type RequestValues } from "./components/OperationView";
 import { Inspector } from "./components/Inspector";
 import { SchemaView } from "./components/SchemaView";
 import { UrlBar } from "./components/UrlBar";
-import { Brand } from "./components/Logo";
 import { MockKeyBar } from "./components/MockKeyBar";
-import { ConnectionChip } from "./components/ConnectionChip";
 import { Resizer } from "./components/Resizer";
 import { EnvironmentsDialog } from "./components/EnvironmentsDialog";
 import { ConnectionDialog } from "./components/ConnectionDialog";
@@ -37,7 +23,8 @@ import { Library } from "./components/Library";
 import { ScratchView } from "./components/ScratchView";
 import { ApiSwitcher } from "./components/ApiSwitcher";
 import { Updater } from "./components/UpdateDialog";
-import { fileName, shortcut } from "./lib/platform";
+import { TitleBar } from "./components/TitleBar";
+import { fileName } from "./lib/platform";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import {
   appFetch,
@@ -927,137 +914,35 @@ export default function App() {
         }}
       />
 
-      <div className="titlebar" data-tauri-drag-region>
-        <Brand compact />
-
-        {onScratch && (
-          <>
-            <span className="rule" />
-            <button className="icon-btn" onClick={goLibrary} title={`All APIs (${shortcut("L")})`} aria-label="Back to all APIs">
-              <ChevronLeft size={16} />
-            </button>
-            <span className="api-switch static">
-              <span className="spec-name">Scratch</span>
-              <span className="tag">no spec</span>
-            </span>
-          </>
-        )}
-
-        {onApi && (
-          <>
-            <span className="rule" />
-            <button className="icon-btn" onClick={goLibrary} title={`All APIs (${shortcut("L")})`} aria-label="Back to all APIs">
-              <ChevronLeft size={16} />
-            </button>
-            <button className="api-switch" onClick={() => setShowSwitcher(true)} title={`Switch API (${shortcut("P")})`}>
-              <span className="spec-name">{spec?.title}</span>
-              {spec?.version && <span className="spec-version">{spec.version}</span>}
-              <ChevronDown size={13} className="chev" />
-            </button>
-            {current?.source.kind === "spec0" && <span className="tag ok">spec0</span>}
-          </>
-        )}
-        <span className="spacer" />
-
-        <ConnectionChip
-          session={session}
-          onClick={() => {
-            setOpenTab("spec0");
-            setShowOpen(true);
-          }}
-        />
-
-        <button
-          className={`icon-btn${connection.trusted.some((t) => t.insecure) ? " warn" : ""}`}
-          onClick={() => setShowConnection(true)}
-          title="Connection — certificates, proxy, timeout, cookies"
-          aria-label="Connection settings"
-        >
-          <Cable size={16} />
-        </button>
-
-        <div className="env-picker" title={`Environment (${shortcut("E")})`}>
-          <Layers size={13} />
-          <select
-            value={envFile.activeId ?? ""}
-            onChange={(event) => {
-              saveEnvFile({ ...envFile, activeId: event.target.value || null });
-            }}
-          >
-            <option value="">No environment</option>
-            {envFile.environments.map((env) => (
-              <option key={env.id} value={env.id}>
-                {env.name}
-              </option>
-            ))}
-          </select>
-          <button className="icon-btn tight" onClick={() => setShowEnvs(true)} aria-label="Edit environments">
-            <Plus size={13} />
-          </button>
-        </div>
-
-        {onScratch && (
-          <button
-            className="icon-btn"
-            onClick={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
-            title={`Response pane (${shortcut("\\")})`}
-            aria-label="Toggle response pane"
-          >
-            {settings.inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-          </button>
-        )}
-
-        {onApi && (
-          <>
-            <button
-              className="icon-btn"
-              onClick={() => setShowRun(true)}
-              title="Run against the spec"
-              aria-label="Run against the spec"
-            >
-              <Play size={16} />
-            </button>
-            <button
-              className={`icon-btn${showDocument ? " on" : ""}`}
-              onClick={() => setView(showDocument ? "operation" : "document")}
-              title="The document"
-              aria-label="The document"
-            >
-              <FileText size={16} />
-            </button>
-            <button
-              className={`icon-btn${showGraph ? " on" : ""}`}
-              onClick={() => setView(showGraph ? "operation" : "graph")}
-              title="Schema graph"
-              aria-label="Schema graph"
-            >
-              <Waypoints size={16} />
-            </button>
-            <button
-              className="icon-btn"
-              onClick={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
-              title={`Response pane (${shortcut("\\")})`}
-              aria-label="Toggle response pane"
-            >
-              {settings.inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-            </button>
-          </>
-        )}
-        <button
-          className="icon-btn"
-          onClick={() => patchSettings({ dark: !settings.dark })}
-          title={`${settings.dark ? "Light" : "Dark"} theme (${shortcut("D")})`}
-          aria-label="Toggle theme"
-        >
-          {settings.dark ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
-        {/* The library screen carries its own Add button — don't offer it twice. */}
-        {onApi && (
-          <button className="btn primary" onClick={() => setShowOpen(true)}>
-            <Plus size={13} /> Add API
-          </button>
-        )}
-      </div>
+      <TitleBar
+        onScratch={onScratch}
+        onApi={onApi}
+        specTitle={spec?.title}
+        specVersion={spec?.version}
+        fromSpec0={current?.source.kind === "spec0"}
+        session={session}
+        insecureHosts={connection.trusted.some((t) => t.insecure)}
+        envFile={envFile}
+        onSelectEnvironment={(activeId) => saveEnvFile({ ...envFile, activeId })}
+        onEditEnvironments={() => setShowEnvs(true)}
+        inspectorOpen={settings.inspectorOpen}
+        onToggleInspector={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
+        showDocument={showDocument}
+        onToggleDocument={() => setView(showDocument ? "operation" : "document")}
+        showGraph={showGraph}
+        onToggleGraph={() => setView(showGraph ? "operation" : "graph")}
+        dark={settings.dark}
+        onToggleTheme={() => patchSettings({ dark: !settings.dark })}
+        onGoLibrary={goLibrary}
+        onSwitchApi={() => setShowSwitcher(true)}
+        onSignIn={() => {
+          setOpenTab("spec0");
+          setShowOpen(true);
+        }}
+        onOpenConnection={() => setShowConnection(true)}
+        onRun={() => setShowRun(true)}
+        onAddApi={() => setShowOpen(true)}
+      />
 
       {onScratch ? (
         <>
