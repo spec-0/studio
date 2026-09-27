@@ -56,7 +56,8 @@ These links always point to the newest version:
 ### Updates
 
 Choose *Check for Updates…* (in the app menu on macOS, the Help menu on Windows
-and Linux) to see whether there is a newer version and install it.
+and Linux), or *Check for updates now* in Settings under Updates, to see whether
+there is a newer version and install it.
 
 - Every update is signed, and Studio refuses an update whose signature doesn't match.
 - An AppImage replaces itself.
@@ -80,6 +81,11 @@ If you use Postman, Insomnia, Bruno or Yaak, the main differences are:
 
 ## Features
 
+The top bar has four tabs: **APIs** (your library and the API you have open),
+**History**, **Mocks** and **MCP**. An open API has its own tabs underneath:
+**Operations**, **Schemas**, **Graph** and **Document**. The environment picker,
+whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the right.
+
 ### Your specs
 
 - **Three sources.** Add an API from a local file, a URL, or a Spec0 account.
@@ -87,10 +93,10 @@ If you use Postman, Insomnia, Bruno or Yaak, the main differences are:
 - **Kept locally.** Studio keeps a copy of the spec's text, so it opens quickly,
   works offline and still works if the file moves.
 - **Operations and schemas.** Browse operations by tag, and browse schemas (the
-  data models) in their own tab: fields, what each schema uses and is used by, an
-  example, and a graph.
-- **Raw and reference views.** See the spec as raw text or as a readable API
-  reference. Both work offline.
+  data models) in their own tab: fields, what each schema uses and is used by, and
+  an example. The Graph tab shows how the schemas refer to each other.
+- **Raw and reference views.** The Document tab shows the spec as raw text or as
+  a readable API reference. Both work offline.
 - **Git details.** If the spec file is in a git repository, Studio shows its
   branch, commit, and whether the file has changed since that commit.
 
@@ -137,6 +143,8 @@ If you use Postman, Insomnia, Bruno or Yaak, the main differences are:
 
 ### Company networks
 
+These are in Settings, under Network.
+
 - **Private certificate authorities** can be trusted for specific hosts.
 - **Proxy settings**, including `HTTPS_PROXY` and `NO_PROXY`.
 - **Timeouts and redirects.** Redirect control (Studio shows each redirect it
@@ -157,10 +165,11 @@ Use Ctrl instead of ⌘ on Windows and Linux.
 | Keys | Action | Keys | Action |
 |---|---|---|---|
 | `⌘↵` | Send | `⌘E` | Environments |
-| `⌘O` | Add API | `⌘\` | Inspector |
-| `⌘P` | Switch API | `⌘1/2/3` | Tabs |
-| `⌘L` | Library | `⌘D` | Theme |
-| `/` | Search | `Esc` | Close |
+| `⌘O` | Add API | `⌘\` | Response pane |
+| `⌘P` | Switch API | `⌘1` to `⌘4` | Operations, Schemas, Graph, Document |
+| `⌘L` | All APIs | `⌘D` | Theme |
+| `/` | Search | `⌘,` | Settings |
+| `Esc` | Close | | |
 
 ### Performance
 
@@ -195,7 +204,7 @@ servers you point it at.
   request to github.com for the latest release. There is a setting to check each
   time Studio starts; it is off unless you turn it on. The check sends nothing
   about your specs, environments or history, and it uses the proxy from your
-  connection settings.
+  Network settings.
 
 > [!WARNING]
 > If the credential store can't be reached (mostly on Linux without a running,
@@ -208,8 +217,9 @@ servers you point it at.
 Everything above works without an account. If your team uses
 [Spec0](https://spec0.io), you can sign in to browse your organisation's APIs,
 pull their specs, use hosted mock servers as request targets, and publish a
-local spec to your organisation. Signing out returns Studio to local-only use,
-and nothing is lost.
+local spec to your organisation. The Mocks tab lists your organisation's hosted
+mock servers. Sign in and out in Settings, under Account & Spec0. Signing out
+returns Studio to local-only use, and nothing is lost.
 
 ## Known limitations
 

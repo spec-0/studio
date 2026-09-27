@@ -7,7 +7,6 @@ export function useDialogs() {
   const [showOpen, setShowOpen] = useState(false);
   const [openTab, setOpenTab] = useState<OpenTab>("file");
   const [showEnvs, setShowEnvs] = useState(false);
-  const [showConnection, setShowConnection] = useState(false);
   const [showRun, setShowRun] = useState(false);
   const [showOAuth, setShowOAuth] = useState<{ prefill?: string } | null>(null);
   const [showSwitcher, setShowSwitcher] = useState(false);
@@ -37,8 +36,6 @@ export function useDialogs() {
     openTab,
     showEnvs,
     setShowEnvs,
-    showConnection,
-    setShowConnection,
     showRun,
     setShowRun,
     showOAuth,

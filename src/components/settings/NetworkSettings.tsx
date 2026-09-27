@@ -1,33 +1,32 @@
 import { useEffect, useState } from "react";
-import { Cookie, ShieldAlert, ShieldCheck, Trash2, X } from "lucide-react";
+import { Cookie, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
 import {
   DEFAULT_TIMEOUT_MS,
   withTrust,
   withoutTrust,
   type ConnectionSettings,
   type HostTrust,
-} from "../lib/connection";
-import { clearCookies, listCookies, type StoredCookie } from "../lib/cookies";
-import { pickCertificate } from "../lib/store";
+} from "../../lib/connection";
+import { clearCookies, listCookies, type StoredCookie } from "../../lib/cookies";
+import { pickCertificate } from "../../lib/store";
 
 interface Props {
   settings: ConnectionSettings;
   onSave: (next: ConnectionSettings) => void;
-  /** The API whose cookie jar this is. Absent on the library screen. */
+  /** The API whose cookie jar this is. Absent when no API is open. */
   jar: { id: string; title: string } | null;
   /** Pre-fill the trust form with the host you were just trying to reach. */
   suggestHost?: string | null;
-  onClose: () => void;
 }
 
 /**
- * Connection settings: certificate trust, proxy, timeout, redirects, cookies.
+ * Network settings: certificate trust, proxy, timeout, redirects, cookies.
  *
- * Grouped into one dialog because they answer a single question — "why can't
+ * Grouped into one section because they answer a single question — "why can't
  * this thing reach my server" — and someone debugging that shouldn't have to
  * guess which of four places to look.
  */
-export function ConnectionDialog({ settings, onSave, jar, suggestHost, onClose }: Props) {
+export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
   const [draft, setDraft] = useState<ConnectionSettings>(settings);
   const [host, setHost] = useState(suggestHost ?? "");
   const [pem, setPem] = useState<{ name: string; content: string } | null>(null);
@@ -36,7 +35,14 @@ export function ConnectionDialog({ settings, onSave, jar, suggestHost, onClose }
 
   useEffect(() => {
     if (jar) void listCookies(jar.id).then(setCookies);
-  }, [jar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jar?.id]);
+
+  // Settings loaded after this mounted (at start, say) replace the draft.
+  useEffect(() => setDraft(settings), [settings]);
+  useEffect(() => {
+    if (suggestHost) setHost(suggestHost);
+  }, [suggestHost]);
 
   const commit = (next: ConnectionSettings) => {
     setDraft(next);
@@ -66,17 +72,7 @@ export function ConnectionDialog({ settings, onSave, jar, suggestHost, onClose }
   };
 
   return (
-    <div className="scrim" onClick={onClose}>
-      <div className="modal wide" onClick={(event) => event.stopPropagation()}>
-        <div className="modal-head">
-          <strong>Connection</strong>
-          <span className="spacer" />
-          <button className="icon-btn tight" onClick={onClose} aria-label="Close">
-            <X size={15} />
-          </button>
-        </div>
-
-        <div className="modal-body">
+    <>
           <section className="section">
             <h3>Certificates</h3>
             <p className="field-meta">
@@ -263,8 +259,18 @@ export function ConnectionDialog({ settings, onSave, jar, suggestHost, onClose }
               )}
             </section>
           )}
-        </div>
-      </div>
-    </div>
+          {!jar && (
+            <section className="section">
+              <h3>
+                <Cookie size={12} style={{ verticalAlign: "-1px", marginRight: 6 }} />
+                Cookies
+              </h3>
+              <p className="field-meta">
+                Kept per API, so a session from one never reaches another. Not written to disk — they
+                last as long as the app is open. Open an API to see and clear its cookies.
+              </p>
+            </section>
+          )}
+    </>
   );
 }
