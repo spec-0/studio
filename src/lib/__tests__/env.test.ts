@@ -5,9 +5,10 @@ import {
   newEnvironment,
   unresolved,
   variableMap,
+  withBaseUrl,
   withVariable,
 } from "../env";
-import type { Environment } from "../env";
+import type { Environment, EnvironmentFile } from "../env";
 
 describe("variables", () => {
   const env: Environment = {
@@ -108,5 +109,28 @@ describe("migrating away from the baseUrl field", () => {
   it("leaves an environment with no legacy field untouched", () => {
     const env = { id: "e", name: "n", variables: [{ name: "a", value: "1", secret: false }] };
     expect(migrateBaseUrl(env)).toEqual(env);
+  });
+});
+
+describe("withBaseUrl", () => {
+  it("creates and activates a Local environment when none is active", () => {
+    const next = withBaseUrl({ environments: [], activeId: null }, "https://api.example.com");
+    expect(next.environments).toHaveLength(1);
+    expect(next.environments[0].name).toBe("Local");
+    expect(next.activeId).toBe(next.environments[0].id);
+    expect(next.environments[0].variables).toEqual([
+      { name: "baseUrl", value: "https://api.example.com", secret: false },
+    ]);
+  });
+
+  it("writes into the active environment, replacing an old baseUrl", () => {
+    const staging = withVariable({ ...newEnvironment("Staging"), id: "s" }, "baseUrl", "https://old");
+    const other = { ...newEnvironment("Other"), id: "o" };
+    const file: EnvironmentFile = { environments: [staging, other], activeId: "s" };
+    const next = withBaseUrl(file, "https://new");
+    expect(next.activeId).toBe("s");
+    expect(next.environments.map((e) => e.id)).toEqual(["s", "o"]);
+    expect(next.environments[0].variables).toEqual([{ name: "baseUrl", value: "https://new", secret: false }]);
+    expect(next.environments[1]).toBe(other);
   });
 });

@@ -146,3 +146,24 @@ export function unresolved(input: string, vars: Record<string, string>): string[
   }
   return [...missing];
 }
+
+/**
+ * Keep an ad-hoc base URL as a `baseUrl` variable in the active environment,
+ * creating a Local one (and making it active) if there isn't one.
+ *
+ * Typing a URL stays the zero-setup path; this is only for wanting it back
+ * tomorrow. It writes a plain variable rather than a special field, so there is
+ * exactly one notion of environment.
+ */
+export function withBaseUrl(file: EnvironmentFile, url: string): EnvironmentFile {
+  const base =
+    file.environments.find((env) => env.id === file.activeId) ?? newEnvironment("Local");
+  const updated = withVariable(base, "baseUrl", url);
+  const exists = file.environments.some((env) => env.id === updated.id);
+  return {
+    activeId: updated.id,
+    environments: exists
+      ? file.environments.map((env) => (env.id === updated.id ? updated : env))
+      : [...file.environments, updated],
+  };
+}
