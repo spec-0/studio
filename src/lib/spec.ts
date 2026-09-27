@@ -209,7 +209,27 @@ function refNames(node: unknown, out = new Set<string>()): Set<string> {
   return out;
 }
 
-export function parseSpec(text: string, sourceName: string): ParsedSpec {
+/**
+ * Turn the spec's server URLs into full URLs.
+ *
+ * OpenAPI allows a server URL like `/api/v3`, which means "relative to where
+ * this document is served". When the spec was opened from a URL, that is
+ * something Studio can resolve. A relative server in a local file has nothing
+ * to resolve against, so it is left as written and the address bar says so.
+ */
+export function resolveServers(servers: string[], documentUrl?: string): string[] {
+  if (!documentUrl) return servers;
+  return servers.map((url) => {
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url) || url.includes("{")) return url;
+    try {
+      return new URL(url, documentUrl).toString().replace(/\/$/, "");
+    } catch {
+      return url;
+    }
+  });
+}
+
+export function parseSpec(text: string, sourceName: string, documentUrl?: string): ParsedSpec {
   const doc = parseDocument(text);
 
   const operations: OperationSpec[] = [];
@@ -299,7 +319,7 @@ export function parseSpec(text: string, sourceName: string): ParsedSpec {
     title: doc.info?.title ?? sourceName,
     version: doc.info?.version ?? "",
     description: doc.info?.description,
-    servers: (doc.servers ?? []).map((s: Json) => s.url).filter(Boolean),
+    servers: resolveServers((doc.servers ?? []).map((s: Json) => s.url).filter(Boolean), documentUrl),
     operations,
     schemas,
     securitySchemes,
