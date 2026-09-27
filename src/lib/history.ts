@@ -1,9 +1,9 @@
 import { readStore, writeStore, STORE } from "./store";
 import { redact, redactHeaders } from "./redact";
-import type { ResponseResult } from "./request";
+import { declaredResponse } from "./response";
 import { SCRATCH_OPERATION_ID } from "./scratch";
 import type { ParsedSpec } from "./spec";
-import { declaredResponse, validateResponse, type Finding, type ValidationResult } from "./validate";
+import { validateResponse, type Finding, type ValidationResult } from "./validate";
 
 /**
  * Request history — local only, never synced. A log of what was sent and what
@@ -335,20 +335,6 @@ function parsedBody(text: string | undefined): unknown {
   }
 }
 
-/** The recorded response in the shape the response renderer takes, or null if none was stored. */
-export function responseFromEntry(entry: HistoryEntry): ResponseResult | null {
-  if (entry.responseBody === undefined) return null;
-  return {
-    status: entry.status,
-    statusText: entry.statusText ?? "",
-    headers: entry.responseHeaders ?? {},
-    bodyText: entry.responseBody,
-    json: parsedBody(entry.responseBody),
-    ms: entry.ms,
-    bytes: entry.bytes,
-  };
-}
-
 /**
  * Check a recorded response against a spec — normally the current one.
  *
@@ -388,6 +374,32 @@ export function belongsTo(
 ): boolean {
   if (isScratch(entry)) return false;
   return entry.apiId ? entry.apiId === api.id : entry.specTitle === api.title;
+}
+
+/**
+ * Give older entries their API's library id, in memory only.
+ *
+ * Entries written before the id was recorded carry only a spec title. Where
+ * exactly one API in the library has that title the match is unambiguous, so
+ * the entry is treated as belonging to it — otherwise one API would show up
+ * twice in the filter. Ambiguous or unmatched titles are left alone; guessing
+ * would file a request under the wrong API.
+ */
+export function attachApiIds(
+  entries: HistoryEntry[],
+  apis: ReadonlyArray<{ id: string; title: string }>,
+): HistoryEntry[] {
+  const byTitle = new Map<string, string | null>();
+  for (const api of apis) byTitle.set(api.title, byTitle.has(api.title) ? null : api.id);
+  let changed = false;
+  const out = entries.map((entry) => {
+    if (entry.apiId || isScratch(entry)) return entry;
+    const id = byTitle.get(entry.specTitle);
+    if (!id) return entry;
+    changed = true;
+    return { ...entry, apiId: id };
+  });
+  return changed ? out : entries;
 }
 
 /** Each API that appears in history, for the filter — newest first, scratch last. */

@@ -9,20 +9,24 @@ import type { ResponseSpec } from "./spec";
  */
 
 /**
- * The response the spec declares for a status code.
+ * The response the spec declares for a status code: the exact code, then its
+ * range (`4XX`), then `default`.
  *
- * An exact match wins, then the range (`4XX`), then `default`. Replaying a
- * history entry has always skipped the range step, so it passes
- * `{ ranges: false }` to keep that behaviour.
+ * The one lookup for every place that checks a response — a single send, a
+ * bulk run, and re-checking a recorded response. Re-checking history used to
+ * carry its own copy that skipped the range step, so a response a live send
+ * matched against `2XX` came back from history as "no schema". Range keys are
+ * matched case-insensitively; OpenAPI says uppercase, specs in the wild don't
+ * always agree.
  */
-export function declaredResponse(
-  responses: ResponseSpec[],
+export function declaredResponse<T extends Pick<ResponseSpec, "status">>(
+  responses: readonly T[],
   status: number,
-  { ranges = true }: { ranges?: boolean } = {},
-): ResponseSpec | undefined {
+): T | undefined {
+  const range = `${Math.floor(status / 100)}XX`;
   return (
     responses.find((r) => r.status === String(status)) ??
-    (ranges ? responses.find((r) => r.status === `${Math.floor(status / 100)}XX`) : undefined) ??
+    responses.find((r) => r.status.toUpperCase() === range) ??
     responses.find((r) => r.status === "default")
   );
 }

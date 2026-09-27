@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   apiChoices,
+  attachApiIds,
   belongsTo,
   checkFields,
   copyDestination,
@@ -20,14 +21,14 @@ import {
   recheck,
   record,
   recordedCheck,
-  responseFromEntry,
   specChange,
   type HistoryEntry,
 } from "../history";
 import { setKnownSecrets } from "../redact";
 import { SCRATCH_OPERATION_ID, SCRATCH_TITLE } from "../scratch";
 import { parseSpec } from "../spec";
-import { declaredResponse, validateResponse, type ValidationResult } from "../validate";
+import { declaredResponse, responseFromHistory } from "../response";
+import { validateResponse, type ValidationResult } from "../validate";
 
 const SPEC = `
 openapi: 3.0.3
@@ -163,7 +164,7 @@ describe("older entries", () => {
   });
 
   it("still render a response that predates response capture as none", () => {
-    expect(responseFromEntry(entry({ responseBody: undefined }))).toBeNull();
+    expect(responseFromHistory(entry({ responseBody: undefined }))).toBeNull();
   });
 });
 
@@ -290,6 +291,33 @@ describe("one list, with filters", () => {
 
   it("keeps a new entry with its library id out of another API with the same title", () => {
     expect(belongsTo(list[0], { id: "lib_other", title: "Orders" })).toBe(false);
+  });
+});
+
+describe("matching older entries to their API", () => {
+  it("adopts the library id when exactly one API has the title", () => {
+    const [e] = attachApiIds([entry()], [{ id: "lib_orders", title: "Orders" }]);
+    expect(e.apiId).toBe("lib_orders");
+  });
+
+  it("leaves an ambiguous title alone rather than guess", () => {
+    const [e] = attachApiIds(
+      [entry()],
+      [
+        { id: "lib_a", title: "Orders" },
+        { id: "lib_b", title: "Orders" },
+      ],
+    );
+    expect(e.apiId).toBeUndefined();
+  });
+
+  it("never changes an entry that already has an id, or a scratch entry", () => {
+    const list = [
+      entry({ apiId: "lib_x" }),
+      entry({ specTitle: "Scratch", operationId: SCRATCH_OPERATION_ID }),
+    ];
+    expect(attachApiIds(list, [{ id: "lib_orders", title: "Orders" }, { id: "s", title: "Scratch" }]))
+      .toBe(list);
   });
 });
 

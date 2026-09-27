@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { DocumentTab } from "../components/DocumentView";
 import type { SidebarTab } from "../components/Sidebar";
 import type { EnvironmentFile } from "../lib/env";
-import type { HistoryEntry } from "../lib/history";
+import { fingerprint, type HistoryEntry } from "../lib/history";
 import * as library from "../lib/library";
 import type { LibraryEntry } from "../lib/library";
 import { initialAuth, type AuthState } from "../lib/request";
 import type { OperationSpec, ParsedSpec } from "../lib/spec";
 
 export type MainView = "operation" | "schema" | "graph" | "document";
-export type Route = "library" | "api" | "scratch";
+export type Route = "library" | "api" | "scratch" | "history";
 
-/** Values restored into the request form from a history entry. */
-export interface ReplayValues {
+/** Values a new request starts from when it is copied from a recording. */
+export interface PrefillValues {
   headers: Record<string, string>;
   body?: string;
   pathParams?: Record<string, string>;
@@ -46,19 +46,24 @@ export function useWorkspace(
   const [docText, setDocText] = useState("");
   const [docTab, setDocTab] = useState<DocumentTab>("reference");
 
-  const [replay, setReplay] = useState<ReplayValues | null>(null);
+  const [prefill, setPrefill] = useState<PrefillValues | null>(null);
   /**
-   * The history entry currently on screen, if the panes are showing a record
-   * rather than something just sent.
-   *
-   * Without this the two are indistinguishable: replayed values are merged into
-   * the live editors and the recorded response fills the inspector, so a result
-   * from three weeks ago looks exactly like one from three seconds ago. The
-   * banner is the only thing that says which you are reading.
+   * The recorded request open in the work area, read-only, in place of the
+   * editor. A record is never loaded into the editors — that made a response
+   * from three weeks ago look exactly like one from three seconds ago.
    */
-  const [viewingRecord, setViewingRecord] = useState<HistoryEntry | null>(null);
+  const [record, setRecord] = useState<HistoryEntry | null>(null);
+  /**
+   * When the editor was filled by "Copy to a new request": the time of the
+   * recording it came from. The editor says it's a new request until this is
+   * dismissed, something is sent, or another operation is picked.
+   */
+  const [copiedFrom, setCopiedFrom] = useState<string | null>(null);
 
   const [server, setServer] = useState("");
+
+  /** Which document a recorded check ran against — computed once per spec, not per send. */
+  const specFingerprint = useMemo(() => (spec ? fingerprint(spec.sourceText) : undefined), [spec]);
   const [auth, setAuth] = useState<AuthState | null>(null);
 
   // Remember where you were in each API, so coming back doesn't mean re-entering everything.
@@ -104,7 +109,9 @@ export function useWorkspace(
         setEnvFile((prev) => ({ ...prev, activeId: state.envId ?? null }));
       }
 
-      setReplay(null);
+      setPrefill(null);
+      setRecord(null);
+      setCopiedFrom(null);
       setAuth(initialAuth(parsed.securitySchemes, state.authScheme));
     },
     [activeEnvId, setEnvFile],
@@ -138,10 +145,13 @@ export function useWorkspace(
     docText,
     docTab,
     setDocTab,
-    replay,
-    setReplay,
-    viewingRecord,
-    setViewingRecord,
+    prefill,
+    setPrefill,
+    record,
+    setRecord,
+    copiedFrom,
+    setCopiedFrom,
+    specFingerprint,
     server,
     setServer,
     auth,

@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { RequestValues } from "../components/OperationView";
-import type { SidebarTab } from "../components/Sidebar";
 import { transportFor, type ConnectionSettings } from "../lib/connection";
 import * as history from "../lib/history";
 import type { HistoryEntry } from "../lib/history";
@@ -16,7 +15,6 @@ import {
 import {
   declaredResponse,
   describeSendError,
-  responseFromHistory,
   storedResponseBody,
   suggestedFileName,
 } from "../lib/response";
@@ -24,7 +22,6 @@ import {
   SCRATCH_OPERATION_ID,
   SCRATCH_TITLE,
   buildScratchPlan,
-  padFromHistory,
   scratchPath,
   type ScratchPad,
 } from "../lib/scratch";
@@ -33,7 +30,6 @@ import { pickSaveTarget, saveResponseTo } from "../lib/store";
 import { sentToMock } from "../lib/targets";
 import { validateResponse, type ValidationResult } from "../lib/validate";
 import type { Settings } from "./useSettings";
-import type { MainView, ReplayValues } from "./useWorkspace";
 
 interface Options {
   spec: ParsedSpec | null;
@@ -44,28 +40,27 @@ interface Options {
   mock: { url: string; key?: string; bearer?: string } | null;
   mockUrl: string | null;
   connection: ConnectionSettings;
-  /** The library entry whose cookie jar a spec request uses. */
+  /** The library entry whose cookie jar a spec request uses, and whose history it joins. */
   currentId: string | undefined;
+  /** The active environment's name, recorded with each request. */
+  environmentName: string | undefined;
+  /** Which document the check runs against, recorded so history can tell if it changed. */
+  specFingerprint: string | undefined;
   /** The OAuth token to send, renewed first if it's close to expiring. */
   usableToken: () => Promise<string>;
   pad: ScratchPad;
-  updatePad: (next: ScratchPad) => void;
   patchSettings: (patch: Partial<Settings>) => void;
   setRequests: Dispatch<SetStateAction<HistoryEntry[]>>;
-  /** Workspace setters a replay moves. */
-  setOperation: (op: OperationSpec) => void;
-  setReplay: (values: ReplayValues | null) => void;
-  setViewingRecord: (entry: HistoryEntry | null) => void;
-  setTab: (tab: SidebarTab) => void;
-  setView: (view: MainView) => void;
-  setServer: (server: string) => void;
+  /** Sending makes a copied request no longer "not sent yet". */
+  setCopiedFrom: (at: string | null) => void;
 }
 
 /**
  * Sending requests and showing what came back.
  *
  * Owns the response pane: the result, its schema check, the error, the curl
- * line. Spec requests, the scratch request and history replays all write to it.
+ * line. Spec requests and the scratch request write to it; recorded requests
+ * never do — they are read in their own view.
  */
 export function useRequestSender({
   spec,
@@ -77,17 +72,13 @@ export function useRequestSender({
   mockUrl,
   connection,
   currentId,
+  environmentName,
+  specFingerprint,
   usableToken,
   pad,
-  updatePad,
   patchSettings,
   setRequests,
-  setOperation,
-  setReplay,
-  setViewingRecord,
-  setTab,
-  setView,
-  setServer,
+  setCopiedFrom,
 }: Options) {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<ResponseResult | null>(null);
@@ -114,8 +105,7 @@ export function useRequestSender({
     setRequestError(null);
     setResult(null);
     setValidation(null);
-    // Whatever comes back is live, so the panes are no longer showing a record.
-    setViewingRecord(null);
+    setCopiedFrom(null);
     try {
       const { pathParams, queryParams, headerParams, body } = values.current;
       // An OAuth "value" isn't typed by the user — it's the acquired token,
@@ -157,10 +147,12 @@ export function useRequestSender({
           bytes: response.bytes,
           specTitle: spec.title,
           operationId: operation.id,
+          apiId: currentId,
+          environment: environmentName,
           headers: plan.headers,
           body: describeBody(plan.body),
           bodyKind: plan.body?.kind,
-          validation: verdict.status,
+          ...history.checkFields(verdict, { version: spec.version, fingerprint: specFingerprint }),
           mock: sentToMock(plan.url, mockUrl),
           statusText: response.statusText,
           responseHeaders: response.headers,
@@ -173,7 +165,7 @@ export function useRequestSender({
       setSending(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, operation, server, auth, vars, mockUrl, mock, connection, currentId, usableToken]);
+  }, [spec, operation, server, auth, vars, mockUrl, mock, connection, currentId, usableToken, environmentName, specFingerprint]);
 
   /**
    * Write the held response body wherever the user asks.
@@ -207,6 +199,7 @@ export function useRequestSender({
     setRequestError(null);
     setResult(null);
     setValidation(null);
+    setCopiedFrom(null);
     try {
       const plan = buildScratchPlan(pad, vars);
       setCurl(toCurl(plan));
@@ -226,6 +219,7 @@ export function useRequestSender({
           bytes: response.bytes,
           specTitle: SCRATCH_TITLE,
           operationId: SCRATCH_OPERATION_ID,
+          environment: environmentName,
           headers: plan.headers,
           body: describeBody(plan.body),
           bodyKind: plan.body?.kind,
@@ -241,79 +235,7 @@ export function useRequestSender({
       setSending(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pad, vars, connection]);
-
-  const replayScratch = useCallback(
-    (entry: HistoryEntry) => {
-      updatePad(padFromHistory(entry));
-      setRequestError(null);
-      setValidation(null);
-      setResult(responseFromHistory(entry));
-    },
-    [updatePad],
-  );
-
-  /**
-   * Open a recorded call: restore the request *and* show what came back.
-   *
-   * Clicking history used to jump to the operation with the inputs restored but
-   * an empty response pane, which loses the thing you clicked for. The recorded
-   * response is re-rendered — including its schema check — and the entry stays
-   * one Send away from being run again.
-   */
-  const doReplay = useCallback(
-    (entry: HistoryEntry) => {
-      if (!spec) return;
-      const found = spec.operations.find((op) => op.id === entry.operationId);
-      if (!found) {
-        // Used to `return` silently, so clicking the row did nothing at all and
-        // looked broken. A spec sync makes this ordinary rather than rare.
-        setRequestError(
-          `${entry.operationId} is no longer in this spec, so it can't be replayed. ` +
-            `It was recorded on ${new Date(entry.at).toLocaleString()} and returned ${entry.status}.`,
-        );
-        setResult(null);
-        setValidation(null);
-        patchSettings({ inspectorOpen: true });
-        return;
-      }
-      setOperation(found);
-      // Path and query values live only inside the recorded URL; without pulling
-      // them back out the form shows blank fields beside the response they
-      // produced.
-      const { pathParams, queryParams } = history.paramsFromEntry(entry, found.path);
-      setReplay({ headers: entry.headers, body: entry.body, pathParams, queryParams });
-      setViewingRecord(entry);
-      setTab("operations");
-      setView("operation");
-      try {
-        const parsed = new URL(entry.url);
-        setServer(`${parsed.protocol}//${parsed.host}`);
-      } catch {
-        /* keep the current base URL */
-      }
-
-      const recorded = responseFromHistory(entry);
-      if (!recorded) {
-        // Recorded before responses were stored — say so instead of showing nothing.
-        setResult(null);
-        setValidation(null);
-        setRequestError(
-          `Recorded ${entry.status} in ${entry.ms}ms, but this entry predates response capture. Send again to see the body.`,
-        );
-        return;
-      }
-
-      setRequestError(null);
-      setResult(recorded);
-
-      const declared = declaredResponse(found.responses, entry.status, { ranges: false });
-      setValidation(validateResponse(spec.doc, declared?.schema, recorded.json));
-      patchSettings({ inspectorOpen: true });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [spec],
-  );
+  }, [pad, vars, connection, environmentName]);
 
   return {
     sending,
@@ -326,7 +248,5 @@ export function useRequestSender({
     doSend,
     saveResponseBody,
     doScratchSend,
-    replayScratch,
-    doReplay,
   };
 }

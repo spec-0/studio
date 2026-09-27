@@ -8,10 +8,10 @@ import {
   recheck,
   recordedCheck,
   relativeTime,
-  responseFromEntry,
   specChange,
   type HistoryEntry,
 } from "../lib/history";
+import { responseFromHistory } from "../lib/response";
 import type { ParsedSpec } from "../lib/spec";
 import type { Finding, ValidationResult } from "../lib/validate";
 
@@ -69,7 +69,7 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
     !scratch && spec !== null && !spec.operations.some((op) => op.id === entry.operationId);
   const destination = copyDestination(entry, spec);
   const canRecheck = !scratch && spec !== null && !operationGone && entry.responseBody !== undefined;
-  const response = responseFromEntry(entry);
+  const response = responseFromHistory(entry);
   const recorded = recordedCheck(entry);
 
   const doRecheck = () => {
