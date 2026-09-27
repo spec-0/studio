@@ -1,7 +1,7 @@
 <h1 align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/assets/spec0-studio-dark.svg">
-    <img alt="spec0 Studio" src=".github/assets/spec0-studio-light.svg" width="340">
+    <img alt="Spec0 Studio" src=".github/assets/spec0-studio-light.svg" width="340">
   </picture>
 </h1>
 
@@ -11,7 +11,7 @@
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/spec-0/studio?color=52525B"></a>
 </p>
 
-**spec0 Studio** is a desktop app for calling and testing APIs, for developers who
+**Spec0 Studio** is a desktop app for calling and testing APIs, for developers who
 already have an OpenAPI spec (the YAML or JSON file that describes an API).
 
 Instead of building a collection of requests by hand, you open the spec and
@@ -23,7 +23,7 @@ Studio is young, and we'd like to hear what breaks.
 Free and open source (MIT). Works without an account.
 
 <p align="center">
-  <img alt="Opening the Swagger Petstore spec from a URL in spec0 Studio, sending a request that passes the schema check, then looking at it in History" src=".github/assets/studio-demo.gif" width="900">
+  <img alt="Opening the Swagger Petstore spec from a URL in Spec0 Studio, sending a request that passes the schema check, then looking at it in History" src=".github/assets/studio-demo.gif" width="900">
 </p>
 
 ## Download
@@ -60,7 +60,7 @@ then Studio starts again.
 ## What it does
 
 **Your specs**
-- Add an API from a local file, a URL, or a spec0 account. OpenAPI 3.0 and 3.1,
+- Add an API from a local file, a URL, or a Spec0 account. OpenAPI 3.0 and 3.1,
   YAML or JSON.
 - Studio keeps a copy of the spec's text, so it opens quickly, works offline and
   still works if the file moves.
@@ -143,10 +143,10 @@ servers you point it at.
   about your specs, environments or history, and it uses the proxy from your
   connection settings.
 
-## Connecting to spec0 (optional)
+## Connecting to Spec0 (optional)
 
 Everything above works without an account. If your team uses
-[spec0](https://spec0.io), you can sign in to browse your organisation's APIs,
+[Spec0](https://spec0.io), you can sign in to browse your organisation's APIs,
 pull their specs, use hosted mock servers as request targets, and publish a
 local spec to your organisation. Signing out returns Studio to local-only use,
 and nothing is lost.
