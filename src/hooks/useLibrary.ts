@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { HistoryEntry } from "../lib/history";
 import * as library from "../lib/library";
-import type { ApiSource, LibraryEntry } from "../lib/library";
+import { documentUrlOf, type ApiSource, type LibraryEntry } from "../lib/library";
 import { fileName } from "../lib/platform";
 import { appFetch, inTauri } from "../lib/request";
 import { parseSpec, type ParsedSpec } from "../lib/spec";
@@ -116,7 +116,7 @@ export function useLibrary({
       } | null,
     ) => {
       try {
-        const parsed = parseSpec(text, name);
+        const parsed = parseSpec(text, name, documentUrlOf(source));
         const entry = await library.addToLibrary({
           title: parsed.title || name,
           version: parsed.version,
@@ -185,7 +185,7 @@ export function useLibrary({
           setLoadError(`${entry.title}: the stored document is missing. Refresh or re-add it.`);
           return;
         }
-        openSpec(parseSpec(text, entry.title), entry, text);
+        openSpec(parseSpec(text, entry.title, documentUrlOf(entry.source)), entry, text);
         setEntries(await library.touchOpened(entry.id));
         void syncEnvironments(entry);
       } catch (error) {

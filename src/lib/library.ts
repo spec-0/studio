@@ -365,3 +365,8 @@ export function relativeTime(iso: string | undefined): string {
   const days = Math.round(hours / 24);
   return days === 1 ? "yesterday" : `${days}d ago`;
 }
+
+/** Where the document was fetched from, when that's a web address relative server URLs can be resolved against. */
+export function documentUrlOf(source: ApiSource): string | undefined {
+  return source.kind === "url" ? source.ref : undefined;
+}
