@@ -45,6 +45,7 @@ import {
   inTauri,
   send,
   describeBody,
+  initialAuth,
   toCurl,
   type AuthState,
   type ResponseResult,
@@ -53,10 +54,9 @@ import { validateResponse, type ValidationResult } from "./lib/validate";
 import {
   interpolate,
   loadEnvironments,
-  newEnvironment,
   saveEnvironments,
   variableMap,
-  withVariable,
+  withBaseUrl,
   type EnvironmentFile,
 } from "./lib/env";
 import * as history from "./lib/history";
@@ -94,7 +94,6 @@ import {
   type TeamSummary,
   type ApiConsumers,
   fetchTeamApiSpec,
-  hasUpdate,
   listApiEnvironments,
   loadSession,
   refreshMock,
@@ -150,10 +149,12 @@ import {
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import {
   describeImpact,
+  describeMockRefresh,
   diffSpecs,
   environmentSkew,
   isNoteworthy,
   mockIsBehind,
+  updateMarks,
 } from "./lib/sync";
 
 type MainView = "operation" | "schema" | "graph" | "document";
@@ -322,26 +323,10 @@ export default function App() {
     [server, vars, mockUrl],
   );
 
-  /**
-   * Keep an ad-hoc base URL as a `baseUrl` variable in the active environment,
-   * creating a Local one if there isn't one.
-   *
-   * Typing a URL stays the zero-setup path; this is only for wanting it back
-   * tomorrow. It writes a plain variable rather than a special field, so there is
-   * exactly one notion of environment.
-   */
+  /** Keep an ad-hoc base URL as `baseUrl` in the active environment — see `withBaseUrl`. */
   const saveTarget = useCallback((url: string) => {
     setEnvFile((prev) => {
-      const base =
-        prev.environments.find((env) => env.id === prev.activeId) ?? newEnvironment("Local");
-      const updated = withVariable(base, "baseUrl", url);
-      const exists = prev.environments.some((env) => env.id === updated.id);
-      const next = {
-        activeId: updated.id,
-        environments: exists
-          ? prev.environments.map((env) => (env.id === updated.id ? updated : env))
-          : [...prev.environments, updated],
-      };
+      const next = withBaseUrl(prev, url);
       void saveEnvironments(next);
       return next;
     });
@@ -367,21 +352,7 @@ export default function App() {
       setEntries(next);
       setCurrent((open) => (open?.id === entry.id ? next.find((e) => e.id === entry.id) ?? open : open));
 
-      const dropped = result.customVariantsDropped ?? [];
-      setSyncReport({
-        title: `${entry.title} mock`,
-        lines: [
-          result.refreshed
-            ? `Rebuilt against ${result.specVersion ?? "the current spec"} — same URL and key`
-            : "Already serving the current spec",
-          ...(result.customVariantsCarriedOver
-            ? [`${result.customVariantsCarriedOver} custom response variant(s) carried over`]
-            : []),
-          ...(dropped.length
-            ? [`${dropped.length} custom variant(s) dropped — their operation is gone: ${dropped.slice(0, 3).join(", ")}`]
-            : []),
-        ],
-      });
+      setSyncReport({ title: `${entry.title} mock`, lines: describeMockRefresh(result) });
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -690,20 +661,7 @@ export default function App() {
       setRequestError(null);
       setReplay(null);
 
-      const scheme =
-        parsed.securitySchemes.find((s) => s.name === state.authScheme) ?? parsed.securitySchemes[0];
-      setAuth(
-        scheme
-          ? {
-              schemeName: scheme.name,
-              value: "",
-              type: scheme.type,
-              httpScheme: scheme.scheme,
-              in: scheme.in,
-              paramName: scheme.paramName,
-            }
-          : null,
-      );
+      setAuth(initialAuth(parsed.securitySchemes, state.authScheme));
     },
     [envFile.activeId],
   );
@@ -818,20 +776,7 @@ export default function App() {
     setChecking(true);
     try {
       const upstream = await upstreamVersions(session);
-      const marks: Record<string, library.AvailableUpdate | undefined> = {};
-      for (const entry of entries) {
-        if (entry.source.kind !== "spec0") continue;
-        const apiId = apiIdFromRef(entry.source.ref);
-        if (!apiId) continue;
-        const found = upstream.get(apiId);
-        marks[entry.id] = hasUpdate(entry, found)
-          ? {
-              version: found?.version,
-              updatedAt: found?.updatedAt,
-              checkedAt: new Date().toISOString(),
-            }
-          : undefined;
-      }
+      const marks = updateMarks(entries, upstream, new Date().toISOString());
       setEntries(await library.setUpdates(marks));
     } catch {
       // A failed check is not worth interrupting anyone for — the badge simply

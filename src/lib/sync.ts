@@ -1,4 +1,6 @@
 import type { HistoryEntry } from "./history";
+import type { AvailableUpdate } from "./library";
+import { apiIdFromRef, hasUpdate, type RefreshedMock, type UpstreamState } from "./spec0";
 import type { ParsedSpec } from "./spec";
 
 /**
@@ -131,4 +133,45 @@ export function environmentSkew(
   const live = environment?.currentVersion;
   if (!environment || !live || !specVersion || live === specVersion) return null;
   return { name: environment.name, live, held: specVersion };
+}
+
+/**
+ * Mark each spec0-sourced entry that upstream holds a newer copy of.
+ *
+ * Returns a mark (or `undefined`, which clears an old one) for every entry with a
+ * spec0 API id; other entries are left out so their state is untouched. Detection
+ * is passive: it marks, it never applies.
+ */
+export function updateMarks(
+  entries: { id: string; source: { kind: string; ref: string }; version?: string; syncedAt?: string }[],
+  upstream: Map<string, UpstreamState>,
+  checkedAt: string,
+): Record<string, AvailableUpdate | undefined> {
+  const marks: Record<string, AvailableUpdate | undefined> = {};
+  for (const entry of entries) {
+    if (entry.source.kind !== "spec0") continue;
+    const apiId = apiIdFromRef(entry.source.ref);
+    if (!apiId) continue;
+    const found = upstream.get(apiId);
+    marks[entry.id] = hasUpdate(entry, found)
+      ? { version: found?.version, updatedAt: found?.updatedAt, checkedAt }
+      : undefined;
+  }
+  return marks;
+}
+
+/** What rebuilding a mock did, one line per fact worth saying. */
+export function describeMockRefresh(result: RefreshedMock): string[] {
+  const dropped = result.customVariantsDropped ?? [];
+  return [
+    result.refreshed
+      ? `Rebuilt against ${result.specVersion ?? "the current spec"} — same URL and key`
+      : "Already serving the current spec",
+    ...(result.customVariantsCarriedOver
+      ? [`${result.customVariantsCarriedOver} custom response variant(s) carried over`]
+      : []),
+    ...(dropped.length
+      ? [`${dropped.length} custom variant(s) dropped — their operation is gone: ${dropped.slice(0, 3).join(", ")}`]
+      : []),
+  ];
 }

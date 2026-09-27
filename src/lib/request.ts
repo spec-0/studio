@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { OperationSpec } from "./spec";
+import type { OperationSpec, SecuritySchemeSpec } from "./spec";
 import { interpolate } from "./env";
 import { redact } from "./redact";
 
@@ -147,6 +147,27 @@ export interface AuthState {
   in?: string;
   type?: string;
   httpScheme?: string;
+}
+
+/**
+ * The auth state to start from when an API opens: the scheme used last time if
+ * the spec still declares it, otherwise the first declared one, with no value.
+ */
+export function initialAuth(
+  schemes: SecuritySchemeSpec[],
+  preferred: string | null | undefined,
+): AuthState | null {
+  const scheme = schemes.find((s) => s.name === preferred) ?? schemes[0];
+  return scheme
+    ? {
+        schemeName: scheme.name,
+        value: "",
+        type: scheme.type,
+        httpScheme: scheme.scheme,
+        in: scheme.in,
+        paramName: scheme.paramName,
+      }
+    : null;
 }
 
 /**
