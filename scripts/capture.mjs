@@ -624,6 +624,18 @@ await must(clickTab(".segment", "Operations"), "the Operations tab");
 await wait(400);
 await page.screenshot({ path: `${outDir}/29-min-width-api-light.png` });
 console.log("29-min-width-api-light");
+// An API with a mock: every action on the bar, and the name still in full.
+await clickLabel("Back to all APIs");
+await wait(400);
+await clickByText(".api-title", UPLOADED);
+await page.waitForSelector(".apibar", { timeout: 15000 });
+await wait(500);
+await page.screenshot({ path: `${outDir}/29b-min-width-api-with-mock-light.png` });
+console.log("29b-min-width-api-with-mock-light");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/29c-min-width-api-with-mock-dark.png` });
+console.log("29c-min-width-api-with-mock-dark");
+await toggleTheme();
 await must(clickLabel("Settings"), "the Settings button");
 await must(clickTab(".settings-tab", "Network"), "the Network section");
 await wait(400);

@@ -456,7 +456,7 @@ export default function App() {
           kind="api"
           title={spec!.title || current?.title || "Untitled API"}
           version={spec!.version}
-          fromSpec0={current?.source.kind === "spec0"}
+          source={current?.source.kind}
           mock={
             current && (current.mockUrl || journeyAvailable(targetOf(current, session?.apiUrl ?? DEFAULT_API_URL)))
               ? {

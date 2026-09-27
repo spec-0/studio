@@ -49,16 +49,17 @@ export interface PublishResult {
 }
 
 /**
- * Only a spec opened from disk can be published.
+ * A spec opened from a file or a URL can be published.
  *
- * Studio has no editor, so a spec0-sourced document is byte-identical to what
- * the platform already holds — publishing it back is a no-op carrying a version
- * bump. A URL-sourced one is someone else's document at an address, and the
- * sample is furniture. Offering the button for those would be a claim about
- * what pressing it does that isn't true.
+ * Studio stores the full text of both, and the user chose to bring them in, so
+ * publishing sends exactly the document Studio shows. Two sources can't:
+ * a spec0-sourced document is byte-identical to what the platform already
+ * holds, so publishing it back is a no-op carrying a version bump; and the
+ * sample isn't a real API. Offering the button for those would be a claim
+ * about what pressing it does that isn't true.
  */
 export function canPublish(source: ApiSource | undefined): boolean {
-  return source?.kind === "file" && Boolean(source.ref);
+  return (source?.kind === "file" || source?.kind === "url") && Boolean(source.ref);
 }
 
 /** Why the button isn't offered, in the words of the thing that's open. */
@@ -69,7 +70,7 @@ export function whyNotPublishable(source: ApiSource | undefined): string | null 
     case "spec0":
       return "This API already lives in spec0. Studio doesn't edit specs, so there's nothing here to publish back — edit the file and open that instead.";
     case "url":
-      return "This spec was fetched from a URL. Save it to a file first — publishing someone else's hosted document isn't the same as publishing yours.";
+      return source.ref ? null : "This document has no address behind it.";
     case "sample":
       return "The bundled sample isn't a real API.";
     default:

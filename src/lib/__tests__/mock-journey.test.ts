@@ -114,8 +114,8 @@ describe("which step comes first", () => {
     expect(checklist(state).every((item) => item.status === "done" || item.status === "skipped")).toBe(true);
   });
 
-  it("isn't offered for a spec from a URL or the sample", () => {
-    expect(journeyAvailable({ apiId: null, sourceKind: "url" })).toBe(false);
+  it("is offered for files and URLs, not for the sample", () => {
+    expect(journeyAvailable({ apiId: null, sourceKind: "url" })).toBe(true);
     expect(journeyAvailable({ apiId: null, sourceKind: "sample" })).toBe(false);
     expect(journeyAvailable({ apiId: null, sourceKind: "file" })).toBe(true);
     expect(journeyAvailable({ apiId: "api-1", sourceKind: "spec0" })).toBe(true);

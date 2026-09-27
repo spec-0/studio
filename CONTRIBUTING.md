@@ -210,11 +210,14 @@ give a second place to read it that could be out of date. Studio shows the numbe
 and links to spec0. Pending access requests are counted, because they are real
 consumers and leaving them out would understate who a change might affect.
 
-**You publish specs you opened from disk, and Studio never chooses the
-version.** Publishing is only offered for specs opened from a file. Studio has no
-editor, so a spec pulled from spec0 is identical to what spec0 already has, and
-publishing it back would change nothing but the version. Where the button would
-be, Studio explains why it isn't there. The version defaults to `info.version`
+**You publish specs you brought in, and Studio never chooses the version.**
+Publishing is offered for specs opened from a file or a URL. Studio stores the
+full text of both, and adding one was the user's choice, so what gets published
+is exactly the document Studio shows. It isn't offered for a spec pulled from
+spec0, which is identical to what spec0 already has (Studio has no editor, so
+publishing it back would change nothing but the version), or for the bundled
+sample, which isn't a real API. Where the button would be, Studio explains why
+it isn't there. The version defaults to `info.version`
 and is never increased automatically; choosing a version is the user's call. A
 commit id is sent **only when the file has no uncommitted changes**, because
 otherwise the commit doesn't describe the file. Show the actual result: "no

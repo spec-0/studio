@@ -95,9 +95,8 @@ export const API_FEATURE = "max_internal_apis";
 /**
  * Can this entry reach a mock through the journey at all?
  *
- * It needs to be on Spec0 already, or be a spec Studio may publish (a file).
- * A spec fetched from a URL, or the sample, isn't offered: publishing someone
- * else's document isn't the same as publishing yours.
+ * It needs to be on Spec0 already, or be a spec Studio may publish (opened
+ * from a file or a URL). The sample isn't offered: it isn't a real API.
  */
 export function journeyAvailable(target: Pick<JourneyTarget, "apiId" | "sourceKind">): boolean {
   return Boolean(target.apiId) || canPublish({ kind: target.sourceKind, ref: "x" });

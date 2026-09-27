@@ -2048,3 +2048,29 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .mock-key-confirm { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: hsl(var(--warning)); white-space: normal; }
 .mock-key-confirm .btn { padding: 2px 8px; font-size: 11px; }
 .modal.journey:focus { outline: none; }
+
+/* The open API's name gets a row of its own, above its views and actions. */
+.apihead { flex: none; display: flex; flex-direction: column; min-width: 0; }
+.apibar-title {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 8px;
+  background: hsl(var(--bg));
+  min-width: 0;
+}
+.apibar-title .api-switch { min-width: 0; max-width: none; flex: 0 1 auto; }
+.apibar-title .spec-name { font-weight: 600; font-size: 13.5px; letter-spacing: -0.005em; }
+.apibar-title .spec-version {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: hsl(var(--ink-3));
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.apibar-title .tag { flex: none; }
+.apibar.tools { height: 38px; flex-basis: 38px; padding-left: 12px; }
+.apibar.tools .segmented { margin-left: 0; }

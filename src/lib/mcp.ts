@@ -538,10 +538,9 @@ async function publishedApi(
 
 function notPublished(entry: LibraryEntry): string {
   const how =
-    entry.source.kind === "file"
-      ? "The user can publish it from Studio: open the API and choose Publish."
-      : "Studio can publish specs opened from a file; this one came from " +
-        (entry.source.kind === "url" ? "a URL." : "the bundled sample.");
+    entry.source.kind === "file" || entry.source.kind === "url"
+      ? "The user can publish it from Studio: open the API and choose Create mock, or Publish."
+      : "This is the bundled sample, which isn't a real API and can't be published.";
   return `${entry.title} isn't published to Spec0 yet, so it has no hosted mock. ${how}`;
 }
 

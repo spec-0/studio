@@ -205,7 +205,7 @@ function PickApi({ entries, apiUrl, onPick, onAddApi }: Props) {
           <div>
             <p>No API in your library can get a mock yet.</p>
             <p className="field-meta">
-              Open a spec from a file or from Spec0, then create its mock here.
+              Add a spec from a file, a URL or Spec0, then create its mock here.
             </p>
             <button className="btn primary" style={{ marginTop: 10 }} onClick={onAddApi}>
               <Plus size={13} /> Add API
@@ -220,7 +220,9 @@ function PickApi({ entries, apiUrl, onPick, onAddApi }: Props) {
                 <span className="path">{entry.title}</span>
                 {entry.version && <span className="count">{entry.version}</span>}
                 <span className="spacer" />
-                <span className="meta">{target.apiId ? "on Spec0" : "local file"}</span>
+                <span className="meta">
+                  {target.apiId ? "on Spec0" : target.sourceKind === "url" ? "from a URL" : "local file"}
+                </span>
               </button>
             </li>
           ))}
@@ -230,7 +232,7 @@ function PickApi({ entries, apiUrl, onPick, onAddApi }: Props) {
         <p className="field-meta" style={{ marginTop: 12 }}>
           {hasMock.length > 0 && `${hasMock.length} already ${hasMock.length === 1 ? "has" : "have"} a mock. `}
           {other > 0 &&
-            `${other} opened from a URL or the sample can't be published from Studio; save the spec to a file first.`}
+            "The sample API can't get a mock; it isn't a real API."}
         </p>
       )}
     </div>

@@ -27,16 +27,20 @@ describe("canPublish", () => {
 
   // Studio has no editor, so a spec0-sourced document is byte-identical to what
   // the platform holds — the button would be a claim that isn't true.
-  it("refuses everything that isn't a file on disk", () => {
+  it("allows a spec opened from a URL: Studio holds its full text", () => {
+    expect(canPublish({ kind: "url", ref: "https://example.com/o.yaml" })).toBe(true);
+    expect(whyNotPublishable({ kind: "url", ref: "https://example.com/o.yaml" })).toBeNull();
+  });
+
+  it("refuses a spec0-sourced document and the sample", () => {
     expect(canPublish({ kind: "spec0", ref: "spec0:abc" })).toBe(false);
-    expect(canPublish({ kind: "url", ref: "https://example.com/o.yaml" })).toBe(false);
     expect(canPublish({ kind: "sample", ref: "sample" })).toBe(false);
     expect(canPublish(undefined)).toBe(false);
   });
 
   it("explains the refusal instead of going quiet", () => {
     expect(whyNotPublishable({ kind: "spec0", ref: "spec0:abc" })).toContain("already lives in spec0");
-    expect(whyNotPublishable({ kind: "url", ref: "https://x" })).toContain("Save it to a file");
+    expect(whyNotPublishable({ kind: "sample", ref: "sample" })).toContain("isn't a real API");
     expect(whyNotPublishable({ kind: "file", ref: "/x.yaml" })).toBeNull();
   });
 });
