@@ -3,6 +3,8 @@
  *
  * Run against real specs, not fixtures: the point is to find out whether the
  * parser survives Stripe-scale input and whether drift detection actually fires.
+ * Swagger 2.0 specs (Kubernetes', Docker Engine's) go through the converter
+ * first, so they exercise it at the same scale.
  *
  *   npx esbuild scripts/smoke.ts --bundle --platform=node --format=esm --outfile=/tmp/smoke.mjs
  *   node /tmp/smoke.mjs <spec-file>…
@@ -30,6 +32,10 @@ for (const file of process.argv.slice(2)) {
     const spec = parseSpec(text, name);
     console.log(`  parse           ${ms(t0)}`);
     console.log(`  title           ${spec.title} ${spec.version}`);
+    if (spec.converted) {
+      // Swagger 2.0 is converted on the way in; everything below runs on the conversion.
+      console.log(`  converted       from ${spec.converted.from}${spec.converted.notes.length ? ` (${spec.converted.notes.join(" ")})` : ""}`);
+    }
     console.log(`  operations      ${spec.operations.length}`);
     console.log(`  schemas         ${spec.schemas.length}`);
     console.log(`  tags            ${spec.tags.length}`);

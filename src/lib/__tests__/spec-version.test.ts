@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { SWAGGER2_CONVERT_COMMAND, parseDocument, parseSpec } from "../spec";
+import { parseDocument, parseSpec } from "../spec";
 
 describe("document version checks", () => {
-  it("tells a Swagger 2.0 user how to convert the spec locally", () => {
+  it("opens Swagger 2.0 by converting it to OpenAPI 3", () => {
     const swagger = JSON.stringify({ swagger: "2.0", info: { title: "Old", version: "1" }, paths: {} });
-    expect(() => parseDocument(swagger)).toThrow(SWAGGER2_CONVERT_COMMAND);
-    expect(() => parseSpec("swagger: '2.0'\ninfo: {title: Old, version: '1'}\npaths: {}\n", "old.yaml")).toThrow(
-      /npx swagger2openapi <file> -o openapi\.json/,
+    expect(parseDocument(swagger).openapi).toBe("3.0.3");
+    expect(parseSpec("swagger: '2.0'\ninfo: {title: Old, version: '1'}\npaths: {}\n", "old.yaml").converted?.from).toBe(
+      "Swagger 2.0",
     );
-    expect(() => parseDocument(swagger)).toThrow(/support is planned/);
   });
 
   it("still rejects a document with no version field", () => {

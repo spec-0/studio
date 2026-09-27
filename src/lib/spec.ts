@@ -1,4 +1,5 @@
-import { load } from "js-yaml";
+import { dump, load } from "js-yaml";
+import { convertSwagger2, isSwagger2 } from "./swagger2";
 
 /**
  * Parse an OpenAPI document into the shape the UI consumes.
@@ -85,9 +86,19 @@ export interface ParsedSpec {
   schemas: SchemaEntry[];
   securitySchemes: SecuritySchemeSpec[];
   tags: string[];
+  /** The document Studio works from: OpenAPI 3, converted if the file was Swagger 2.0. */
   doc: Json;
+  /** The text as imported. For a converted spec, that is the Swagger 2.0 original. */
   sourceText: string;
   sourceName: string;
+  /** Present when the file was Swagger 2.0 and `doc` is Studio's conversion of it. */
+  converted?: ConvertedSpec;
+}
+
+export interface ConvertedSpec {
+  from: "Swagger 2.0";
+  /** Where the conversion had to guess or drop something; empty when it didn't. */
+  notes: string[];
 }
 
 const HTTP_METHODS = ["get", "put", "post", "delete", "patch", "options", "head", "trace"];
@@ -110,17 +121,24 @@ function parseOAuthFlows(flows: Json | undefined): OAuthFlowSpec[] | undefined {
 }
 
 /**
- * Converting a Swagger 2.0 document is a one-liner that runs locally, so the error
- * says how instead of stopping at "not supported". The Library screen offers to
- * copy the command and links to the tracking issue.
+ * If Studio can't convert a Swagger 2.0 document, converting it locally is a
+ * one-liner, so the error says how. The Library screen offers to copy it.
  */
 export const SWAGGER2_CONVERT_COMMAND = "npx swagger2openapi <file> -o openapi.json";
-export const SWAGGER2_ISSUE_URL = "https://github.com/spec-0/studio/issues/33";
-export const SWAGGER2_MESSAGE =
-  "This is a Swagger 2.0 document. Studio can't open it yet; support is planned. " +
-  `To convert it to OpenAPI 3 on your machine, run: ${SWAGGER2_CONVERT_COMMAND}`;
 
-export function parseDocument(text: string): Json {
+/** A parsed document, and whether Studio converted it from Swagger 2.0 to get there. */
+export interface ReadDocument {
+  doc: Json;
+  converted?: ConvertedSpec;
+}
+
+/**
+ * Parse a document's text into the OpenAPI 3 document Studio works from.
+ *
+ * Swagger 2.0 is converted here, so everything downstream only ever sees
+ * OpenAPI 3. The caller keeps the original text.
+ */
+export function readDocument(text: string, documentUrl?: string): ReadDocument {
   const trimmed = text.trimStart();
   const doc = trimmed.startsWith("{") ? JSON.parse(text) : (load(text) as Json);
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
@@ -129,8 +147,43 @@ export function parseDocument(text: string): Json {
   if (!doc.openapi && !doc.swagger) {
     throw new Error("No `openapi` or `swagger` version field — is this an OpenAPI document?");
   }
-  if (doc.swagger) throw new Error(SWAGGER2_MESSAGE);
-  return doc;
+  if (!isSwagger2(doc)) return { doc };
+  try {
+    const { doc: converted, notes } = convertSwagger2(doc, { documentUrl });
+    return { doc: converted, converted: { from: "Swagger 2.0", notes } };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Studio couldn't convert this Swagger 2.0 document to OpenAPI 3: ${reason} ` +
+        `You can convert it on your machine instead, then open the result: ${SWAGGER2_CONVERT_COMMAND}`,
+    );
+  }
+}
+
+export function parseDocument(text: string, documentUrl?: string): Json {
+  return readDocument(text, documentUrl).doc;
+}
+
+const convertedTexts = new WeakMap<ParsedSpec, string>();
+
+/**
+ * The document as OpenAPI 3 text: the imported text, or for a converted spec,
+ * the conversion written out in the same format as the file (JSON or YAML).
+ *
+ * What the Reference tab renders and what publishing sends, so both describe
+ * the document the rest of Studio uses. Written out on first use and cached,
+ * since most sessions never need it.
+ */
+export function openapiText(spec: ParsedSpec): string {
+  if (!spec.converted) return spec.sourceText;
+  let text = convertedTexts.get(spec);
+  if (text === undefined) {
+    text = spec.sourceText.trimStart().startsWith("{")
+      ? JSON.stringify(spec.doc, null, 2)
+      : dump(spec.doc, { noRefs: true, lineWidth: -1 });
+    convertedTexts.set(spec, text);
+  }
+  return text;
 }
 
 /** Resolve one `$ref` against the document root. Returns undefined if unresolvable. */
@@ -239,7 +292,7 @@ export function resolveServers(servers: string[], documentUrl?: string): string[
 }
 
 export function parseSpec(text: string, sourceName: string, documentUrl?: string): ParsedSpec {
-  const doc = parseDocument(text);
+  const { doc, converted } = readDocument(text, documentUrl);
 
   const operations: OperationSpec[] = [];
   for (const [path, pathItem] of Object.entries<Json>(doc.paths ?? {})) {
@@ -336,5 +389,6 @@ export function parseSpec(text: string, sourceName: string, documentUrl?: string
     doc,
     sourceText: text,
     sourceName,
+    ...(converted ? { converted } : {}),
   };
 }

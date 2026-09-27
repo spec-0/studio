@@ -3,6 +3,7 @@ import { TabList } from "./TabList";
 import { API_SECTIONS, type ApiSection } from "../lib/navigation";
 import { shortcut } from "../lib/platform";
 import type { SourceKind } from "../lib/library";
+import { CONVERTED_LABEL, describeConversion } from "../lib/swagger2";
 
 type Props =
   | ({ kind: "api" } & ApiProps)
@@ -19,6 +20,8 @@ interface ApiProps extends CommonProps {
   version?: string;
   /** Where the open API came from: a file, a URL, Spec0 or the sample. */
   source?: SourceKind;
+  /** Present when the file was Swagger 2.0 and Studio converted it: where the conversion guessed. */
+  converted?: { notes: string[] } | null;
   section: ApiSection;
   onSection: (section: ApiSection) => void;
   onSwitchApi: () => void;
@@ -95,6 +98,11 @@ export function ApiBar(props: Props) {
       </button>
       {props.source && props.source !== "sample" && (
         <span className={`tag src-${props.source}`}>{props.source === "spec0" ? "spec0" : props.source}</span>
+      )}
+      {props.converted && (
+        <span className="meta converted-note" title={describeConversion(props.converted.notes)}>
+          {CONVERTED_LABEL}
+        </span>
       )}
     </div>
     <div className="apibar tools">

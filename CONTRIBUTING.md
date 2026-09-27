@@ -93,6 +93,12 @@ the plugin back.
   library, environments, history, sending a request, and so on). `App.tsx` only
   connects hooks to components; new behaviour goes in a hook or in `src/lib/`,
   not in `App.tsx`.
+- **Swagger 2.0 is converted on opening, in `src/lib/swagger2.ts`.** Everything
+  after `readDocument` in `src/lib/spec.ts` sees OpenAPI 3 only; the library
+  keeps the imported text, which the Raw tab shows. It is our own converter
+  rather than `swagger2openapi`, which is written for Node (an HTTP client, a
+  CLI, a validator) and would need shimming to run in the web view. Publishing
+  sends the converted OpenAPI 3.0 text, because Spec0 takes 3.0 and 3.1.
 - **Never expand a whole spec.** `$ref` references are looked up when needed,
   with a record of what has been seen. That keeps large specs fast (Stripe's
   parses in about 30 ms) and stops schemas that refer to themselves from looping
