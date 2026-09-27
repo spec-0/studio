@@ -11,7 +11,8 @@ import {
   type CatalogEntry,
   type Session,
 } from "../lib/spec0";
-import { Cloud, CloudOff, Download, Globe, Plus, RefreshCw, Search, TriangleAlert } from "lucide-react";
+import { ConnectModes } from "./ConnectModes";
+import { Download, Globe, Plus, RefreshCw, Search, TriangleAlert } from "lucide-react";
 import { inTauri } from "../lib/request";
 
 type Source = "file" | "url" | "spec0";
@@ -284,39 +285,7 @@ export function OpenDialog({
               {/* State the capability split explicitly. Someone on this tab is asking
                   exactly this question, so answering it here isn't a nag — and the
                   status chip must never answer it anywhere else. */}
-              <div className="modes">
-                <div className="mode">
-                  <div className="mode-head">
-                    <CloudOff size={13} />
-                    <strong>Local</strong>
-                    <span className="tag ok">now</span>
-                  </div>
-                  <ul>
-                    <li>Open specs from a file, a URL, or the sample</li>
-                    <li>Browse operations, schemas and the schema graph</li>
-                    <li>Auth, custom headers, environments and secrets</li>
-                    <li>Send requests to any host</li>
-                    <li>Response validation and drift detection</li>
-                    <li>Request history</li>
-                  </ul>
-                  <p className="meta">No account. No network call to spec0. Ever.</p>
-                </div>
-                <div className="mode">
-                  <div className="mode-head">
-                    <Cloud size={13} />
-                    <strong>Connected</strong>
-                    <span className="tag">adds</span>
-                  </div>
-                  <ul>
-                    <li>Your organisation&apos;s API catalog</li>
-                    <li>Import any org API, private or published</li>
-                    <li>Re-pull a spec when it changes upstream</li>
-                    <li>Discover and create hosted mock servers</li>
-                    <li>Target a mock from the address bar</li>
-                  </ul>
-                  <p className="meta">Signing out reverts to Local. Nothing you added is lost.</p>
-                </div>
-              </div>
+              <ConnectModes />
 
               <div style={{ display: "grid", gap: 8, marginTop: 14, maxWidth: 460 }}>
                 {cliAvailable && (

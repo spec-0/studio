@@ -2,11 +2,17 @@ import { useMemo } from "react";
 import type { OperationSpec, ParsedSpec, SchemaEntry } from "../lib/spec";
 import { search as searchHistory, type HistoryEntry } from "../lib/history";
 import { HistoryList } from "./HistoryList";
+import { TabList } from "./TabList";
 
 export type SidebarTab = "operations" | "schemas" | "history";
 
 interface Props {
   spec: ParsedSpec;
+  /**
+   * What the sidebar lists. The Operations and Schemas tabs above choose
+   * between operations and schemas; under Operations, the sidebar's own tabs
+   * switch between the operations and this API's history.
+   */
   tab: SidebarTab;
   onTabChange: (tab: SidebarTab) => void;
   query: string;
@@ -76,33 +82,39 @@ export function Sidebar({
   );
 
   return (
-    <aside className="sidebar">
-      <div className="tabs" role="tablist">
-        <button
-          className="tab"
-          role="tab"
-          aria-selected={tab === "operations"}
-          onClick={() => onTabChange("operations")}
-        >
-          Operations <span className="meta">{spec.operations.length}</span>
-        </button>
-        <button
-          className="tab"
-          role="tab"
-          aria-selected={tab === "schemas"}
-          onClick={() => onTabChange("schemas")}
-        >
-          Schemas <span className="meta">{spec.schemas.length}</span>
-        </button>
-        <button
-          className="tab"
-          role="tab"
-          aria-selected={tab === "history"}
-          onClick={() => onTabChange("history")}
-        >
-          History <span className="meta">{history.length}</span>
-        </button>
-      </div>
+    <aside className="sidebar" aria-label={tab === "schemas" ? "Schemas" : "Operations and history"}>
+      {tab === "schemas" ? (
+        <div className="history-side-head">
+          <h2>Schemas</h2>
+          <span className="meta">{spec.schemas.length}</span>
+        </div>
+      ) : (
+        <TabList<SidebarTab>
+          className="tabs"
+          tabClassName="tab"
+          label="Operations or history"
+          tabs={[
+            {
+              id: "operations",
+              label: (
+                <>
+                  Operations <span className="meta">{spec.operations.length}</span>
+                </>
+              ),
+            },
+            {
+              id: "history",
+              label: (
+                <>
+                  History <span className="meta">{history.length}</span>
+                </>
+              ),
+            },
+          ]}
+          selected={tab}
+          onSelect={onTabChange}
+        />
+      )}
 
       <div className="search">
         <input

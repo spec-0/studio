@@ -6,10 +6,11 @@ import { fingerprint, type HistoryEntry } from "../lib/history";
 import * as library from "../lib/library";
 import type { LibraryEntry } from "../lib/library";
 import { initialAuth, type AuthState } from "../lib/request";
+import type { Route } from "../lib/navigation";
 import type { OperationSpec, ParsedSpec } from "../lib/spec";
 
 export type MainView = "operation" | "schema" | "graph" | "document";
-export type Route = "library" | "api" | "scratch" | "history";
+export type { Route } from "../lib/navigation";
 
 /** Values a new request starts from when it is copied from a recording. */
 export interface PrefillValues {
