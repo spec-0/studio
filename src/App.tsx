@@ -45,7 +45,6 @@ import {
   inTauri,
   send,
   describeBody,
-  extensionFor,
   toCurl,
   type AuthState,
   type ResponseResult,
@@ -141,6 +140,13 @@ import {
   mockCredentials,
   sentToMock,
 } from "./lib/targets";
+import {
+  declaredResponse,
+  describeSendError,
+  responseFromHistory,
+  storedResponseBody,
+  suggestedFileName,
+} from "./lib/response";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import {
   describeImpact,
@@ -515,10 +521,7 @@ export default function App() {
             ...transportFor(connection, plan.url),
             jar: current?.id,
           });
-          const declared =
-            item.operation.responses.find((r) => r.status === String(response.status)) ??
-            item.operation.responses.find((r) => r.status === `${Math.floor(response.status / 100)}XX`) ??
-            item.operation.responses.find((r) => r.status === "default");
+          const declared = declaredResponse(item.operation.responses, response.status);
           const verdict = validateResponse(spec.doc, declared?.schema, response.json);
           collected.push({
             operation: item.operation,
@@ -1021,10 +1024,7 @@ export default function App() {
       });
       setResult(response);
 
-      const declared =
-        operation.responses.find((r) => r.status === String(response.status)) ??
-        operation.responses.find((r) => r.status === `${Math.floor(response.status / 100)}XX`) ??
-        operation.responses.find((r) => r.status === "default");
+      const declared = declaredResponse(operation.responses, response.status);
       const verdict = validateResponse(spec.doc, declared?.schema, response.json);
       setValidation(verdict);
       patchSettings({ inspectorOpen: true });
@@ -1046,19 +1046,11 @@ export default function App() {
           mock: sentToMock(plan.url, mockUrl),
           statusText: response.statusText,
           responseHeaders: response.headers,
-          // A 40MB PDF must not end up in history.json. Record that it happened
-          // and how big it was; the bytes are already held in a temp file.
-          responseBody: response.binary
-            ? `(${response.binary.contentType || "binary"} · ${response.binary.byteLength} bytes — not stored)`
-            : response.bodyText,
+          responseBody: storedResponseBody(response),
         }),
       );
     } catch (error) {
-      setRequestError(
-        error instanceof Error
-          ? `${error.message}${inTauri ? "" : "\n\n(Browser preview — probably CORS. The desktop build sends from Rust and isn't subject to it.)"}`
-          : String(error),
-      );
+      setRequestError(describeSendError(error, inTauri));
     } finally {
       setSending(false);
     }
@@ -1075,8 +1067,7 @@ export default function App() {
     const path = result?.binary?.path;
     if (!path) return;
     const disposition = result?.headers?.["content-disposition"] ?? "";
-    const named = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1];
-    const target = await pickSaveTarget(named ?? `response${extensionFor(contentType)}`);
+    const target = await pickSaveTarget(suggestedFileName(disposition, contentType));
     if (!target) return;
     try {
       await saveResponseTo(path, target);
@@ -1130,19 +1121,11 @@ export default function App() {
           validation: "no_schema",
           statusText: response.statusText,
           responseHeaders: response.headers,
-          // A 40MB PDF must not end up in history.json. Record that it happened
-          // and how big it was; the bytes are already held in a temp file.
-          responseBody: response.binary
-            ? `(${response.binary.contentType || "binary"} · ${response.binary.byteLength} bytes — not stored)`
-            : response.bodyText,
+          responseBody: storedResponseBody(response),
         }),
       );
     } catch (error) {
-      setRequestError(
-        error instanceof Error
-          ? `${error.message}${inTauri ? "" : "\n\n(Browser preview — probably CORS. The desktop build sends from Rust and isn't subject to it.)"}`
-          : String(error),
-      );
+      setRequestError(describeSendError(error, inTauri));
     } finally {
       setSending(false);
     }
@@ -1160,25 +1143,7 @@ export default function App() {
       updatePad(padFromHistory(entry));
       setRequestError(null);
       setValidation(null);
-      if (entry.responseBody === undefined) {
-        setResult(null);
-        return;
-      }
-      let json: unknown;
-      try {
-        json = entry.responseBody ? JSON.parse(entry.responseBody) : undefined;
-      } catch {
-        json = undefined;
-      }
-      setResult({
-        status: entry.status,
-        statusText: entry.statusText ?? "",
-        headers: entry.responseHeaders ?? {},
-        bodyText: entry.responseBody,
-        json,
-        ms: entry.ms,
-        bytes: entry.bytes,
-      });
+      setResult(responseFromHistory(entry));
     },
     [updatePad],
   );
@@ -1231,7 +1196,8 @@ export default function App() {
         /* keep the current base URL */
       }
 
-      if (entry.responseBody === undefined) {
+      const recorded = responseFromHistory(entry);
+      if (!recorded) {
         // Recorded before responses were stored — say so instead of showing nothing.
         setResult(null);
         setValidation(null);
@@ -1241,27 +1207,11 @@ export default function App() {
         return;
       }
 
-      let json: unknown;
-      try {
-        json = entry.responseBody ? JSON.parse(entry.responseBody) : undefined;
-      } catch {
-        json = undefined;
-      }
       setRequestError(null);
-      setResult({
-        status: entry.status,
-        statusText: entry.statusText ?? "",
-        headers: entry.responseHeaders ?? {},
-        bodyText: entry.responseBody,
-        json,
-        ms: entry.ms,
-        bytes: entry.bytes,
-      });
+      setResult(recorded);
 
-      const declared =
-        found.responses.find((r) => r.status === String(entry.status)) ??
-        found.responses.find((r) => r.status === "default");
-      setValidation(validateResponse(spec.doc, declared?.schema, json));
+      const declared = declaredResponse(found.responses, entry.status, { ranges: false });
+      setValidation(validateResponse(spec.doc, declared?.schema, recorded.json));
       patchSettings({ inspectorOpen: true });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
