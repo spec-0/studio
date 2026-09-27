@@ -57,8 +57,6 @@ import type { HistoryEntry } from "./lib/history";
 import * as library from "./lib/library";
 import type { ApiSource, LibraryEntry } from "./lib/library";
 import {
-  awaitOAuthCallback,
-  openExternal,
   pickSaveTarget,
   pickSpecFile,
   readStore,
@@ -104,20 +102,7 @@ import {
   scratchPath,
   type ScratchPad,
 } from "./lib/scratch";
-import {
-  buildAuthorizeUrl,
-  createChallenge,
-  createVerifier,
-  describeExpiry,
-  exchangeAuthorizationCode,
-  fetchClientCredentialsToken,
-  isExpired,
-  loadToken,
-  refreshAccessToken,
-  saveToken,
-  type CachedToken,
-  type OAuthConfig,
-} from "./lib/oauth";
+import { describeExpiry } from "./lib/oauth";
 import {
   planRun,
   toMarkdown,
@@ -139,6 +124,7 @@ import {
   suggestedFileName,
 } from "./lib/response";
 import { DEFAULT_SETTINGS, useSettings, type Settings } from "./hooks/useSettings";
+import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import {
@@ -229,14 +215,14 @@ export default function App() {
   const [runScope, setRunScope] = useState("");
   const runCancel = useRef(false);
   const [showOAuth, setShowOAuth] = useState<{ prefill?: string } | null>(null);
-  const [oauthToken, setOauthToken] = useState<CachedToken | null>(null);
-  const [oauthBusy, setOauthBusy] = useState(false);
-  const [oauthError, setOauthError] = useState<string | null>(null);
   const [connection, setConnection] = useState<ConnectionSettings>(DEFAULT_CONNECTION);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [checking, setChecking] = useState(false);
   const [pad, setPad] = useState<ScratchPad>(EMPTY_PAD);
   const [syncReport, setSyncReport] = useState<{ title: string; lines: string[] } | null>(null);
+
+  const { oauthToken, oauthBusy, oauthError, setOauthError, acquireToken, usableToken, clearToken } =
+    useOAuth(current, envFile.activeId, vars, connection);
 
   const values = useRef<RequestValues>({ pathParams: {}, queryParams: {}, headerParams: {}, body: "" });
   const onValuesChange = useCallback((next: RequestValues) => {
@@ -322,95 +308,6 @@ export default function App() {
       setLoading(null);
     }
   }, [session, current]);
-
-  useEffect(() => {
-    if (!current?.id) {
-      setOauthToken(null);
-      return;
-    }
-    void loadToken(current.id, envFile.activeId).then(setOauthToken);
-  }, [current?.id, envFile.activeId]);
-
-  /**
-   * Obtain a token, by whichever grant is configured.
-   *
-   * Both grants end the same way — a token in the cache keyed by API and
-   * environment — so the caller doesn't branch on which one ran.
-   */
-  const acquireToken = useCallback(
-    async (config: OAuthConfig) => {
-      if (!current) return;
-      setOauthBusy(true);
-      setOauthError(null);
-      try {
-        const transport = transportFor(connection, config.tokenUrl);
-        let token: CachedToken;
-        if (config.grant === "client_credentials") {
-          token = await fetchClientCredentialsToken(config, vars, transport);
-        } else {
-          const verifier = createVerifier();
-          const challenge = await createChallenge(verifier);
-          const state = createVerifier(24);
-          const port = 8127;
-          const redirectUri = `http://127.0.0.1:${port}/callback`;
-
-          // Reuses the loopback listener built for spec0 sign-in — a webview
-          // can't hold a socket, and this is the same shape of handshake.
-          const waiting = awaitOAuthCallback(port, 180);
-          await openExternal(buildAuthorizeUrl(config, challenge, state, redirectUri));
-          const params = await waiting;
-
-          if (params.state !== state) {
-            // A mismatched state means the response didn't come from the
-            // request we made — refusing is the whole point of sending it.
-            throw new Error("The authorization response didn't match this request. Try again.");
-          }
-          if (params.error) {
-            throw new Error(params.error_description ?? params.error);
-          }
-          if (!params.code) throw new Error("The browser came back without an authorization code.");
-          token = await exchangeAuthorizationCode(
-            config,
-            params.code,
-            verifier,
-            redirectUri,
-            vars,
-            transport,
-          );
-        }
-        await saveToken(current.id, envFile.activeId, token);
-        setOauthToken(token);
-      } catch (error) {
-        setOauthError(error instanceof Error ? error.message : String(error));
-      } finally {
-        setOauthBusy(false);
-      }
-    },
-    [current, connection, vars, envFile.activeId],
-  );
-
-  /**
-   * The token to send, renewed first if it's close to expiring.
-   *
-   * Silent by design: a refresh that works is not news, and stopping to tell the
-   * user would defeat the point of storing a refresh token.
-   */
-  const usableToken = useCallback(async (): Promise<string> => {
-    const config = current?.oauth;
-    if (!current || !config) return "";
-    let token = oauthToken ?? (await loadToken(current.id, envFile.activeId));
-    if (token && isExpired(token) && token.refreshToken) {
-      try {
-        token = await refreshAccessToken(config, token, vars, transportFor(connection, config.tokenUrl));
-        await saveToken(current.id, envFile.activeId, token);
-        setOauthToken(token);
-      } catch {
-        // A refresh that fails leaves the old token in place: it may still work,
-        // and a 401 from the API is a clearer signal than a refresh error here.
-      }
-    }
-    return token?.accessToken ?? "";
-  }, [current, oauthToken, envFile.activeId, vars, connection]);
 
   /**
    * Run a set of operations and check each response against the spec.
@@ -1717,10 +1614,7 @@ export default function App() {
             });
           }}
           onAcquire={(config) => void acquireToken(config)}
-          onClear={() => {
-            void saveToken(current.id, envFile.activeId, null);
-            setOauthToken(null);
-          }}
+          onClear={clearToken}
           onClose={() => {
             setShowOAuth(null);
             setOauthError(null);
