@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Sidebar, type SidebarTab } from "./components/Sidebar";
-import { DocumentView, type DocumentTab } from "./components/DocumentView";
+import { Sidebar } from "./components/Sidebar";
+import { DocumentView } from "./components/DocumentView";
 import { PublishDialog } from "./components/PublishDialog";
 import { canPublish, whyNotPublishable } from "./lib/publish";
 import { OperationView, type RequestValues } from "./components/OperationView";
@@ -22,16 +22,14 @@ import { StatusBar } from "./components/StatusBar";
 import { GraphView } from "./components/GraphView";
 import { RecordBar } from "./components/RecordBar";
 import { fileName } from "./lib/platform";
-import { parseSpec, type OperationSpec, type ParsedSpec } from "./lib/spec";
+import { parseSpec,  type ParsedSpec } from "./lib/spec";
 import {
   appFetch,
   buildPlan,
   inTauri,
   send,
   describeBody,
-  initialAuth,
   toCurl,
-  type AuthState,
   type ResponseResult,
 } from "./lib/request";
 import { validateResponse, type ValidationResult } from "./lib/validate";
@@ -87,6 +85,7 @@ import { useShortcuts } from "./hooks/useShortcuts";
 import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { useBoot } from "./hooks/useBoot";
+import { useWorkspace } from "./hooks/useWorkspace";
 import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
 import { useScratchPad } from "./hooks/useScratchPad";
@@ -100,50 +99,12 @@ import {
   updateMarks,
 } from "./lib/sync";
 
-type MainView = "operation" | "schema" | "graph" | "document";
-type Route = "library" | "api" | "scratch";
-
 export default function App() {
-  const [route, setRoute] = useState<Route>("library");
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
-  const [current, setCurrent] = useState<LibraryEntry | null>(null);
-
-  const [spec, setSpec] = useState<ParsedSpec | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  const [tab, setTab] = useState<SidebarTab>("operations");
-  const [query, setQuery] = useState("");
-  const [view, setView] = useState<MainView>("operation");
-  const [operation, setOperation] = useState<OperationSpec | null>(null);
-  const [schemaName, setSchemaName] = useState<string | null>(null);
-  const [graphFocus, setGraphFocus] = useState<string | null>(null);
-
-  // The document itself: the text as imported, plus the two facts about
-  // it that Studio can't read out of the spec (see useDocumentFacts).
-  const [docText, setDocText] = useState("");
-  const [docTab, setDocTab] = useState<DocumentTab>("reference");
-
-  const [replay, setReplay] = useState<{
-    headers: Record<string, string>;
-    body?: string;
-    pathParams?: Record<string, string>;
-    queryParams?: Record<string, string>;
-  } | null>(null);
-  /**
-   * The history entry currently on screen, if the panes are showing a record
-   * rather than something just sent.
-   *
-   * Without this the two are indistinguishable: replayed values are merged into
-   * the live editors and the recorded response fills the inspector, so a result
-   * from three weeks ago looks exactly like one from three seconds ago. The
-   * banner is the only thing that says which you are reading.
-   */
-  const [viewingRecord, setViewingRecord] = useState<HistoryEntry | null>(null);
-
-  const [server, setServer] = useState("");
-  const [auth, setAuth] = useState<AuthState | null>(null);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<ResponseResult | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
@@ -153,6 +114,38 @@ export default function App() {
 
   const { settings, setSettings, patchSettings } = useSettings();
   const { envFile, setEnvFile, saveEnvFile, activeEnv, vars, saveTarget } = useEnvironments();
+  const {
+    route,
+    setRoute,
+    current,
+    setCurrent,
+    spec,
+    tab,
+    setTab,
+    query,
+    setQuery,
+    view,
+    setView,
+    operation,
+    setOperation,
+    schemaName,
+    setSchemaName,
+    graphFocus,
+    setGraphFocus,
+    docText,
+    docTab,
+    setDocTab,
+    replay,
+    setReplay,
+    viewingRecord,
+    setViewingRecord,
+    server,
+    setServer,
+    auth,
+    setAuth,
+    showSpec,
+    closeApi,
+  } = useWorkspace(envFile.activeId, setEnvFile);
   const [requests, setRequests] = useState<HistoryEntry[]>([]);
   const { session, setSession, updateSession } = useSession();
 
@@ -254,55 +247,18 @@ export default function App() {
     [current],
   );
 
-  // Remember where you were in each API, so coming back doesn't mean re-entering everything.
-  useEffect(() => {
-    if (route !== "api" || !current) return;
-    void library.saveApiState(current.id, {
-      server,
-      envId: envFile.activeId,
-      lastOperationId: operation?.id ?? null,
-      tab,
-      authScheme: auth?.schemeName ?? null,
-      docTab,
-    });
-  }, [route, current, server, envFile.activeId, operation, tab, auth?.schemeName, docTab]);
-
   // ── opening ──────────────────────────────────────────────────────────────────
 
   const applySpec = useCallback(
     (parsed: ParsedSpec, entry: LibraryEntry, text: string) => {
-      const state = entry.state ?? {};
-      setSpec(parsed);
-      setCurrent(entry);
+      showSpec(parsed, entry, text);
       setLoadError(null);
-      setRoute("api");
-
-      // Keep the bytes, not just the parse — the Raw tab shows the document
-      // that was imported, and the Reference tab renders the same string, so
-      // the two can never disagree about what the spec says.
-      setDocText(text);
-      setDocTab(state.docTab ?? "reference");
       resetDocumentFacts();
-
-      const restoredOperation =
-        parsed.operations.find((op) => op.id === state.lastOperationId) ?? parsed.operations[0] ?? null;
-      setOperation(restoredOperation);
-      setSchemaName(parsed.schemas[0]?.name ?? null);
-      setTab(state.tab ?? "operations");
-      setView(state.tab === "schemas" ? "schema" : "operation");
-      setServer(state.server ?? parsed.servers[0] ?? "");
-      if (state.envId !== undefined && state.envId !== envFile.activeId) {
-        setEnvFile((prev) => ({ ...prev, activeId: state.envId ?? null }));
-      }
-
       setResult(null);
       setValidation(null);
       setRequestError(null);
-      setReplay(null);
-
-      setAuth(initialAuth(parsed.securitySchemes, state.authScheme));
     },
-    [envFile.activeId, resetDocumentFacts],
+    [showSpec, resetDocumentFacts],
   );
 
   /** Parse, add to the library, and open it. Every entry point funnels through here. */
@@ -554,12 +510,10 @@ export default function App() {
     async (entry: LibraryEntry) => {
       setEntries(await library.removeEntry(entry.id));
       if (current?.id === entry.id) {
-        setCurrent(null);
-        setSpec(null);
-        setRoute("library");
+        closeApi();
       }
     },
-    [current],
+    [current, closeApi],
   );
 
   const onDrop = useCallback(
