@@ -114,6 +114,7 @@ import { DEFAULT_SETTINGS, useSettings, type Settings } from "./hooks/useSetting
 import { useTargeting } from "./hooks/useTargeting";
 import { useBulkRun } from "./hooks/useBulkRun";
 import { usePublish } from "./hooks/usePublish";
+import { useShortcuts } from "./hooks/useShortcuts";
 import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
@@ -231,7 +232,6 @@ export default function App() {
     values.current = next;
   }, []);
   const fileInput = useRef<HTMLInputElement>(null);
-  const sendRef = useRef<() => void>(() => {});
 
   // ── boot ─────────────────────────────────────────────────────────────────────
 
@@ -742,8 +742,6 @@ export default function App() {
     }
   }, [result]);
 
-  sendRef.current = () => void doSend();
-
   const updatePad = useCallback((next: ScratchPad) => {
     setPad(next);
     void saveScratch(next);
@@ -884,48 +882,23 @@ export default function App() {
     [spec],
   );
 
-  // ── shortcuts ────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const meta = event.metaKey || event.ctrlKey;
-      if (meta && event.key === "Enter") {
-        event.preventDefault();
-        sendRef.current();
-      } else if (meta && event.key === "o") {
-        event.preventDefault();
-        setShowOpen(true);
-      } else if (meta && event.key === "p") {
-        event.preventDefault();
-        if (entries.length) setShowSwitcher(true);
-      } else if (meta && event.key === "e") {
-        event.preventDefault();
-        setShowEnvs(true);
-      } else if (meta && event.key === "l") {
-        event.preventDefault();
-        goLibrary();
-      } else if (meta && event.key === "\\") {
-        event.preventDefault();
-        patchSettings({ inspectorOpen: !settings.inspectorOpen });
-      } else if (meta && ["1", "2", "3"].includes(event.key)) {
-        event.preventDefault();
-        setTab(event.key === "1" ? "operations" : event.key === "2" ? "schemas" : "history");
-      } else if (meta && event.key === "d") {
-        event.preventDefault();
-        patchSettings({ dark: !settings.dark });
-      } else if (event.key === "/" && document.activeElement?.tagName !== "INPUT") {
-        event.preventDefault();
-        document.getElementById("sidebar-search")?.focus();
-      } else if (event.key === "Escape") {
-        setShowOpen(false);
-        setShowEnvs(false);
-        setShowSwitcher(false);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.inspectorOpen, settings.dark, entries.length, goLibrary]);
+  useShortcuts({
+    send: () => void doSend(),
+    openAdd: () => setShowOpen(true),
+    openSwitcher: () => {
+      if (entries.length) setShowSwitcher(true);
+    },
+    openEnvironments: () => setShowEnvs(true),
+    goLibrary,
+    toggleInspector: () => patchSettings({ inspectorOpen: !settings.inspectorOpen }),
+    showTab: setTab,
+    toggleTheme: () => patchSettings({ dark: !settings.dark }),
+    closeDialogs: () => {
+      setShowOpen(false);
+      setShowEnvs(false);
+      setShowSwitcher(false);
+    },
+  });
 
   const showGraph = view === "graph";
   const showDocument = view === "document";
