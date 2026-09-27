@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowDownToLine,
   Cloud,
@@ -18,6 +18,8 @@ import { mockIsBehind } from "../lib/sync";
 import { relativeTime, sourceLabel, type ApiSource, type LibraryEntry } from "../lib/library";
 import { Wordmark } from "./Logo";
 import { shortcut } from "../lib/platform";
+import { SWAGGER2_CONVERT_COMMAND, SWAGGER2_ISSUE_URL } from "../lib/spec";
+import { openInBrowser } from "../lib/store";
 
 function SourceIcon({ kind }: { kind: ApiSource["kind"] }) {
   const size = 11;
@@ -25,6 +27,32 @@ function SourceIcon({ kind }: { kind: ApiSource["kind"] }) {
   if (kind === "spec0") return <Cloud size={size} />;
   if (kind === "sample") return <Sparkles size={size} />;
   return <FileJson size={size} />;
+}
+
+/**
+ * The library's load error. A Swagger 2.0 document gets two small actions: copy the
+ * local conversion command, and open the tracking issue in the browser.
+ */
+function LoadError({ error, style }: { error: string; style?: CSSProperties }) {
+  const swagger2 = error.includes(SWAGGER2_CONVERT_COMMAND);
+  return (
+    <div className="error-box" style={style}>
+      {error}
+      {swagger2 && (
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button
+            className="btn"
+            onClick={() => void navigator.clipboard.writeText(SWAGGER2_CONVERT_COMMAND)}
+          >
+            Copy command
+          </button>
+          <button className="btn" onClick={() => void openInBrowser(SWAGGER2_ISSUE_URL)}>
+            Swagger 2.0 support on GitHub
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface Props {
@@ -116,7 +144,7 @@ export function Library({
           <SquareDashed size={13} /> Or send one request without a spec
         </button>
         {busy && <p className="meta" style={{ marginTop: 12 }}>{busy}</p>}
-        {error && <div className="error-box">{error}</div>}
+        {error && <LoadError error={error} />}
       </div>
     );
   }
@@ -173,7 +201,7 @@ export function Library({
       )}
 
       {busy && <div className="verdict none">{busy}</div>}
-      {error && <div className="error-box" style={{ marginTop: 0 }}>{error}</div>}
+      {error && <LoadError error={error} style={{ marginTop: 0 }} />}
 
       <div className="library-grid">
         {/* Pinned, unnamed, and outside `entries` — so "there is only ever one, and

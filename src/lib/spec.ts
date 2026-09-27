@@ -109,6 +109,17 @@ function parseOAuthFlows(flows: Json | undefined): OAuthFlowSpec[] | undefined {
   return parsed.length ? parsed : undefined;
 }
 
+/**
+ * Converting a Swagger 2.0 document is a one-liner that runs locally, so the error
+ * says how instead of stopping at "not supported". The Library screen offers to
+ * copy the command and links to the tracking issue.
+ */
+export const SWAGGER2_CONVERT_COMMAND = "npx swagger2openapi <file> -o openapi.json";
+export const SWAGGER2_ISSUE_URL = "https://github.com/spec-0/studio/issues/33";
+export const SWAGGER2_MESSAGE =
+  "This is a Swagger 2.0 document. Studio can't open it yet; support is planned. " +
+  `To convert it to OpenAPI 3 on your machine, run: ${SWAGGER2_CONVERT_COMMAND}`;
+
 export function parseDocument(text: string): Json {
   const trimmed = text.trimStart();
   const doc = trimmed.startsWith("{") ? JSON.parse(text) : (load(text) as Json);
@@ -118,9 +129,7 @@ export function parseDocument(text: string): Json {
   if (!doc.openapi && !doc.swagger) {
     throw new Error("No `openapi` or `swagger` version field — is this an OpenAPI document?");
   }
-  if (doc.swagger) {
-    throw new Error("Swagger 2.0 isn't supported. Convert to OpenAPI 3.x first.");
-  }
+  if (doc.swagger) throw new Error(SWAGGER2_MESSAGE);
   return doc;
 }
 
