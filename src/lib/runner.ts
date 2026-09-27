@@ -1,5 +1,6 @@
 import type { OperationSpec, ParamSpec } from "./spec";
 import type { ValidationResult } from "./validate";
+import { redact } from "./redact";
 
 /**
  * Run every operation in a tag and report which responses match the spec.
@@ -210,7 +211,9 @@ export function toMarkdown(
     }
   }
 
-  return lines.join("\n");
+  // Meant to be pasted into a PR, so no secret value may survive into it — an
+  // error message can quote a URL with an API key in its query.
+  return redact(lines.join("\n"));
 }
 
 /** Which parameters an operation needs before it can run — for the pre-run summary. */

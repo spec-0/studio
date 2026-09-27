@@ -1,4 +1,5 @@
 import { readStore, writeStore, STORE } from "./store";
+import { redact, redactHeaders } from "./redact";
 
 /**
  * Request history — local only, never synced. Recorded so a request can be found
@@ -57,8 +58,40 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
   return prune(await readStore<HistoryEntry[]>(STORE.history, []));
 }
 
-export async function record(entry: Omit<HistoryEntry, "id" | "at">): Promise<HistoryEntry[]> {
+/**
+ * Replace secret values with their `{{name}}` references, everywhere a request
+ * or its response could carry one — the URL (an API key in the query), headers
+ * (a bearer token, a Basic credential), and both bodies (a server that echoes
+ * what it was sent).
+ */
+export function redactEntry<T extends Omit<HistoryEntry, "id" | "at">>(entry: T): T {
+  return {
+    ...entry,
+    url: redact(entry.url),
+    path: redact(entry.path),
+    headers: redactHeaders(entry.headers),
+    body: redact(entry.body),
+    responseHeaders: redactHeaders(entry.responseHeaders),
+    responseBody: redact(entry.responseBody),
+  } as T;
+}
+
+/**
+ * Remove secret values from history written before redaction existed.
+ *
+ * Older versions recorded the headers as sent, bearer token and all. Runs at
+ * start-up once the secrets are known, and rewrites the file only if something
+ * changed.
+ */
+export async function scrubHistory(): Promise<void> {
+  const stored = await readStore<HistoryEntry[]>(STORE.history, []);
+  const scrubbed = stored.map((entry) => redactEntry(entry));
+  if (JSON.stringify(scrubbed) !== JSON.stringify(stored)) await writeStore(STORE.history, scrubbed);
+}
+
+export async function record(raw: Omit<HistoryEntry, "id" | "at">): Promise<HistoryEntry[]> {
   const existing = await loadHistory();
+  const entry = redactEntry(raw);
   const body =
     entry.responseBody && entry.responseBody.length > MAX_STORED_BODY
       ? `${entry.responseBody.slice(0, MAX_STORED_BODY)}\n\n… truncated for history`

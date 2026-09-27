@@ -1,4 +1,6 @@
 import { readStore, writeStore, STORE } from "./store";
+import { secrets } from "./secrets";
+import { setKnownSecrets } from "./redact";
 
 /**
  * Environments and variables.
@@ -6,8 +8,8 @@ import { readStore, writeStore, STORE } from "./store";
  * An environment is a named bag of variables that interpolate into the URL,
  * headers, and body as `{{name}}`. A variable can be marked secret: the
  * environment file then records that the variable exists and is secret, but not
- * its value — so the file is safe to commit. Secret values live in a separate
- * local file.
+ * its value — so the file is safe to commit. Secret values live in the OS
+ * credential store (see `secrets.ts`).
  *
  * **An environment supplies values, never destinations.** Where a request goes is
  * a *target*: a server from the spec, a hosted mock, or a URL you typed — those
@@ -19,12 +21,6 @@ import { readStore, writeStore, STORE } from "./store";
  * target list, which fused the two. It didn't survive contact with real cloud
  * environments arriving as targets. A `baseUrl` *variable* is still good practice
  * — it's just a variable, with no privileged field and no privileged UI.
- *
- * Caveat worth stating plainly: that separate file is **not** the OS keychain.
- * Tauri v2 ships no first-party keychain plugin (Stronghold is an encrypted vault
- * file; `keyring` is community). This split keeps secrets out of anything you'd
- * commit or share, which is the property that actually matters day to day — but
- * it is not at-rest encryption, and the UI says so.
  */
 
 export interface Variable {
@@ -67,40 +63,44 @@ export interface EnvironmentFile {
 
 const EMPTY: EnvironmentFile = { environments: [], activeId: null };
 
-/** Secret values, keyed `<envId>:<varName>`. Kept apart from the committable file. */
-type SecretMap = Record<string, string>;
-
 export async function loadEnvironments(): Promise<EnvironmentFile> {
   const file = await readStore<EnvironmentFile>(STORE.environments, EMPTY);
-  const secrets = await readStore<SecretMap>(STORE.secrets, {});
-  return {
+  const environments = file.environments.map(migrateBaseUrl);
+  const values = await secrets.load(environments);
+  const loaded: EnvironmentFile = {
     ...file,
-    environments: file.environments.map(migrateBaseUrl).map((env) => ({
+    environments: environments.map((env) => ({
       ...env,
       variables: env.variables.map((variable) =>
         variable.secret
-          ? { ...variable, value: secrets[`${env.id}:${variable.name}`] ?? "" }
+          ? { ...variable, value: values.get(`${env.id}:${variable.name}`) ?? "" }
           : variable,
+      ),
+    })),
+  };
+  setKnownSecrets(loaded.environments);
+  return loaded;
+}
+
+/** The committable file: secret variables are recorded, their values are not. */
+export function redactedFile(file: EnvironmentFile): EnvironmentFile {
+  return {
+    activeId: file.activeId,
+    environments: file.environments.map((env) => ({
+      ...env,
+      variables: env.variables.map((variable) =>
+        variable.secret ? { ...variable, value: "" } : variable,
       ),
     })),
   };
 }
 
 export async function saveEnvironments(file: EnvironmentFile): Promise<void> {
-  const secrets: SecretMap = {};
-  const redacted: EnvironmentFile = {
-    activeId: file.activeId,
-    environments: file.environments.map((env) => ({
-      ...env,
-      variables: env.variables.map((variable) => {
-        if (!variable.secret) return variable;
-        if (variable.value) secrets[`${env.id}:${variable.name}`] = variable.value;
-        return { ...variable, value: "" };
-      }),
-    })),
-  };
-  await writeStore(STORE.environments, redacted);
-  await writeStore(STORE.secrets, secrets);
+  setKnownSecrets(file.environments);
+  // The committable file first: if the secret store then fails, the worst case
+  // is a value that didn't save, never a value written into environments.json.
+  await writeStore(STORE.environments, redactedFile(file));
+  await secrets.save(file.environments);
 }
 
 export function newEnvironment(name: string): Environment {

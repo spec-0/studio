@@ -2,6 +2,7 @@ mod cookies;
 mod git;
 mod http;
 mod oauth;
+mod secrets;
 mod storage;
 
 /// spec0 Studio — Tauri shell.
@@ -12,6 +13,7 @@ mod storage;
 ///    caller asked for and **no `Origin`**. A desktop client isn't a browser and
 ///    has no origin; sending one makes every CORS-configured server reject it.
 ///  - **Sign-in** needs a loopback socket, which a webview cannot hold.
+///  - **Secrets** go to the OS credential store, which only native code can reach.
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -26,8 +28,14 @@ pub fn run() {
             storage::read_text,
             storage::store_read,
             storage::store_write,
+            storage::store_delete,
             storage::store_location,
             storage::cli_config,
+            secrets::secret_backend,
+            secrets::secret_get,
+            secrets::secret_set,
+            secrets::secret_delete,
+            secrets::secret_list,
         ])
         .run(tauri::generate_context!())
         .expect("error while running spec0 Studio");
