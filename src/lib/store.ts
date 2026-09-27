@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { fileName } from "./platform";
 import { inTauri } from "./request";
 
 /**
@@ -33,6 +34,8 @@ export const STORE = {
    * index that describes the APIs.
    */
   tokens: "tokens.json",
+  /** Whether to check for a new version of Studio at start. Off by default. */
+  updates: "updates.json",
 } as const;
 
 /** Fixed files above, plus per-API blobs like `spec_<id>.json`. */
@@ -106,7 +109,7 @@ export async function pickCertificate(): Promise<{ name: string; text: string } 
   });
   if (typeof picked !== "string") return null;
   const text = await invoke<string>("read_text", { path: picked });
-  return { name: picked.split("/").pop() ?? picked, text };
+  return { name: fileName(picked), text };
 }
 
 /** Pick any file, for a multipart part. Only its path travels — Rust reads it. */
@@ -115,7 +118,7 @@ export async function pickAnyFile(): Promise<{ path: string; name: string } | nu
   const { open } = await import("@tauri-apps/plugin-dialog");
   const picked = await open({ multiple: false });
   if (typeof picked !== "string") return null;
-  return { path: picked, name: picked.split("/").pop() ?? picked };
+  return { path: picked, name: fileName(picked) };
 }
 
 /** Where to write a response body the user asked to keep. */

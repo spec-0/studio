@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { fileName } from "./platform";
 import { inTauri } from "./request";
 import type { OAuthConfig } from "./oauth";
 import { readStore, writeStore, STORE } from "./store";
@@ -342,7 +343,7 @@ export async function rereadFile(entry: LibraryEntry): Promise<string | null> {
 export function sourceLabel(source: ApiSource): string {
   switch (source.kind) {
     case "file":
-      return source.ref.split("/").pop() ?? "file";
+      return fileName(source.ref) || "file";
     case "url":
       return source.ref.replace(/^https?:\/\//, "");
     case "spec0":

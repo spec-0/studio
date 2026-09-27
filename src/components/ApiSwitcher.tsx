@@ -9,7 +9,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** ⌘P — jump between the APIs in the library without going home first. */
+/** ⌘P / Ctrl+P — jump between the APIs in the library without going home first. */
 export function ApiSwitcher({ entries, currentId, onPick, onGoLibrary, onClose }: Props) {
   const [filter, setFilter] = useState("");
   const [cursor, setCursor] = useState(0);

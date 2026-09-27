@@ -71,7 +71,11 @@ pub fn store_location(app: tauri::AppHandle) -> Result<String, String> {
 /// The spec0 CLI's session, if the user already has one. Read-only, never written.
 #[tauri::command]
 pub fn cli_config() -> Result<Option<String>, String> {
-    let Some(home) = std::env::var_os("HOME").map(PathBuf::from) else {
+    // Windows has no HOME; USERPROFILE is the home folder there.
+    let Some(home) = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+    else {
         return Ok(None);
     };
     let path: &Path = &home.join(".spec0").join("config.json");

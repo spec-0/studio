@@ -36,6 +36,8 @@ import { OpenDialog } from "./components/OpenDialog";
 import { Library } from "./components/Library";
 import { ScratchView } from "./components/ScratchView";
 import { ApiSwitcher } from "./components/ApiSwitcher";
+import { Updater } from "./components/UpdateDialog";
+import { fileName, shortcut } from "./lib/platform";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import {
   appFetch,
@@ -950,7 +952,7 @@ export default function App() {
     }
     const picked = await pickSpecFile();
     if (picked) {
-      await ingest(picked.text, picked.path.split("/").pop() ?? picked.path, {
+      await ingest(picked.text, fileName(picked.path), {
         kind: "file",
         ref: picked.path,
       });
@@ -1437,7 +1439,7 @@ export default function App() {
         {onScratch && (
           <>
             <span className="rule" />
-            <button className="icon-btn" onClick={goLibrary} title="All APIs (⌘L)" aria-label="Back to all APIs">
+            <button className="icon-btn" onClick={goLibrary} title={`All APIs (${shortcut("L")})`} aria-label="Back to all APIs">
               <ChevronLeft size={16} />
             </button>
             <span className="api-switch static">
@@ -1450,10 +1452,10 @@ export default function App() {
         {onApi && (
           <>
             <span className="rule" />
-            <button className="icon-btn" onClick={goLibrary} title="All APIs (⌘L)" aria-label="Back to all APIs">
+            <button className="icon-btn" onClick={goLibrary} title={`All APIs (${shortcut("L")})`} aria-label="Back to all APIs">
               <ChevronLeft size={16} />
             </button>
-            <button className="api-switch" onClick={() => setShowSwitcher(true)} title="Switch API (⌘P)">
+            <button className="api-switch" onClick={() => setShowSwitcher(true)} title={`Switch API (${shortcut("P")})`}>
               <span className="spec-name">{spec?.title}</span>
               {spec?.version && <span className="spec-version">{spec.version}</span>}
               <ChevronDown size={13} className="chev" />
@@ -1480,7 +1482,7 @@ export default function App() {
           <Cable size={16} />
         </button>
 
-        <div className="env-picker" title="Environment (⌘E)">
+        <div className="env-picker" title={`Environment (${shortcut("E")})`}>
           <Layers size={13} />
           <select
             value={envFile.activeId ?? ""}
@@ -1506,7 +1508,7 @@ export default function App() {
           <button
             className="icon-btn"
             onClick={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
-            title="Response pane (⌘\)"
+            title={`Response pane (${shortcut("\\")})`}
             aria-label="Toggle response pane"
           >
             {settings.inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
@@ -1542,7 +1544,7 @@ export default function App() {
             <button
               className="icon-btn"
               onClick={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
-              title="Response pane (⌘\)"
+              title={`Response pane (${shortcut("\\")})`}
               aria-label="Toggle response pane"
             >
               {settings.inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
@@ -1552,7 +1554,7 @@ export default function App() {
         <button
           className="icon-btn"
           onClick={() => patchSettings({ dark: !settings.dark })}
-          title={settings.dark ? "Light theme (⌘D)" : "Dark theme (⌘D)"}
+          title={`${settings.dark ? "Light" : "Dark"} theme (${shortcut("D")})`}
           aria-label="Toggle theme"
         >
           {settings.dark ? <Sun size={16} /> : <Moon size={16} />}
@@ -2010,6 +2012,8 @@ export default function App() {
           }}
         />
       )}
+
+      <Updater />
     </div>
   );
 }

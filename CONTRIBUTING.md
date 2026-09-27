@@ -1,6 +1,7 @@
 # Contributing
 
-Tauri v2 (Rust shell) + React 18 + TypeScript + Vite. macOS only for now.
+Tauri v2 (Rust shell) + React 18 + TypeScript + Vite. Ships for macOS, Windows
+and Linux; the Mac build has had by far the most use.
 
 This file is the design rationale as much as the build instructions. Most of what
 follows is a rule plus the reason it exists — the reason matters more, because it
@@ -37,9 +38,10 @@ origin. Don't reintroduce the plugin.
 
 ## Architecture
 
-- **Rust owns four things only**: outbound HTTP (`http.rs`), the sign-in loopback
+- **Rust owns five things only**: outbound HTTP (`http.rs`), the sign-in loopback
   listener (`oauth.rs` — a webview can't hold a socket), file IO (`storage.rs`),
-  and the OS credential store (`secrets.rs` — only native code can reach it).
+  the OS credential store (`secrets.rs` — only native code can reach it), and
+  checking for and installing updates (`updates.rs`, with the menu in `menu.rs`).
   Everything else is React.
 - **Secrets are narrow commands too.** The webview names an environment id and a
   variable name; Rust builds the account under one fixed service name. There is no
@@ -209,6 +211,13 @@ that moves on the next upgrade.
 host to another's on any redirect that crossed between them. Jars live in Rust for
 the process lifetime and are never written to disk — persisting a session across
 restarts is a credential decision nobody made.
+
+**No update check the user didn't ask for.** Studio promises it makes no request
+you didn't ask for, and an update check is a request. It runs from the menu, or
+at start only when the user turned that on — the setting is off by default and
+has a test saying so. The check lives in Rust (`updates.rs`) so it can use the
+proxy from Connection settings; the plugin's JavaScript API is not granted to the
+webview.
 
 **No `tauri-plugin-http`, no `fs` plugin** (see above).
 

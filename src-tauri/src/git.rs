@@ -12,11 +12,14 @@
 //!    specs are not in a repo, and walking a handful of parent directories is
 //!    far cheaper than starting a process to be told "not a repository".
 //!
-//!  - **We never invoke `/usr/bin/git` blindly.** On macOS that path is a shim:
-//!    if the Command Line Tools are not installed, running it pops a system
-//!    dialog asking the user to install them. A spec viewer must not conjure an
-//!    Xcode installer because someone opened a file. So we resolve a real git
-//!    binary and, finding none, simply report nothing.
+//!  - **We never invoke `/usr/bin/git` blindly on macOS.** There that path is a
+//!    shim: if the Command Line Tools are not installed, running it pops a
+//!    system dialog asking the user to install them. A spec viewer must not
+//!    conjure an Xcode installer because someone opened a file. So we resolve a
+//!    real git binary and, finding none, simply report nothing. On Linux
+//!    `/usr/bin/git` is the real thing. On Windows we look in the usual Git for
+//!    Windows locations and then on `PATH`, and start git without a console
+//!    window, which would otherwise flash up on every opened spec.
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -25,14 +28,24 @@ use std::process::Command;
 /// How far up the tree to look for `.git` before giving up.
 const MAX_DEPTH: usize = 64;
 
-/// Real git binaries, in preference order. `/usr/bin/git` is deliberately absent
-/// unless one of these exists — see the module note about the CLT prompt.
-const GIT_CANDIDATES: [&str; 4] = [
+/// Real git binaries, in preference order. On macOS `/usr/bin/git` is
+/// deliberately absent — see the module note about the CLT prompt.
+#[cfg(target_os = "macos")]
+const GIT_CANDIDATES: &[&str] = &[
     "/opt/homebrew/bin/git",
     "/usr/local/bin/git",
     "/Library/Developer/CommandLineTools/usr/bin/git",
     "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
 ];
+
+#[cfg(windows)]
+const GIT_CANDIDATES: &[&str] = &[
+    r"C:\Program Files\Git\cmd\git.exe",
+    r"C:\Program Files (x86)\Git\cmd\git.exe",
+];
+
+#[cfg(not(any(target_os = "macos", windows)))]
+const GIT_CANDIDATES: &[&str] = &["/usr/bin/git", "/usr/local/bin/git", "/bin/git"];
 
 #[derive(Debug, Serialize)]
 pub struct GitInfo {
@@ -127,10 +140,34 @@ fn find_git() -> Option<PathBuf> {
         .iter()
         .map(PathBuf::from)
         .find(|candidate| candidate.is_file())
+        .or_else(git_on_path)
+}
+
+/// Git for Windows installed somewhere else, or through a package manager.
+#[cfg(windows)]
+fn git_on_path() -> Option<PathBuf> {
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path)
+        .map(|dir| dir.join("git.exe"))
+        .find(|candidate| candidate.is_file())
+}
+
+/// Elsewhere the fixed list is the whole answer — on macOS, searching `PATH`
+/// would find the `/usr/bin/git` shim.
+#[cfg(not(windows))]
+fn git_on_path() -> Option<PathBuf> {
+    None
 }
 
 fn run(git: &Path, root: &Path, args: &[&str]) -> Option<String> {
-    let output = Command::new(git)
+    let mut command = Command::new(git);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    let output = command
         .arg("-C")
         .arg(root)
         // Keep a slow or interactive credential helper from ever blocking the
@@ -190,11 +227,18 @@ mod tests {
     }
 
     #[test]
-    fn every_candidate_git_is_an_absolute_real_path() {
-        // Guards the CLT-prompt rule: no bare "git", no /usr/bin/git shim.
+    fn every_candidate_git_is_an_absolute_path() {
+        // No bare "git": that would search PATH, which on macOS finds the shim.
         for candidate in GIT_CANDIDATES {
-            assert!(candidate.starts_with('/'), "{candidate} is not absolute");
-            assert_ne!(candidate, "/usr/bin/git");
+            assert!(Path::new(candidate).is_absolute(), "{candidate} is not absolute");
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_never_uses_the_usr_bin_git_shim() {
+        // Guards the CLT-prompt rule.
+        assert!(!GIT_CANDIDATES.contains(&"/usr/bin/git"));
+        assert!(git_on_path().is_none());
     }
 }

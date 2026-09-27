@@ -134,11 +134,15 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px 0 82px; /* leaves room for the macOS traffic lights */
+  padding: 0 12px;
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--surface));
   user-select: none;
 }
+
+/* On macOS the window draws its traffic lights over the titlebar, so leave room.
+   Windows and Linux keep their own native title bar above this row. */
+:root.platform-mac .titlebar { padding-left: 82px; }
 
 .titlebar .spec-name { font-weight: 600; font-size: 12.5px; }
 .titlebar .spec-version {
@@ -859,6 +863,22 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   color: hsl(var(--ink-2));
 }
 .check input { width: auto; flex: none; }
+
+/* Release notes in the update dialog: plain text as GitHub wrote it. */
+.update-notes {
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: hsl(var(--ink-2));
+  background: hsl(var(--surface));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
 
 /* A platform environment is a real place the API runs — named, not classified, so
    it gets the org's own label rather than a badge we invented. */
