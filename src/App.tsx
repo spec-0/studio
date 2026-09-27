@@ -29,6 +29,7 @@ import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { TitleBar } from "./components/TitleBar";
 import { UpdateDialog } from "./components/UpdateDialog";
+import { McpHost } from "./components/mcp/McpHost";
 import { UrlBar } from "./components/UrlBar";
 import { useBoot } from "./hooks/useBoot";
 import { useBulkRun } from "./hooks/useBulkRun";
@@ -472,7 +473,7 @@ export default function App() {
                   onInspectorOpen={(inspectorOpen) => patchSettings({ inspectorOpen })}
                 />
               ),
-              mcp: <McpSettings />,
+              mcp: <McpSettings signedIn={Boolean(session)} />,
               data: <DataSettings historyCount={requests.length} onClearHistory={clearHistory} />,
             }}
           />
@@ -497,7 +498,7 @@ export default function App() {
         </>
       ) : route === "mcp" ? (
         <>
-          <McpView onOpenSettings={() => nav.openSettings("mcp")} />
+          <McpView signedIn={Boolean(session)} onOpenSettings={() => nav.openSettings("mcp")} />
           <StatusBar summary="MCP" envName={activeEnv?.name} result={null} />
         </>
       ) : onHistory ? (
@@ -876,6 +877,7 @@ export default function App() {
       )}
 
       <UpdateDialog updater={updater} />
+      <McpHost />
     </div>
   );
 }

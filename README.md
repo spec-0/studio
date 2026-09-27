@@ -205,6 +205,9 @@ servers you point it at.
   time Studio starts; it is off unless you turn it on. The check sends nothing
   about your specs, environments or history, and it uses the proxy from your
   Network settings.
+- **The local MCP server exists only when you turn it on.** It listens on this
+  computer only (`127.0.0.1`), answers only requests that carry its token, turns
+  away web pages, and stops when Studio quits. It never shares secret values.
 
 > [!WARNING]
 > If the credential store can't be reached (mostly on Linux without a running,
@@ -220,6 +223,34 @@ pull their specs, use hosted mock servers as request targets, and publish a
 local spec to your organisation. The Mocks tab lists your organisation's hosted
 mock servers. Sign in and out in Settings, under Account & Spec0. Signing out
 returns Studio to local-only use, and nothing is lost.
+
+## Local MCP server
+
+Studio can run a small [MCP](https://modelcontextprotocol.io) server so that AI
+coding agents on your computer, such as Claude Code or Cursor, can ask it about
+your APIs, including specs you haven't published anywhere.
+
+**Turning it on.** Open the **MCP** tab (or Settings → MCP) and press *Start*.
+The panel shows the address (`http://127.0.0.1:47321/mcp` unless that port is
+taken), a token, and setup commands to copy for Claude Code, Cursor and other
+clients. It is off until you start it. You can ask for it to start with Studio;
+that is off by default too.
+
+**What agents can see.** The APIs in your library (titles, versions, servers,
+operations and the spec text), your environments' variable names and the values
+of variables that aren't secret, and whether you're signed in to Spec0. When you
+are signed in, agents can also get an API's hosted mock server (its address and
+key) and create or rebuild one for an API that's already published.
+
+**What it doesn't do.** Agents don't send requests through Studio: they get
+URLs and call them themselves. Secret values are never shared. For searching
+every API in your organisation, use the Spec0 MCP server instead; this one only
+knows what's on your computer.
+
+**Privacy.** The server listens on `127.0.0.1` only, so other computers can't
+reach it. Every request needs the token, which is generated on your computer
+(you can make a new one at any time). Requests from web pages are refused. The
+server runs only while Studio is open.
 
 ## Known limitations
 

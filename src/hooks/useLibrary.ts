@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import type { HistoryEntry } from "../lib/history";
 import * as library from "../lib/library";
 import { documentUrlOf, type ApiSource, type LibraryEntry } from "../lib/library";
+import { LIBRARY_CHANGED_EVENT } from "../lib/mcpServer";
 import { fileName } from "../lib/platform";
 import { appFetch, inTauri } from "../lib/request";
 import { parseSpec, type ParsedSpec } from "../lib/spec";
@@ -99,6 +100,17 @@ export function useLibrary({
     },
     [current],
   );
+
+  // A local MCP tool (creating or rebuilding a mock) wrote the library file.
+  useEffect(() => {
+    const reload = () =>
+      void library.loadLibrary().then((next) => {
+        setEntries(next);
+        setCurrent((open) => (open ? next.find((entry) => entry.id === open.id) ?? open : open));
+      });
+    window.addEventListener(LIBRARY_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, reload);
+  }, [setCurrent]);
 
   // ── opening ──────────────────────────────────────────────────────────────────
 

@@ -66,11 +66,12 @@ the plugin back.
 
 ## How the code is organised
 
-- **Rust does five things**: outbound HTTP (`http.rs`), the local listener used
+- **Rust does six things**: outbound HTTP (`http.rs`), the local listener used
   during OAuth sign-in (`oauth.rs`, because a web view can't open a socket), file
   reading and writing (`storage.rs`), the OS credential store (`secrets.rs`,
-  because only native code can reach it), and checking for and installing updates
-  (`updates.rs`, with the menu in `menu.rs`). Everything else is React.
+  because only native code can reach it), checking for and installing updates
+  (`updates.rs`, with the menu in `menu.rs`), and the local MCP server's socket
+  (`mcp.rs`, for the same reason as sign-in). Everything else is React.
 - **Secrets go through narrow commands.** The web view passes an environment id
   and a variable name; Rust builds the credential store entry under one fixed
   service name. There is no command that reads an arbitrary keychain item.
@@ -236,6 +237,28 @@ from Settings, or at start only if the user turned that setting on. The setting 
 and a test checks that. The check runs in Rust (`updates.rs`) so it can use the
 proxy from Network settings; the updater's JavaScript API isn't available to
 the web view.
+
+**The local MCP server is off until the user starts it, and hands out facts,
+not requests.** It listens on `127.0.0.1` only, requires the per-install bearer
+token on every request, and refuses any `Host` other than its own loopback
+address and any browser `Origin`, which is what stops a web page reaching it
+through DNS rebinding. Studio makes no request you didn't ask for, and a
+listening socket is the same kind of promise, so the server doesn't start by
+itself unless the user turned on "start when Studio opens" (off by default).
+Agents get specs, URLs and mock details and send requests themselves; adding a
+"send this request" tool would make Studio act for a caller the user can't see.
+
+Rust owns the socket, the checks and the protocol (a small hand-written subset
+of MCP's Streamable HTTP transport: one `POST /mcp`, JSON responses, no
+sessions). Tool calls go to the web view as `studio://mcp-call` events and are
+answered by `src/lib/mcp.ts`, which already parses specs and talks to Spec0, and
+reads what Studio stored rather than what's on screen. The exception is
+`list_environments`, answered in Rust from `environments.json` alone: it never
+touches the credential store and drops the value of anything marked secret, so
+no bug in the interface can make a secret come back. Tool definitions live in
+`src/lib/mcp-tools.json`, read by both sides. Don't add a tool that repeats what
+the remote Spec0 MCP server already offers for the whole organisation; this one
+is for what only Studio knows.
 
 **No `tauri-plugin-http` and no `fs` plugin** (see above).
 

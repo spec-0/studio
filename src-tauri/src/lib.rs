@@ -1,6 +1,7 @@
 mod cookies;
 mod git;
 mod http;
+mod mcp;
 mod menu;
 mod oauth;
 mod secrets;
@@ -16,6 +17,7 @@ mod updates;
 ///    has no origin; sending one makes every CORS-configured server reject it.
 ///  - **Sign-in** needs a loopback socket, which a webview cannot hold.
 ///  - **Secrets** go to the OS credential store, which only native code can reach.
+///  - **The local MCP server** (off unless the user starts it) needs a socket too.
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -48,6 +50,10 @@ pub fn run() {
             secrets::secret_set,
             secrets::secret_delete,
             secrets::secret_list,
+            mcp::mcp_start,
+            mcp::mcp_stop,
+            mcp::mcp_status,
+            mcp::mcp_respond,
         ])
         .run(tauri::generate_context!())
         .expect("error while running spec0 Studio");

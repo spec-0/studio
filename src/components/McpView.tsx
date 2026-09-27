@@ -1,7 +1,7 @@
 import { McpSettings } from "./settings/McpSettings";
 
 /** The MCP tab. Its content is the same component as the MCP section in Settings. */
-export function McpView({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function McpView({ signedIn, onOpenSettings }: { signedIn: boolean; onOpenSettings: () => void }) {
   return (
     <div className="page">
       <div className="page-inner">
@@ -17,7 +17,7 @@ export function McpView({ onOpenSettings }: { onOpenSettings: () => void }) {
             MCP settings
           </button>
         </div>
-        <McpSettings />
+        <McpSettings signedIn={signedIn} />
       </div>
     </div>
   );

@@ -1687,6 +1687,51 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 }
 .copied-note-close:hover { color: hsl(var(--ink)); }
 
+/* ─── Local MCP server panel ──────────────────────────────────────────────── */
+
+.mcp-panel { display: flex; flex-direction: column; gap: var(--s2); font-size: 12px; }
+.mcp-lede { margin: 0 0 var(--s1); color: hsl(var(--ink-2)); }
+.mcp-row { display: flex; align-items: center; gap: var(--s2); }
+.mcp-row .spacer { flex: 1; }
+.mcp-status code, .mcp-mono { font-family: var(--font-mono); font-size: 11.5px; }
+.mcp-dot { width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--border-strong)); flex: none; }
+.mcp-dot.on { background: hsl(var(--success)); }
+.mcp-dot.bad { background: hsl(var(--danger)); }
+.mcp-warn { margin: 0; color: hsl(var(--warning)); }
+.mcp-panel .error-box { margin-top: 0; max-width: none; }
+.mcp-grid {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: var(--s2) var(--s3);
+  align-items: center;
+  margin-top: var(--s1);
+}
+.mcp-label { color: hsl(var(--ink-3)); }
+.mcp-value { display: flex; align-items: center; gap: var(--s2); min-width: 0; flex-wrap: wrap; }
+.mcp-value .mcp-mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.mcp-port { width: 80px; font-family: var(--font-mono); font-size: 12px; }
+.mcp-heading { margin: var(--s3) 0 0; font-size: 12px; font-weight: 600; }
+.mcp-tabs { display: flex; gap: 2px; }
+.mcp-tab {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: hsl(var(--ink-2));
+  cursor: pointer;
+}
+.mcp-tab:hover { background: hsl(var(--surface-hover)); }
+.mcp-tab.on { border-color: hsl(var(--border)); background: hsl(var(--surface)); color: hsl(var(--ink)); }
+.mcp-snippet { margin: 0; max-height: 180px; }
+.mcp-tools { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.mcp-tools li { display: flex; align-items: center; gap: var(--s2); }
+.mcp-tools li code { font-family: var(--font-mono); font-size: 11.5px; min-width: 170px; }
+.mcp-tools li.off { opacity: 0.45; }
+.mcp-tool-title { color: hsl(var(--ink-2)); }
+.mcp-privacy { margin: var(--s3) 0 0; }
+
 /* ─── Navigation ──────────────────────────────────────────────────────────── */
 
 /* The app's sections, as text tabs in the top bar. The tab fills the bar's

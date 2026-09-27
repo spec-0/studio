@@ -1,0 +1,122 @@
+[
+  {
+    "name": "list_local_apis",
+    "title": "List the APIs in Studio",
+    "description": "Lists the APIs in this Spec0 Studio library: specs the user opened from files, URLs or Spec0, including ones that aren't published anywhere. For each: id, title, version, where it came from, number of operations, base URLs from the spec's servers, and whether it has a hosted mock. Use the id or title with the other tools. To search every API in the user's organisation, use the remote Spec0 MCP server instead.",
+    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false
+  },
+  {
+    "name": "get_api_spec",
+    "title": "Get an API's OpenAPI document",
+    "description": "Returns the OpenAPI document Studio holds for one API, exactly as stored (YAML or JSON). Large documents come back in parts: the first part says how many characters there are and which offset to ask for next. For one endpoint, get_operation is usually enough and much smaller.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." },
+        "offset": { "type": "integer", "minimum": 0, "description": "Character offset to start from, for the next part of a large document. Default 0." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false
+  },
+  {
+    "name": "get_operation",
+    "title": "Get one operation",
+    "description": "Returns one operation of an API: parameters, request body schema, responses, the security schemes it uses, and the full URL for each server (and for the hosted mock, if there is one). Identify it by operation_id, or by method and path. Studio does not send requests for you: call the URL yourself, for example with curl.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." },
+        "operation_id": { "type": "string", "description": "The operationId from the spec." },
+        "method": { "type": "string", "description": "HTTP method, such as GET. Use with path." },
+        "path": { "type": "string", "description": "Path as written in the spec, such as /orders/{orderId}. Use with method." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false
+  },
+  {
+    "name": "search_operations",
+    "title": "Search operations",
+    "description": "Fuzzy search over the operations of the APIs in Studio (paths, operationIds, summaries, tags and descriptions). Returns the best matches with their API, method and path; pass one to get_operation for details. Searches this machine's library only; for the whole organisation, use the remote Spec0 MCP server.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string", "description": "What you're looking for, such as \"cancel order\" or \"/users/{id}\"." },
+        "api": { "type": "string", "description": "Limit the search to one API (id or title). Optional." },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 50, "description": "How many results to return. Default 15." }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false
+  },
+  {
+    "name": "get_connection_status",
+    "title": "Get Studio's connection status",
+    "description": "Says whether Studio is signed in to Spec0 or working locally, the organisation name, the Spec0 app URL, the address of the remote Spec0 MCP server, and the Studio and MCP server versions. Call this first to know whether the signed-in tools (mock servers) will work.",
+    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false
+  },
+  {
+    "name": "list_environments",
+    "title": "List environments and variables",
+    "description": "Lists the user's Studio environments (named sets of variables used as {{name}} in requests), which one is active, and each variable's name. Values are included for ordinary variables only. Secret variables are listed by name and marked secret; their values are never shared. If you need one, ask the user.",
+    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false
+  },
+  {
+    "name": "get_mock_server",
+    "title": "Get an API's hosted mock server",
+    "description": "Requires the user to be signed in to Spec0 in Studio. For one API: the hosted mock's base URL, its API key (if Studio has it), the header to send it in, the spec version the mock was built from, and a curl command you can run.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": true },
+    "requiresSignIn": true
+  },
+  {
+    "name": "create_mock_server",
+    "title": "Create a hosted mock server",
+    "description": "Requires the user to be signed in to Spec0 in Studio. Creates a hosted mock server for an API that is already published to Spec0, and returns its URL and API key. If the API already has a mock, that one is returned. An API that exists only on this machine has to be published from Studio first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true },
+    "requiresSignIn": true
+  },
+  {
+    "name": "refresh_mock_server",
+    "title": "Rebuild a mock from the latest spec",
+    "description": "Requires the user to be signed in to Spec0 in Studio. Rebuilds an API's hosted mock from the latest version published to Spec0. The mock keeps its URL and API key.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true },
+    "requiresSignIn": true
+  }
+]
