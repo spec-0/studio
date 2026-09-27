@@ -2,15 +2,12 @@ import { useMemo, useRef } from "react";
 import { BookmarkPlus, CornerDownLeft, Loader2, Send, ShieldAlert, TriangleAlert } from "lucide-react";
 import { interpolate, unresolved } from "../lib/env";
 import type { OperationSpec } from "../lib/spec";
+import type { Target } from "../lib/targets";
+
+export type { Target };
 
 /** Sentinel for the "type your own" option — "" was indistinguishable from unset. */
 const CUSTOM = "__custom__";
-
-export interface Target {
-  label: string;
-  url: string;
-  kind: "server" | "mock" | "env";
-}
 
 interface Props {
   op: OperationSpec;

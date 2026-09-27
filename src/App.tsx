@@ -23,7 +23,7 @@ import { canPublish, whyNotPublishable, type PublishResult } from "./lib/publish
 import { OperationView, type RequestValues } from "./components/OperationView";
 import { Inspector } from "./components/Inspector";
 import { SchemaView } from "./components/SchemaView";
-import { UrlBar, type Target } from "./components/UrlBar";
+import { UrlBar } from "./components/UrlBar";
 import { Brand } from "./components/Logo";
 import { MockKeyBar } from "./components/MockKeyBar";
 import { ConnectionChip } from "./components/ConnectionChip";
@@ -134,6 +134,13 @@ import {
   type RunOptions,
   type RunResult,
 } from "./lib/runner";
+import {
+  buildTargets,
+  environmentFor,
+  isTargetingMock,
+  mockCredentials,
+  sentToMock,
+} from "./lib/targets";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import {
   describeImpact,
@@ -289,14 +296,6 @@ export default function App() {
     () => absoluteMockUrl(session?.apiUrl ?? DEFAULT_API_URL, current?.mockUrl) ?? null,
     [current?.mockUrl, session?.apiUrl],
   );
-  /**
-   * How to authenticate against the hosted mock.
-   *
-   * The platform session token is only offered when the mock is served from the
-   * *same origin* we already send that token to. A mock URL is data that arrived
-   * over the network; attaching the user's credentials to whatever host it names
-   * would be a credential leak, so the origin check is a hard gate, not a tidy-up.
-   */
   /** True when the mock serves an older contract than the spec we hold. */
   const mockBehind = useMemo(() => mockIsBehind(current ?? {}), [current]);
 
@@ -306,27 +305,16 @@ export default function App() {
     [connection, server, vars],
   );
 
-  const mock = useMemo(() => {
-    if (!mockUrl) return null;
-    let sameOrigin = false;
-    try {
-      sameOrigin = Boolean(session) && new URL(mockUrl).origin === new URL(session!.apiUrl).origin;
-    } catch {
-      sameOrigin = false;
-    }
-    return {
-      url: mockUrl,
-      key: current?.mockApiKey,
-      bearer: sameOrigin ? session?.token : undefined,
-    };
-  }, [mockUrl, current?.mockApiKey, session]);
+  const mock = useMemo(
+    () => mockCredentials(mockUrl, current?.mockApiKey, session),
+    [mockUrl, current?.mockApiKey, session],
+  );
 
   /** True while the address bar is aimed at the mock — drives the key prompt. */
-  const targetingMock = useMemo(() => {
-    if (!mockUrl) return false;
-    const resolved = interpolate(server, vars).replace(/\/$/, "");
-    return resolved !== "" && resolved === mockUrl.replace(/\/$/, "");
-  }, [server, vars, mockUrl]);
+  const targetingMock = useMemo(
+    () => isTargetingMock(interpolate(server, vars), mockUrl),
+    [server, vars, mockUrl],
+  );
 
   /**
    * Keep an ad-hoc base URL as a `baseUrl` variable in the active environment,
@@ -553,7 +541,7 @@ export default function App() {
             body: describeBody(plan.body),
             bodyKind: plan.body?.kind,
             validation: verdict.status,
-            mock: Boolean(mockUrl && plan.url.startsWith(mockUrl.replace(/\/$/, ""))),
+            mock: sentToMock(plan.url, mockUrl),
             statusText: response.statusText,
             responseHeaders: response.headers,
             responseBody: response.binary ? "(binary — not stored)" : response.bodyText,
@@ -585,55 +573,17 @@ export default function App() {
     [current],
   );
 
-  /**
-   * What the address bar can point at.
-   *
-   * Targets belong to the API — its declared servers, its hosted mock, the platform
-   * environments it's deployed to — plus whatever the user types.
-   *
-   * *Client* environments are deliberately absent: they supply values, not
-   * destinations. A platform environment is the opposite thing with an
-   * unfortunately similar name — an actual place the API runs, reported by spec0,
-   * so it belongs here and its variables do not.
-   *
-   * None of these is ever auto-selected. The initial value stays the spec's own
-   * first server, because that is the document's declaration rather than a choice
-   * made on the developer's behalf; where a request goes is theirs to pick.
-   */
-  const targets = useMemo(() => {
-    const list: Target[] = [];
-    for (const url of spec?.servers ?? []) {
-      let label = url;
-      try {
-        const parsed = new URL(url);
-        label = parsed.host + (parsed.pathname === "/" ? "" : parsed.pathname);
-      } catch {
-        /* a templated server URL — show it verbatim */
-      }
-      list.push({ label, url, kind: "server" });
-    }
-    if (mockUrl) list.push({ label: "Mock server", url: mockUrl, kind: "mock" });
-    // Order is the platform's — its promotion order — and is preserved as received.
-    for (const env of current?.environments ?? []) {
-      list.push({ label: env.name, url: env.url, kind: "env" });
-    }
-    return list.filter((t, i, all) => all.findIndex((o) => o.url === t.url) === i);
-  }, [spec, mockUrl, current?.environments]);
+  /** What the address bar can point at — see `buildTargets`. */
+  const targets = useMemo(
+    () => buildTargets(spec?.servers ?? [], mockUrl, current?.environments ?? []),
+    [spec, mockUrl, current?.environments],
+  );
 
-  /**
-   * The environment currently being targeted, if any.
-   *
-   * Matched on URL rather than tracked as separate state, so typing an environment's
-   * URL by hand is recognised as that environment — which is what a developer means
-   * when they do it.
-   */
-  const activeEnvTarget = useMemo(() => {
-    const resolved = interpolate(server, vars).replace(/\/$/, "");
-    if (!resolved) return null;
-    return (
-      (current?.environments ?? []).find((env) => env.url.replace(/\/$/, "") === resolved) ?? null
-    );
-  }, [current?.environments, server, vars]);
+  /** The platform environment currently being targeted, if any. */
+  const activeEnvTarget = useMemo(
+    () => environmentFor(current?.environments ?? [], interpolate(server, vars)),
+    [current?.environments, server, vars],
+  );
 
   /**
    * The environment serves a different version than the spec we hold.
@@ -1093,7 +1043,7 @@ export default function App() {
           body: describeBody(plan.body),
           bodyKind: plan.body?.kind,
           validation: verdict.status,
-          mock: Boolean(mockUrl && plan.url.startsWith(mockUrl.replace(/\/$/, ""))),
+          mock: sentToMock(plan.url, mockUrl),
           statusText: response.statusText,
           responseHeaders: response.headers,
           // A 40MB PDF must not end up in history.json. Record that it happened
