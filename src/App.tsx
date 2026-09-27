@@ -20,6 +20,7 @@ import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { TitleBar } from "./components/TitleBar";
 import { Updater } from "./components/UpdateDialog";
+import { McpHost } from "./components/mcp/McpHost";
 import { UrlBar } from "./components/UrlBar";
 import { useBoot } from "./hooks/useBoot";
 import { useBulkRun } from "./hooks/useBulkRun";
@@ -765,6 +766,7 @@ export default function App() {
       )}
 
       <Updater />
+      <McpHost signedIn={Boolean(session)} />
     </div>
   );
 }

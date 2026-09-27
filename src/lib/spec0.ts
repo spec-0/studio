@@ -234,7 +234,7 @@ export class Spec0Error extends Error {
 }
 
 /** Pull a human message out of a Problem/JSON error body, if there is one. */
-function describeBody(body: string): string | null {
+export function describeBody(body: string): string | null {
   const trimmed = body.trim();
   if (!trimmed) return null;
   try {
