@@ -51,14 +51,7 @@ import {
   type ResponseResult,
 } from "./lib/request";
 import { validateResponse, type ValidationResult } from "./lib/validate";
-import {
-  interpolate,
-  loadEnvironments,
-  saveEnvironments,
-  variableMap,
-  withBaseUrl,
-  type EnvironmentFile,
-} from "./lib/env";
+import { interpolate, loadEnvironments } from "./lib/env";
 import * as history from "./lib/history";
 import type { HistoryEntry } from "./lib/history";
 import * as library from "./lib/library";
@@ -146,6 +139,7 @@ import {
   suggestedFileName,
 } from "./lib/response";
 import { DEFAULT_SETTINGS, useSettings, type Settings } from "./hooks/useSettings";
+import { useEnvironments } from "./hooks/useEnvironments";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import {
   describeImpact,
@@ -221,7 +215,7 @@ export default function App() {
   const [hookDismissed, setHookDismissed] = useState(false);
 
   const { settings, setSettings, patchSettings } = useSettings();
-  const [envFile, setEnvFile] = useState<EnvironmentFile>({ environments: [], activeId: null });
+  const { envFile, setEnvFile, saveEnvFile, activeEnv, vars, saveTarget } = useEnvironments();
   const [requests, setRequests] = useState<HistoryEntry[]>([]);
   const [session, setSession] = useState<Session | null>(null);
 
@@ -272,8 +266,6 @@ export default function App() {
     void saveConnection(next);
   }, []);
 
-  const activeEnv = envFile.environments.find((env) => env.id === envFile.activeId) ?? null;
-  const vars = useMemo(() => variableMap(activeEnv), [activeEnv]);
   /**
    * Resolve on read, not just on import: entries added before mock URLs were
    * absolutised still hold a bare path, and a stale library row shouldn't leave
@@ -302,15 +294,6 @@ export default function App() {
     () => isTargetingMock(interpolate(server, vars), mockUrl),
     [server, vars, mockUrl],
   );
-
-  /** Keep an ad-hoc base URL as `baseUrl` in the active environment — see `withBaseUrl`. */
-  const saveTarget = useCallback((url: string) => {
-    setEnvFile((prev) => {
-      const next = withBaseUrl(prev, url);
-      void saveEnvironments(next);
-      return next;
-    });
-  }, []);
 
   /**
    * Rebuild the mock against the spec we now hold.
@@ -1312,9 +1295,7 @@ export default function App() {
           <select
             value={envFile.activeId ?? ""}
             onChange={(event) => {
-              const next = { ...envFile, activeId: event.target.value || null };
-              setEnvFile(next);
-              void saveEnvironments(next);
+              saveEnvFile({ ...envFile, activeId: event.target.value || null });
             }}
           >
             <option value="">No environment</option>
@@ -1809,10 +1790,7 @@ export default function App() {
       {showEnvs && (
         <EnvironmentsDialog
           file={envFile}
-          onSave={(next) => {
-            setEnvFile(next);
-            void saveEnvironments(next);
-          }}
+          onSave={saveEnvFile}
           onClose={() => setShowEnvs(false)}
         />
       )}
