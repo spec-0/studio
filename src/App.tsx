@@ -19,7 +19,7 @@ import { Sidebar, type SidebarTab } from "./components/Sidebar";
 import { DocumentView, type DocumentTab } from "./components/DocumentView";
 import { readGitInfo, type GitInfo } from "./lib/git";
 import { PublishDialog } from "./components/PublishDialog";
-import { canPublish, whyNotPublishable, type PublishResult } from "./lib/publish";
+import { canPublish, whyNotPublishable } from "./lib/publish";
 import { OperationView, type RequestValues } from "./components/OperationView";
 import { Inspector } from "./components/Inspector";
 import { SchemaView } from "./components/SchemaView";
@@ -76,9 +76,6 @@ import {
   getApiConsumers,
   consumersUrl,
   apiUrl,
-  listTeams,
-  publishTeamApi,
-  type TeamSummary,
   type ApiConsumers,
   fetchTeamApiSpec,
   listApiEnvironments,
@@ -116,6 +113,7 @@ import {
 import { DEFAULT_SETTINGS, useSettings, type Settings } from "./hooks/useSettings";
 import { useTargeting } from "./hooks/useTargeting";
 import { useBulkRun } from "./hooks/useBulkRun";
+import { usePublish } from "./hooks/usePublish";
 import { useOAuth } from "./hooks/useOAuth";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
@@ -155,15 +153,6 @@ export default function App() {
   const [git, setGit] = useState<GitInfo | null>(null);
   const [consumers, setConsumers] = useState<ApiConsumers | null>(null);
 
-  // Publishing this document to spec0. The only write path in the app,
-  // so its failures are surfaced rather than swallowed the way the read-side
-  // decorations are.
-  const [showPublish, setShowPublish] = useState(false);
-  const [teams, setTeams] = useState<TeamSummary[]>([]);
-  const [teamsError, setTeamsError] = useState<string | null>(null);
-  const [publishing, setPublishing] = useState(false);
-  const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
-  const [publishError, setPublishError] = useState<string | null>(null);
   const [replay, setReplay] = useState<{
     headers: Record<string, string>;
     body?: string;
@@ -224,6 +213,18 @@ export default function App() {
     currentId: current?.id,
     setRequests,
   });
+
+  const {
+    showPublish,
+    setShowPublish,
+    teams,
+    teamsError,
+    publishing,
+    publishResult,
+    publishError,
+    startPublish,
+    doPublish,
+  } = usePublish(session, current, setEntries);
 
   const values = useRef<RequestValues>({ pathParams: {}, queryParams: {}, headerParams: {}, body: "" });
   const onValuesChange = useCallback((next: RequestValues) => {
@@ -925,51 +926,6 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.inspectorOpen, settings.dark, entries.length, goLibrary]);
-
-  /**
-   * Open the publish dialog, loading the org's teams as it opens.
-   *
-   * Signed out this routes to sign-in rather than hiding the action: a button
-   * that disappears when you aren't signed in teaches people the feature isn't
-   * there, in another form.
-   */
-  const startPublish = useCallback(() => {
-    setPublishResult(null);
-    setPublishError(null);
-    setTeamsError(null);
-    setShowPublish(true);
-    if (!session) return;
-    void listTeams(session)
-      .then(setTeams)
-      .catch(() => {
-        setTeams([]);
-        // Not fatal: publishing without a team is legal and lands the API in
-        // the org's "Unassigned APIs" team.
-        setTeamsError("Couldn't list teams — you can still publish as unassigned.");
-      });
-  }, [session]);
-
-  const doPublish = useCallback(
-    async (body: unknown) => {
-      if (!session || !current) return;
-      setPublishing(true);
-      setPublishError(null);
-      try {
-        const result = await publishTeamApi<PublishResult>(session, body);
-        setPublishResult(result);
-        // The document now exists upstream; remember it so the entry stops
-        // looking like a purely local file.
-        if (result.apiId) {
-          setEntries(await library.touchOpened(current.id));
-        }
-      } catch (error) {
-        setPublishError(error instanceof Error ? error.message : String(error));
-      } finally {
-        setPublishing(false);
-      }
-    },
-    [session, current],
-  );
 
   const showGraph = view === "graph";
   const showDocument = view === "document";
