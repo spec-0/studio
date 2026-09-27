@@ -134,7 +134,11 @@ export async function saveResponseTo(from: string, to: string): Promise<void> {
   await invoke("save_response", { from, to });
 }
 
-export async function openExternal(url: string): Promise<void> {
+/**
+ * Open `url` in the user's default browser. Not for loading a spec — that is
+ * `addFromUrl` in `useLibrary`.
+ */
+export async function openInBrowser(url: string): Promise<void> {
   if (!inTauri) {
     window.open(url, "_blank", "noopener");
     return;

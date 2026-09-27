@@ -1,7 +1,7 @@
 import { appFetch } from "./request";
 import {
   awaitOAuthCallback,
-  openExternal,
+  openInBrowser,
   readCliSession,
   readStore,
   writeStore,
@@ -182,7 +182,7 @@ export async function signInViaBrowser(
 
   // Start listening before the browser opens, or a fast redirect races the bind.
   const pending = awaitOAuthCallback(port, 120);
-  await openExternal(authUrl.toString());
+  await openInBrowser(authUrl.toString());
 
   const params = await pending;
   const token = params.token;
@@ -657,6 +657,19 @@ export async function createMock(session: Session, apiId: string): Promise<Creat
 export function apiIdFromRef(ref: string): string | null {
   const id = ref.startsWith("spec0:") ? ref.slice("spec0:".length) : null;
   return id && id.length > 0 ? id : null;
+}
+
+/**
+ * The API whose platform environments should be loaded when a library entry
+ * opens, or null when there is nothing to load: no session, or an API that
+ * didn't come from spec0.
+ */
+export function environmentSyncApiId(
+  session: Session | null,
+  source: { kind: string; ref: string },
+): string | null {
+  if (!session || source.kind !== "spec0") return null;
+  return apiIdFromRef(source.ref);
 }
 
 export interface UpstreamState {

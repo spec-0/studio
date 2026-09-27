@@ -17,7 +17,7 @@ import {
 } from "../lib/appUpdates";
 import { loadConnection } from "../lib/connection";
 import { inTauri } from "../lib/request";
-import { openExternal } from "../lib/store";
+import { openInBrowser } from "../lib/store";
 
 type Phase =
   | { kind: "checking" }
@@ -166,7 +166,7 @@ export function Updater() {
         </div>
 
         <div className="modal-foot">
-          <button className="btn" onClick={() => void openExternal(RELEASES_PAGE)}>
+          <button className="btn" onClick={() => void openInBrowser(RELEASES_PAGE)}>
             Open releases page
           </button>
           <span className="spacer" style={{ flex: 1 }} />

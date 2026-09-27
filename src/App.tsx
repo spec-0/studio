@@ -44,9 +44,11 @@ import type { LibraryEntry } from "./lib/library";
 import { describeExpiry } from "./lib/oauth";
 import { canPublish, whyNotPublishable } from "./lib/publish";
 import { toMarkdown } from "./lib/runner";
+import { sendTargetFor } from "./lib/shortcuts";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import type { ParsedSpec } from "./lib/spec";
 import { apiIdFromRef, apiUrl, consumersUrl } from "./lib/spec0";
+import { openInBrowser } from "./lib/store";
 
 /**
  * The composition root: wires the hooks in `src/hooks` to the components in
@@ -194,7 +196,7 @@ export default function App() {
     ingest,
     openEntry,
     openFile,
-    openUrl,
+    addFromUrl,
     refreshEntry,
     removeEntry,
     checkForUpdates,
@@ -246,7 +248,11 @@ export default function App() {
   }, [setRoute, clearResponse]);
 
   useShortcuts({
-    send: () => void doSend(),
+    send: () => {
+      const target = sendTargetFor(route);
+      if (target === "scratch") void doScratchSend();
+      else if (target === "operation") void doSend();
+    },
     openAdd: () => setShowOpen(true),
     openSwitcher: () => {
       if (entries.length) setShowSwitcher(true);
@@ -420,7 +426,7 @@ export default function App() {
                   consumers={consumers}
                   onOpenConsumers={() => {
                     const apiId = current ? apiIdFromRef(current.source.ref) : null;
-                    if (apiId) void openUrl(consumersUrl(session?.appUrl ?? "", apiId));
+                    if (apiId) void openInBrowser(consumersUrl(session?.appUrl ?? "", apiId));
                   }}
                   publishBlockedReason={
                     canPublish(current?.source) ? null : whyNotPublishable(current?.source)
@@ -633,7 +639,7 @@ export default function App() {
           result={publishResult}
           error={publishError}
           onPublish={(body) => void doPublish(body)}
-          onOpenPublished={(id) => void openUrl(apiUrl(session?.appUrl ?? "", id))}
+          onOpenPublished={(id) => void openInBrowser(apiUrl(session?.appUrl ?? "", id))}
           onClose={() => setShowPublish(false)}
         />
       )}
@@ -652,7 +658,7 @@ export default function App() {
           session={session}
           onSession={updateSession}
           onOpenFile={() => void openFile()}
-          onOpenUrl={(url) => void openUrl(url)}
+          onOpenUrl={(url) => void addFromUrl(url)}
           onOpenSpec0={(text, name, source, mock) => {
             void ingest(text, name, { kind: "spec0", ref: source }, mock);
           }}
