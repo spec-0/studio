@@ -12,6 +12,7 @@
 #   MACOS_CERTIFICATE       base64 of the Developer ID Application .p12
 #   MACOS_CERTIFICATE_PWD   password set when exporting that .p12
 #   KEYCHAIN_PASSWORD       any string; secures the throwaway build keychain
+#   APPLE_SIGNING_IDENTITY  e.g. "Developer ID Application: Your Name (TEAMID)"
 #   APPLE_API_KEY_P8        contents of the App Store Connect .p8 private key
 #   APPLE_API_KEY_ID        the key id, e.g. ABCD123456
 #   APPLE_API_ISSUER        the issuer UUID

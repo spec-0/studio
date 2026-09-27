@@ -1,212 +1,201 @@
-<div align="center">
-
 # spec0 Studio
 
-**A desktop API client where the OpenAPI spec is the organising primitive.**
+spec0 Studio is a desktop app for calling and testing APIs, for developers who
+already have an OpenAPI spec (the YAML or JSON file that describes an API).
 
-Not a collection you maintain by hand. The spec you already have.
+Instead of building a collection of requests by hand, you open the spec and
+Studio builds the requests from it. It then checks each response against what
+the spec says, so you notice when the API and its description drift apart.
+Studio is young, and we'd like to hear what breaks.
 
-[Download](https://github.com/spec-0/studio/releases/latest) for macOS, Windows and Linux ·
-[Build from source](#build-from-source) · MIT
+Free and open source (MIT). Works without an account.
 
-</div>
+<!-- screenshot: main window -->
 
----
+## Download
 
-Most API clients ask you to describe your API a second time. You have a spec that
-already says what the endpoints are, what the parameters mean, what the response
-should look like — and then you hand-build a collection of requests that says the
-same thing, badly, and drifts the moment the API changes.
-
-Studio starts from the spec. Requests are generated from it, responses are checked
-against it, and when the spec changes the client changes with it. Nothing to
-re-record.
-
-## What it does
-
-**A library of specs, not a bag of requests.** Add an API from a local file, a URL,
-or your spec0 catalog — OpenAPI 3.0 and 3.1, YAML or JSON. Switch between them with
-⌘P. The spec *text* is stored rather than a file path, so reopening is instant,
-survives the file moving, and works with no network.
-
-**Schemas are first-class.** Operations grouped by tag *and* component schemas are
-two separate sidebar tabs — schemas aren't buried inside the operations that happen
-to use them. Schema detail shows merged `allOf` fields, what it references, what
-references it, which operations use it, a generated example, the raw JSON, and an
-interactive graph.
-
-**Read the document itself.** Raw and Reference tabs: the text exactly as you
-imported it with syntax highlighting, or the same document rendered as a full API
-reference. Both work offline with no account. If the spec came from a git working
-tree, Studio shows its branch, commit and whether the file is dirty.
-
-**Requests built from the schema.** Parameters are typed by what the spec says they
-are — an enum becomes a select, a boolean a toggle. Bodies are pre-populated with
-real field names and format-aware values. The base URL is free text, so you can
-point at `localhost`, a host the spec never mentions, or `{{baseUrl}}`.
-
-**Requests execute in Rust, so there is no CORS.** No preflight, no browser origin,
-no proxy needed to talk to your own API.
-
-**Responses are checked against the spec.** Validated against the schema declared
-for the status code actually returned — including fields the response contains that
-the spec doesn't declare, which is how drift usually shows up first.
-
-**Conformance runs.** Run a tag or the whole spec and get a verdict per operation.
-The assertions come from the spec, so nobody wrote them and they can't rot.
-Read-only by default, sequential, cancellable, exportable as markdown for a PR.
-
-**Environments.** Named variable sets interpolated as `{{name}}` into the URL,
-parameters, headers, auth and body. A variable can be marked secret — the
-environment file then records that it exists and is secret, but not its value, so
-the file stays safe to commit. The value goes to your OS credential store.
-
-**OAuth 2.0 that Studio performs for you.** Client credentials, or authorization
-code + PKCE through your browser. Token URL, authorize URL and scopes pre-fill from
-the spec's declared `oauth2` flows.
-
-**Bodies and responses of every shape.** A JSON editor, a key/value editor for
-`x-www-form-urlencoded`, or a per-part editor with file pickers for
-`multipart/form-data` — files travel as paths, so uploads aren't bounded by what
-fits in a JSON string. Binary responses render inline or offer *Save as…* instead
-of being mangled into text.
-
-**The things that decide whether a client works on a corporate network.** Per-host
-certificate trust with a private CA bundle, proxy configuration honouring
-`HTTPS_PROXY`/`NO_PROXY`, configurable timeouts, redirect control that reports the
-chain it followed, and a per-API cookie jar you can inspect and clear.
-
-**History.** Every request recorded locally, searchable and replayable, 30-day
-retention. Local only — never synced anywhere.
-
-Keyboard: `⌘↵` send · `⌘O` add API · `⌘P` switch API · `⌘L` library ·
-`⌘E` environments · `⌘\` inspector · `⌘1/2/3` tabs · `⌘D` theme · `/` search ·
-`Esc` close.
-
-## Optional: connect to spec0
-
-Studio is a complete API client with no account. Connecting a
-[spec0](https://spec0.io) organisation adds your team's catalog, spec pull, hosted
-mock URLs as base-URL suggestions, and publishing a local spec back to your org.
-
-Signing out reverts to purely local operation and loses nothing.
-
-## Privacy
-
-An API client for internal APIs has no business talking to anyone but your API.
-
-- **No telemetry, no analytics, no crash reporting.** Studio makes no request you
-  didn't ask for.
-- **The rendered reference makes zero network requests.** The renderer is handed
-  the document text, never a URL. A spec whose description references a remote
-  image will not load it — that request would tell whoever wrote the spec that you
-  opened it.
-- **A Content Security Policy on the webview** enforces the above regardless of
-  what any bundled dependency decides to do in a future version.
-- **Auth values are never stored per API.** They live in an environment where they
-  can be marked secret, so there's exactly one secret store rather than a second,
-  worse one.
-- **Secret values live in your OS credential store**: the macOS Keychain, Windows
-  Credential Manager, or the Secret Service on Linux. The environment file records
-  only that a variable is secret. History, error messages and exported reports show
-  a `{{name}}` reference in place of a secret value.
-- **Certificate trust is per-host and deliberate.** There is no global "ignore TLS
-  errors" switch, and skipping verification for a host is shown at send time.
-- **Update checks only when you ask.** *Check for Updates…* (in the app menu on
-  macOS, the Help menu on Windows and Linux) sends one request to github.com for
-  the latest release. There is also a setting to check each time Studio starts.
-  It is off unless you turn it on. The check carries nothing about your specs,
-  environments or history, and it uses the proxy from Connection settings.
-
-## Install
-
-Download from [Releases](https://github.com/spec-0/studio/releases/latest). These
-links always point at the newest version:
+These links always point to the newest version:
 
 | Platform | File | Notes |
 |---|---|---|
-| macOS 11 or later | [spec0-studio-macos-universal.dmg](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-macos-universal.dmg) | Universal (Apple silicon and Intel). Signed and notarized by Apple. |
-| Windows 10 and 11, x64 | [spec0-studio-windows-x64-setup.exe](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-windows-x64-setup.exe) | Installs for your user only, no admin rights needed. **Not code-signed** — see below. |
-| Linux x86_64 | [spec0-studio-linux-x86_64.AppImage](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-x86_64.AppImage) | Runs on most distributions. `chmod +x` it, then run it. |
+| macOS 11 or later | [spec0-studio-macos-universal.dmg](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-macos-universal.dmg) | Apple silicon and Intel. Signed and notarized by Apple. |
+| Windows 10 and 11, x64 | [spec0-studio-windows-x64-setup.exe](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-windows-x64-setup.exe) | Installs for your user only, no admin rights needed. **Not code-signed**, see below. |
+| Linux x86_64 | [spec0-studio-linux-x86_64.AppImage](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-x86_64.AppImage) | Most distributions. Run `chmod +x` on it, then run it. |
 | Debian, Ubuntu, x86_64 | [spec0-studio-linux-amd64.deb](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-amd64.deb) | `sudo apt install ./spec0-studio-linux-amd64.deb` |
 
-Each release has a `SHA256SUMS.txt` you can check a download against.
+All files are on the [releases page](https://github.com/spec-0/studio/releases/latest).
+Each release includes a `SHA256SUMS.txt` file you can check a download against.
 
 **The Windows installer is not code-signed.** We don't have a Windows
-code-signing certificate yet. So when you run the installer, Windows SmartScreen
-will probably show "Windows protected your PC" and name the publisher as
-unknown. To go on, click **More info**, then **Run anyway**. If you'd rather not,
-check the file against `SHA256SUMS.txt` first
-(`Get-FileHash .\spec0-studio-windows-x64-setup.exe` in PowerShell), or build from
-source. Studio on Windows uses Microsoft's WebView2 to draw its window. Windows 11
-and current Windows 10 already have it; if yours doesn't, the installer downloads
-it from Microsoft.
+code-signing certificate yet. When you run the installer, Windows SmartScreen
+will probably say "Windows protected your PC" and call the publisher unknown.
+To continue, click **More info**, then **Run anyway**. If you'd rather not, you
+can check the file against `SHA256SUMS.txt` first (in PowerShell:
+`Get-FileHash .\spec0-studio-windows-x64-setup.exe`), or build Studio from
+source. On Windows, Studio uses Microsoft's WebView2 to draw its window. Windows
+11 and current Windows 10 already have it; if yours doesn't, the installer
+downloads it from Microsoft.
 
-**Updates.** Pick *Check for Updates…* to see if there is a newer version and
-install it. Every update is signed, and Studio refuses one whose signature
-doesn't match. An AppImage replaces itself. A `.deb` install asks for your
-password (through `pkexec`) to install the new package. On Windows the installer
-runs, then Studio starts again.
+**Updates.** Choose *Check for Updates…* (in the app menu on macOS, the Help menu
+on Windows and Linux) to see whether there is a newer version and install it.
+Every update is signed, and Studio refuses an update whose signature doesn't
+match. An AppImage replaces itself. A `.deb` install asks for your password
+(through `pkexec`) to install the new package. On Windows the installer runs and
+then Studio starts again.
 
-## Build from source
+## What it does
 
-Requires Node 20+ and a Rust toolchain. On Linux you also need
-[Tauri's system packages](https://v2.tauri.app/start/prerequisites/#linux)
-(WebKitGTK 4.1 and friends).
+**Your specs**
+- Add an API from a local file, a URL, or a spec0 account. OpenAPI 3.0 and 3.1,
+  YAML or JSON.
+- Studio keeps a copy of the spec's text, so it opens quickly, works offline and
+  still works if the file moves.
+- Browse operations by tag, and browse schemas (the data models) in their own
+  tab: fields, what each schema uses and is used by, an example, and a graph.
+- See the spec as raw text or as a readable API reference. Both work offline.
+- If the spec file is in a git repository, Studio shows its branch, commit, and
+  whether the file has changed since that commit.
 
-```bash
-npm install
-npm run app            # native window
-```
+**Sending requests**
+- Request forms come from the spec: a list of allowed values becomes a dropdown,
+  a true/false becomes a toggle, and request bodies start filled in with the
+  real field names.
+- Point a request anywhere: the spec's server, `localhost`, or any other address.
+- Requests are sent by the app itself, not by a web page, so browser CORS rules
+  (which stop a web page from calling other sites) don't get in the way. No
+  proxy needed.
+- JSON bodies, form bodies, and file uploads. Binary responses such as images or
+  PDFs show inline or can be saved to disk.
 
-```bash
-npm run dev            # browser preview at :5173 — fast UI iteration
-```
+**Checking responses**
+- Each response is checked against the schema the spec gives for that status
+  code, including fields the API returns that the spec doesn't mention.
+- Conformance runs: run every operation in a tag or in the whole spec and see
+  which responses match the spec. Only read-only requests (like GET) run unless
+  you choose otherwise. Requests run one at a time, can be cancelled, and the
+  result can be exported as Markdown.
 
-The browser preview is useful for styling, but requests to third-party APIs will
-hit CORS there. That's the whole point of the Rust shell — inside the app, requests
-go out through Rust. The status bar tells you which mode you're in.
+**Environments and sign-in**
+- Environments are named sets of values, such as `{{baseUrl}}` or `{{token}}`,
+  that you can use in the URL, headers, auth and body.
+- A value can be marked secret. The secret goes into your operating system's
+  credential store, and the environment file only notes that the secret exists,
+  so the file is safe to commit.
+- OAuth 2.0: Studio can get tokens for you, using client credentials or the
+  authorization code flow with PKCE in your browser. Settings are pre-filled from
+  the spec where it has them.
 
-```bash
-npm test               # vitest
-npm run type-check     # tsc --noEmit
-npm run app:build      # installers for this platform (.app/.dmg, .AppImage/.deb, .exe)
-```
+**Company networks**
+- Trust a private certificate authority for specific hosts.
+- Proxy settings, including `HTTPS_PROXY` and `NO_PROXY`.
+- Timeouts, redirect control (Studio shows each redirect it followed), and a
+  cookie jar per API that you can inspect and clear.
+
+**History**
+- Every request is saved on your computer for 30 days, and you can search and
+  replay it. History is never synced anywhere.
+
+Keyboard shortcuts (use Ctrl instead of ⌘ on Windows and Linux): `⌘↵` send ·
+`⌘O` add API · `⌘P` switch API · `⌘L` library · `⌘E` environments ·
+`⌘\` inspector · `⌘1/2/3` tabs · `⌘D` theme · `/` search · `Esc` close.
+
+## Privacy
+
+Studio is often used with private, internal APIs, so it should talk only to the
+servers you point it at.
+
+- **No telemetry, analytics or crash reporting.** Studio makes no request you
+  didn't ask for.
+- **The API reference view makes no network requests.** It is given the spec's
+  text, never a URL. If a spec's description links to a remote image, the image
+  is not loaded, because loading it would tell the spec's author that you opened it.
+- **A Content Security Policy** (a set of rules the app's window enforces) blocks
+  other network requests from the interface, whatever a bundled library tries to do.
+- **Auth values are not stored per API.** They go in an environment, where they
+  can be marked secret. There is one place for secrets, not two.
+- **Secret values are kept in your operating system's credential store**: the
+  macOS Keychain, Windows Credential Manager, or the Secret Service on Linux.
+  History, error messages and exported reports show `{{name}}` in place of a
+  secret value.
+- **Certificate checks are never switched off everywhere at once.** You can turn
+  them off for one host at a time, and Studio reminds you when you send a
+  request to that host.
+- **Update checks happen only when you ask.** *Check for Updates…* sends one
+  request to github.com for the latest release. There is a setting to check each
+  time Studio starts; it is off unless you turn it on. The check sends nothing
+  about your specs, environments or history, and it uses the proxy from your
+  connection settings.
+
+## Connecting to spec0 (optional)
+
+Everything above works without an account. If your team uses
+[spec0](https://spec0.io), you can sign in to browse your organisation's APIs,
+pull their specs, use hosted mock servers as request targets, and publish a
+local spec to your organisation. Signing out returns Studio to local-only use,
+and nothing is lost.
 
 ## Known limitations
 
-- **Windows and Linux builds are new** and have had much less use than the Mac
-  build. Please [open an issue](https://github.com/spec-0/studio/issues) when
-  something looks or works wrong there.
+- **The Windows and Linux builds are new** and have had much less use than the
+  Mac build. Please [open an issue](https://github.com/spec-0/studio/issues) if
+  something looks or works wrong.
 - **The Windows installer is not code-signed**, so SmartScreen warns about it
-  (see [Install](#install)).
-- **x86_64 only on Windows and Linux.** There are no ARM builds for those yet.
-- **Linux needs WebKitGTK 4.1**, which means Ubuntu 22.04, Debian 12 or newer
-  (or another distribution of about that age).
-- **Update checks use Studio's proxy setting, but not its certificate trust.** If
-  your network inspects TLS with a private certificate authority, the check may
-  fail. Download new versions from the releases page instead.
-- **Swagger 2.0 is rejected** with a message rather than converted. Convert to
+  (see [Download](#download)).
+- **Windows and Linux builds are x86_64 only.** There are no ARM builds for them yet.
+- **Linux needs WebKitGTK 4.1**: Ubuntu 22.04, Debian 12 or newer, or another
+  distribution of about that age.
+- **Update checks use Studio's proxy setting, but not its certificate settings.**
+  If your network inspects encrypted traffic with a private certificate
+  authority, the check may fail. Download new versions from the releases page
+  instead.
+- **Swagger 2.0 is not supported.** Studio shows a message; convert the spec to
   OpenAPI 3 first.
-- **Generated example values fall back to type** when a field has no `example`, no
-  `format`, and an unrecognised name — so some bodies arrive with `"string"`
-  placeholders you'll want to replace.
-- **Secrets fall back to a plain file if the OS credential store can't be
-  reached.** This mostly affects Linux without a running, unlocked keyring (for
-  example GNOME Keyring or KWallet). Studio keeps working, keeps secret values in a
-  local file that is not encrypted, and says so in the environments dialog. The
-  values move into the credential store the next time Studio starts and can reach
-  it.
-- The app requests broad outbound HTTP scope, because an API client has to be able
-  to reach any host you point it at.
+- **Some example values are placeholders.** When a field has no example, no
+  format and an unfamiliar name, Studio fills in something like `"string"`,
+  which you'll want to replace.
+- **Secrets can fall back to a plain file.** If the credential store can't be
+  reached (mostly on Linux without a running, unlocked keyring such as GNOME
+  Keyring or KWallet), Studio keeps secret values in a local file that is not
+  encrypted, and says so in the environments dialog. The values move to the
+  credential store the next time Studio starts and can reach it.
+- **The app is allowed to make HTTP requests to any host**, because an API
+  client has to reach whatever address you give it.
 
 ## Performance
 
-Measured against Stripe's published spec — 7.6 MB, 589 operations, 1440 schemas:
-**~30 ms to parse, ~16 ms to generate examples for all 1440 schemas.**
+On Stripe's public spec (7.6 MB, 589 operations, 1440 schemas), Studio takes
+about 30 ms to read the spec and about 16 ms to build examples for every schema,
+on our machines. It gets there by looking up `$ref` references only when they
+are needed, rather than expanding the whole document up front. That is also what
+keeps schemas that refer to themselves from causing problems.
 
-That comes from *not* dereferencing the document. `$ref`s resolve on demand with a
-seen-set, which is also what stops recursive models from overflowing the stack.
+## Build from source
+
+You need Node 20 or later and a Rust toolchain. On Linux you also need
+[Tauri's system packages](https://v2.tauri.app/start/prerequisites/#linux)
+(WebKitGTK 4.1 and a few others).
+
+```bash
+npm install
+npm run app            # run the desktop app
+npm run dev            # preview the interface in a browser at localhost:5173
+```
+
+The browser preview is handy for styling, but requests to other sites will be
+blocked by CORS there, because it is a web page. In the desktop app they go out
+through Rust. The status bar tells you which one you are in.
+
+```bash
+npm test               # unit tests
+npm run type-check     # TypeScript check
+npm run app:build      # installers for your platform (.dmg, .AppImage/.deb, .exe)
+```
+
+## Contributing
+
+Bug reports, questions and pull requests are welcome. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) first. To report a security problem, see
+[SECURITY.md](SECURITY.md) rather than opening a public issue.
 
 ## Licence
 

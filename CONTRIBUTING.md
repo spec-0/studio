@@ -1,235 +1,255 @@
 # Contributing
 
-Tauri v2 (Rust shell) + React 18 + TypeScript + Vite. Ships for macOS, Windows
-and Linux; the Mac build has had by far the most use.
+Thanks for taking a look. Studio is built with Tauri v2 (a Rust shell around a
+web view), React 18, TypeScript and Vite. It ships for macOS, Windows and Linux;
+the Mac build has had the most use so far.
 
-This file is the design rationale as much as the build instructions. Most of what
-follows is a rule plus the reason it exists — the reason matters more, because it
-tells you when the rule stops applying.
+Most of this file is a list of rules, each with the reason behind it. The reason
+is the useful part: it tells you when a rule applies and when it doesn't.
 
-## Definition of done
+## Reporting bugs and asking for features
+
+Open an [issue](https://github.com/spec-0/studio/issues/new/choose). For a bug,
+the most helpful things are your operating system, the Studio version (shown
+under *About*), what you did, what you expected, and what happened. If you can
+share a small spec that shows the problem, even better. Please remove any tokens
+or private URLs first.
+
+**Security problems:** please don't open a public issue. See
+[SECURITY.md](SECURITY.md) for how to report one privately.
+
+## Before you open a pull request
 
 ```bash
-npm run type-check          # tsc --noEmit
-npm test                    # vitest
-npm run build               # vite build
-npx tauri build             # compiles the Rust shell + bundles the .app
+npm run type-check          # TypeScript check
+npm test                    # unit tests (vitest)
+npm run build               # production build of the interface
+npx tauri build             # builds the Rust shell and the app
 ```
 
-All four must pass. For UI changes also run the app (`npm run app`) and exercise
-the feature — a type-check proves it compiles, not that it works. `npm run dev`
-gives a browser preview for fast styling iteration, but requests to third-party
-APIs will hit CORS there; that's expected, and the status bar says which mode
-you're in.
+All four should pass. CI also runs two more checks:
 
-## The two rules that define this app
+```bash
+npm run test:csp            # runs the built app in Chrome under its real security policy
+cd src-tauri && cargo test  # the Rust tests, on macOS, Linux and Windows
+```
 
-**1. Working locally is not negotiable.** Opening a local or remote spec, browsing
-operations and schemas, configuring auth, firing requests, validating responses,
-managing environments and history must all work with **no account, no login, and no
-network call to spec0**. If a change puts any of that behind a connection, it's
-wrong — that constraint is the product's entire positioning.
+`test:csp` exists because unit tests run in Node, which has no Content Security
+Policy. Code that the app's policy blocks (for example a library that uses
+`eval`) can pass every unit test and still fail in the real app.
 
-**2. Requests carry no `Origin`.** Outbound HTTP goes through our own reqwest
-command in `src-tauri/src/http.rs`, **not** `tauri-plugin-http`. That plugin
-attaches the webview's origin to every request, which makes any CORS-configured
-server reject a desktop client. A desktop client is not a browser and has no
-origin. Don't reintroduce the plugin.
+For interface changes, also run the app (`npm run app`) and try the feature.
+A passing type-check shows the code compiles, not that it works. `npm run dev`
+gives a quicker browser preview for styling, but requests to other sites will be
+blocked by CORS there. That's expected; the status bar shows which mode you're in.
 
-## Architecture
+For larger changes, it helps to open an issue first so we can agree on the
+approach before you spend time on it.
 
-- **Rust owns five things only**: outbound HTTP (`http.rs`), the sign-in loopback
-  listener (`oauth.rs` — a webview can't hold a socket), file IO (`storage.rs`),
-  the OS credential store (`secrets.rs` — only native code can reach it), and
-  checking for and installing updates (`updates.rs`, with the menu in `menu.rs`).
-  Everything else is React.
-- **Secrets are narrow commands too.** The webview names an environment id and a
-  variable name; Rust builds the account under one fixed service name. There is no
-  command that reads an arbitrary keychain item. Credential stores can't be listed
-  portably, so Rust keeps an index of what it wrote (names, never values), and that
-  is what lets a renamed or deleted variable be cleaned up. The logic around it —
-  migrating from the old plaintext file, falling back to it when the store can't be
-  reached, pruning — is in `src/lib/secrets.ts` and tested there. A value that
-  can't reach the store falls back to the local file and the UI says so; it is
+## The two main rules
+
+**1. Everything works locally, without an account.** Opening a spec (local or
+remote), browsing operations and schemas, setting up auth, sending requests,
+checking responses, and using environments and history must all work with no
+account, no sign-in, and no network call to spec0. A change that puts any of
+this behind a connection to spec0 is the wrong change.
+
+**2. Requests don't carry an `Origin` header.** Outbound HTTP goes through our
+own Rust command in `src-tauri/src/http.rs`, not `tauri-plugin-http`. That plugin
+adds the web view's origin to every request, and servers with CORS rules then
+reject it. A desktop app isn't a browser and has no origin. Please don't bring
+the plugin back.
+
+## How the code is organised
+
+- **Rust does five things**: outbound HTTP (`http.rs`), the local listener used
+  during OAuth sign-in (`oauth.rs`, because a web view can't open a socket), file
+  reading and writing (`storage.rs`), the OS credential store (`secrets.rs`,
+  because only native code can reach it), and checking for and installing updates
+  (`updates.rs`, with the menu in `menu.rs`). Everything else is React.
+- **Secrets go through narrow commands.** The web view passes an environment id
+  and a variable name; Rust builds the credential store entry under one fixed
+  service name. There is no command that reads an arbitrary keychain item.
+  Credential stores can't be listed in a portable way, so Rust keeps an index of
+  what it wrote (names only, never values). That index is how a renamed or
+  deleted variable gets cleaned up. The logic around it (moving values out of the
+  old plain file, falling back to that file when the store can't be reached,
+  cleaning up) is in `src/lib/secrets.ts` and tested there. A value that can't
+  reach the store falls back to the local file and the interface says so; it is
   never dropped.
-- **File IO is narrow commands, not the `fs` plugin.** "Read the file the user just
-  picked in a dialog" and "read `~/.spec0/config.json`" are different in kind and
-  shouldn't share a scope. The dialog *is* the consent step for the first.
-- **`src/lib/` is the logic, `src/components/` is the surface.** Spec parsing,
-  example generation, validation, environments, history and the platform client are
-  all headless and testable without React.
-- **Never dereference a whole spec.** `$ref`s resolve on demand with a seen-set.
-  That's why Stripe (7.6 MB, 1440 schemas) parses in ~30 ms and why recursive
-  models don't overflow the stack.
+- **File access uses narrow commands, not the `fs` plugin.** "Read the file the
+  user just picked" and "read `~/.spec0/config.json`" are different kinds of
+  access and shouldn't share one permission. For the first, the file picker is
+  the user's consent.
+- **`src/lib/` holds the logic, `src/components/` holds the interface.** Spec
+  parsing, example generation, validation, environments, history and the spec0
+  client don't depend on React and can be tested without it.
+- **`src/hooks/` holds React state and effects.** Each hook owns one area (the
+  library, environments, history, sending a request, and so on). `App.tsx` only
+  connects hooks to components; new behaviour goes in a hook or in `src/lib/`,
+  not in `App.tsx`.
+- **Never expand a whole spec.** `$ref` references are looked up when needed,
+  with a record of what has been seen. That keeps large specs fast (Stripe's
+  parses in about 30 ms) and stops schemas that refer to themselves from looping
+  forever.
 
 ## Tests
 
-- New logic in `src/lib/` → cover it. `scripts/smoke.ts` runs the parse → example →
-  validate pipeline over real specs and is the regression net for spec handling;
-  extend it rather than adding a parallel harness.
-- `scripts/capture.mjs` drives the real UI in headless Chrome and screenshots each
-  view. It also fails on page errors.
-- Anything touching auth, secrets, or the works-offline rule needs a test that
-  would fail if the rule broke.
+- New logic in `src/lib/` needs tests. `scripts/smoke.ts` runs the parse,
+  example and validate steps over real specs and is the main safety net for spec
+  handling. Add to it rather than writing a separate harness.
+- `scripts/capture.mjs` drives the real interface in headless Chrome, takes a
+  screenshot of each view, and fails on page errors.
+- Anything touching auth, secrets, or the works-without-an-account rule needs a
+  test that would fail if the rule were broken.
 
-## Don't
+## Design rules, and why
 
-**No secrets stored per API.** Auth values belong in an environment as secret
-variables, referenced as `{{token}}`. A per-API token store would be a second,
-worse secret store.
+**No secrets stored per API.** Auth values go in an environment as secret
+variables, used as `{{token}}`. A separate token store per API would be a second,
+weaker place for secrets.
 
-**Environments supply values, never destinations.** Where a request goes is a
-*target* — a spec server, a mock, a platform environment, a typed URL. Don't put a
-URL field back on `Environment`, and don't put client environments in the target
-list. The two share a word and are opposites: a **platform** environment is a real
-place the API runs, reported by the platform; a **client** environment is a local
-set of values for a testing scenario, never synced. Both can be active at once and
-neither should turn into the other.
+**Environments hold values, not destinations.** Where a request goes is its
+*target*: a server from the spec, a mock, a spec0 environment, or a typed URL.
+Don't add a URL field to `Environment`, and don't list client environments as
+targets. The word "environment" means two opposite things here. A **spec0
+environment** is a real place the API runs, reported by spec0. A **client
+environment** is a local set of values for testing, never synced. Both can be
+active at once, and neither should turn into the other.
 
-**Don't auto-select a destination.** Platform environments join the target list but
-are never the initial value — that stays the spec's own first server, which is the
-document's declaration rather than a choice made for the developer. This isn't
-about protecting anyone from production: a caller who can reach an environment
-could reach it without us. It's that where a request goes is theirs to pick, so
-Studio offers and doesn't decide.
+**Don't choose the destination for the user.** spec0 environments appear in the
+target list but are never selected by default. The default stays the spec's own
+first server, because that is what the document says. Where a request goes is
+the user's choice; Studio offers options and doesn't decide.
 
-**Don't infer staleness when the platform reports it.** Comparing the version a
-mock actually serves against the one we hold is a fact; the "synced after the mock
-was attached" flag is only a fallback for platforms that predate the reported
-version. Reintroducing the heuristic as the primary signal turns a fact back into a
-guess, and a wrong staleness claim discredits the drift verdict it exists to
-protect.
+**Use the reported mock version when there is one.** When spec0 reports which
+spec version a mock serves, compare that with the version Studio has; that is a
+fact. The older "synced after the mock was attached" check is only a fallback
+for when no version is reported. A wrong "out of date" message makes people
+distrust the drift check it supports.
 
-**Don't grow the scratch pad.** There is exactly one, it is unnamed, and it is not
-saved — only its contents persist, the way a text buffer does. No second pad, no
-naming, no folders, no collection import. A scratch request is the thin end of the
-wedge toward becoming a collection manager: with no schema there is no generated
-body, no response check and no graph, so every reason to use Studio is absent. It
-ships as an escape hatch and only survives as one. Requests worth keeping are worth
-describing — the answer is a spec.
+**Keep the scratch pad small.** There is one scratch request. It has no name and
+isn't saved as an item, only its contents are kept, like a text buffer. No second
+pad, no names, no folders, no collection import. A scratch request has no schema,
+so none of Studio's checks apply to it. It exists as an escape hatch. Requests
+worth keeping are worth describing in a spec.
 
-**OAuth config lives with the API; the client secret does not.** Client id, token
-and authorization URLs and scopes are properties of the API and belong on the
-library entry. The client secret is stored as a `{{reference}}` into the
-environment's secret store — never a literal, or `library.json` becomes the
-per-API secret store we just forbade. Acquired tokens are **cache**, keyed by API
-*and* environment (staging and production credentials are two environments), in
-their own uncommitted file. There's a test that fails if a secret reaches the
-index; don't relax it to make a provider's setup one field shorter.
+**OAuth settings live with the API; the client secret doesn't.** Client id,
+token and authorization URLs and scopes belong to the API and are saved with it
+in the library. The client secret is saved as a `{{reference}}` to a secret in
+the environment, never as a literal, so that `library.json` never holds secrets.
+Tokens Studio receives are a cache, kept per API *and* per environment (staging
+and production credentials are different), in their own file that shouldn't be
+committed. A test fails if a secret reaches the library file; please don't relax
+it.
 
-**A bulk run never invents a parameter value.** Required parameters resolve from
-the active environment by name, and an operation whose values aren't there is
-**skipped with the reason stated**. Studio generates plausible examples elsewhere —
-right for a form a human is about to review, wrong here: a fabricated `{orderId}`
-produces a confident 404 that means nothing, and a page of those is worse than a
-page of honest skips because it *looks like findings*. For the same reason the
-exported report lists what was skipped rather than dropping it; a report that omits
-what it didn't run reads as "all clear" when it isn't.
+**A bulk run never makes up a parameter value.** Required parameters come from
+the active environment by name. If a value isn't there, the operation is
+**skipped, with the reason shown**. Studio generates example values elsewhere,
+which is fine for a form someone will read before sending. It's wrong here: an
+invented `{orderId}` gives a 404 that means nothing, and a page of those looks
+like real findings. For the same reason, the exported report lists what was
+skipped, so it doesn't read as "all clear" when it isn't.
 
-**Read-only methods run by default in a bulk run.** Mutating ones are opt-in per
-run and marked. This isn't paternalism about the target — a caller who can reach an
-endpoint could reach it without us — it's that "run all" is a bulk action where the
-user didn't choose each request, which is different from deliberately firing one
-DELETE. Sequential, too: a burst of concurrent requests at an internal service is a
-load test nobody asked for.
+**Bulk runs send read-only requests by default.** Requests that change data are
+opt-in for each run and clearly marked. In "run all", the user didn't pick each
+request, which is different from deliberately sending one DELETE. Requests run
+one at a time, too: many requests at once against an internal service is a load
+test nobody asked for.
 
-**Files cross to Rust as paths, never as bytes.** A multipart part carries a path;
-Rust reads it. Base64 over the IPC bridge inflates every upload by a third and
-holds the whole file in the webview's heap — a 200 MB upload must cost the same as
-a 200 KB one. The file dialog is already the consent step for reading it. The same
-rule runs the other way: a binary **response** is written to a temp file and only
-*previewed* inline under a cap, so "Save as…" is a copy rather than a second
-download, and `history.json` never accumulates payloads.
+**Files go to Rust as paths, not bytes.** A file upload passes a path and Rust
+reads the file. Sending the bytes across the bridge (as base64) would make every
+upload a third bigger and hold the whole file in the web view's memory; a 200 MB
+upload should cost the same as a 200 KB one. The file picker is already the
+consent to read it. It works the other way too: a binary **response** is written
+to a temporary file and only previewed, with a size limit, so *Save as…* copies
+the file instead of downloading it again, and `history.json` doesn't fill up with
+response bodies.
 
-**Content-type decides the body editor, the user doesn't.** The spec already says
-whether an endpoint takes JSON, a form or a file upload; a dropdown asking which is
-a question the document answered. But don't trust content-type when *reading* a
-response: servers mislabel constantly, and `application/octet-stream` is routinely
-JSON — a payload that decodes as clean UTF-8 is shown as text whatever the header
-claimed, because showing someone replacement characters instead of their response
-is the worse failure.
+**The content type picks the body editor.** The spec already says whether an
+endpoint takes JSON, a form or a file, so Studio doesn't ask. But don't trust the
+content type when *reading* a response: servers often label responses wrongly,
+and `application/octet-stream` is often JSON. A response that decodes cleanly as
+UTF-8 text is shown as text, whatever the header said.
 
-**Certificate trust is per-host and deliberate.** There is no global "ignore TLS
-errors" switch, and there must not be: that's how a tool teaches someone to stop
-reading warnings, and one bad afternoon then leaves verification off against the
-public internet forever. Supplying a private CA bundle is the preferred path and is
-*not* the same thing — it's still verification, so it must never carry the same
-warning, or the warning stops meaning anything. Whenever a request goes to a host
-with verification off, the address bar says so at send time; a decision buried in a
-dialog is invisible by the following week.
+**Certificate checks are per host and deliberate.** There is no global "ignore
+TLS errors" switch, and there shouldn't be one: a switch like that teaches people
+to stop reading warnings, and it tends to get left on. Adding a private CA bundle
+is the preferred option, and it is *not* the same thing, since it still checks
+certificates. So it must not show the same warning, or the warning stops meaning
+anything. When a request goes to a host with checks turned off, the address bar
+says so at send time.
 
-**The Reference tab renders the document you hold, never a fetch.** The renderer is
-handed the spec *text* from the library entry — the same string the Raw tab shows.
-Handing it a URL would break offline use and, worse, let the two tabs disagree
-about what the spec says, which makes both untrustworthy. For the same reason the
-renderer's own request client is off permanently: it fires from the webview, so it
-would carry an `Origin` (rule 2) and would bypass environments, auth, per-host
-certificate trust and history. Requests go through Studio; that tab reads. It's
-loaded with `React.lazy` because it's by a wide margin the largest dependency in
-the app — a session that never opens it should pay nothing for it. And it renders
-**windowed**: only the visible lines are tokenized, because handing back the 30 ms
-parse at the last step by laying out a quarter of a million lines would be a poor
-trade.
+**The Reference tab shows the document Studio has, never a fetched copy.** The
+renderer gets the spec *text* from the library, the same text the Raw tab shows.
+Giving it a URL would break offline use and could make the two tabs disagree
+about the spec. The renderer's own "send request" feature is turned off for good:
+it would send requests from the web view, with an `Origin` (rule 2), and skip
+environments, auth, certificate settings and history. Requests go through Studio;
+that tab is for reading. It loads lazily (`React.lazy`) because it is by far the
+largest dependency, so a session that never opens it doesn't pay for it. It also
+only draws the lines currently on screen, so large specs stay fast.
 
-**Git provenance describes the file, never a deployment.** A branch name beside an
-API is one short step from reading as "this is what production is running", which
-Studio cannot know — deployments are facts a platform *reports*, never ones a
-client infers. So the wording says "this file", the dirty flag exists precisely so
-a commit id is never shown as describing bytes that have since been edited, and
-there's a test asserting the sentence contains no deployment language. Detection is
-best-effort and silent: no repo, no git, or a non-file source shows nothing. It
-also never invokes `/usr/bin/git` — on a Mac without Command Line Tools that shim
-pops an Xcode installer, and opening a spec must not conjure one.
+**Git details describe the file, never a deployment.** A branch name next to an
+API can easily be read as "this is what production runs", which Studio can't
+know. So the wording says "this file", the changed-file flag makes sure a commit
+id is never shown for content that has since been edited, and a test checks the
+wording has no deployment language. Detection is best-effort and silent: no repo,
+no git, or a spec that isn't a file shows nothing. It never runs `/usr/bin/git`,
+because on a Mac without the Command Line Tools that pops up an Xcode installer,
+and opening a spec shouldn't do that.
 
-**Consumers are a count, and the detail lives in the dashboard.** Who consumes an
-API is org-governance information with its own screen, approval flow and
-permissions; restating a slice of it here would be a second, staler place to read
-it. Studio shows the number and links out. Pending grants are included in the total
-— a grant awaiting a decision is a real consumer, and hiding it would understate
-the blast radius exactly when someone is judging whether a change is safe.
+**Consumers are shown as a count.** Who uses an API is managed in spec0 itself,
+with its own permissions and approvals. Copying part of that into Studio would
+give a second place to read it that could be out of date. Studio shows the number
+and links to spec0. Pending access requests are counted, because they are real
+consumers and leaving them out would understate who a change might affect.
 
-**You publish what you opened from disk, and Studio never picks the version.**
-Publishing is offered for `file` sources only: Studio has no editor, so a
-platform-sourced document is byte-identical to what the platform already holds and
-publishing it back is a no-op wearing a version bump. The refusal is *explained*
-where the button would be rather than left as a silence. The version defaults to
-`info.version` and is never auto-incremented — an incremented default would be
-Studio making a release decision on someone's behalf and hiding it in a
-placeholder. A commit sha travels **only when the working file is clean**: a dirty
-file's commit does not describe its contents, so sending it would assert something
-false. Report what came back — "no changes" and "version unchanged" are the two
-outcomes worth knowing and both vanish if the UI collapses everything into
-"published".
+**You publish specs you opened from disk, and Studio never chooses the
+version.** Publishing is only offered for specs opened from a file. Studio has no
+editor, so a spec pulled from spec0 is identical to what spec0 already has, and
+publishing it back would change nothing but the version. Where the button would
+be, Studio explains why it isn't there. The version defaults to `info.version`
+and is never increased automatically; choosing a version is the user's call. A
+commit id is sent **only when the file has no uncommitted changes**, because
+otherwise the commit doesn't describe the file. Show the actual result: "no
+changes" and "version unchanged" are both worth knowing and shouldn't be folded
+into "published".
 
-**Our actions sit in our chrome.** The renderer ships a `Deploy` of its own
-pointing at its vendor's hosted product; it's hidden along with the rest of its
-toolbar. Putting our verb where theirs was would frame a first-class Studio
-capability as a vendor integration and pin its position to a third-party layout
-that moves on the next upgrade.
+**Studio's own actions sit in Studio's interface.** The reference renderer comes
+with a toolbar, including a button for its maker's hosted product. That toolbar
+is hidden. Putting our own buttons in its place would tie them to a third-party
+layout that can change with any upgrade.
 
-**Cookie jars are per-API.** One shared jar would hand a session from one API's
-host to another's on any redirect that crossed between them. Jars live in Rust for
-the process lifetime and are never written to disk — persisting a session across
-restarts is a credential decision nobody made.
+**One cookie jar per API.** A shared jar could pass one API's session to another
+API's host on a redirect between them. Jars live in Rust while the app runs and
+are never written to disk; keeping a session across restarts would be a decision
+about credentials that nobody made.
 
 **No update check the user didn't ask for.** Studio promises it makes no request
 you didn't ask for, and an update check is a request. It runs from the menu, or
-at start only when the user turned that on — the setting is off by default and
-has a test saying so. The check lives in Rust (`updates.rs`) so it can use the
-proxy from Connection settings; the plugin's JavaScript API is not granted to the
-webview.
+at start only if the user turned that setting on. The setting is off by default,
+and a test checks that. The check runs in Rust (`updates.rs`) so it can use the
+proxy from connection settings; the updater's JavaScript API isn't available to
+the web view.
 
-**No `tauri-plugin-http`, no `fs` plugin** (see above).
+**No `tauri-plugin-http` and no `fs` plugin** (see above).
 
-**No hardcoded brand colours** — the design tokens live in `src/styles.css`.
+**No hard-coded colours.** The design tokens are in `src/styles.css`.
 
-**No gradients, no more than one accent per region, dark code wells in both
-themes.** The aesthetic direction is settled; craft goes into typography, rhythm
-and motion.
+**No gradients, at most one accent colour per area, and dark code blocks in both
+themes.** The visual style is settled; effort goes into typography, spacing and
+motion.
 
-## The platform client
+## Talking to spec0
 
-`src/lib/spec0.ts` talks to the **public V1 API only** (`/api/v1/public/**`,
-`Authorization: Bearer` plus an org header) — the same surface the
-[spec0 CLI](https://github.com/spec-0/cli) uses. Read the published OpenAPI
-document as the source of truth rather than any generated client, which may lag it.
+`src/lib/spec0.ts` uses only spec0's public API (`/api/v1/public/**`, with an
+`Authorization: Bearer` token and an organisation header), the same one the
+[spec0 CLI](https://github.com/spec-0/cli) uses. When checking what that API
+offers, go by its published OpenAPI document rather than a generated client,
+which can fall behind it.
+
+## Licence
+
+By contributing, you agree that your contribution is licensed under the
+[MIT licence](LICENSE), the same as the rest of the project.
