@@ -13,8 +13,7 @@ import {
  *
  * Everything here targets the **public V1 surface** the CLI already uses
  * (`/api/v1/public/**`, `Authorization: Bearer <token>` + `X-Org-Id`), so Studio
- * and the CLI are the same client of the same API — no private BFF routes, no
- * bespoke endpoints.
+ * uses only spec0's public API, the same one the spec0 CLI uses.
  *
  * Sign-in reuses the CLI's flow verbatim: open `{appUrl}/cli-auth` with a
  * loopback `redirect_uri` and wait for `token` / `org` / `org_name` to come back.
@@ -35,9 +34,8 @@ export const DEFAULT_APP_URL = "https://app.spec0.io";
  * the org summary — so anything built on it needs the user to type a slug by hand.
  * Resolving by UUID sidesteps that entirely.
  *
- * (An earlier version of this file claimed no team-spec endpoint existed. That was
- * read off the CLI's vendored SDK, which lags the platform's own spec. Read the
- * spec, not a generated client.)
+ * When checking what the API offers, read the published spec, not a generated
+ * client: a generated client can lag behind it.
  */
 
 export interface Session {

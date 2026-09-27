@@ -1,5 +1,5 @@
 /**
- * Smoke test for the spike's spec pipeline — parse, example-generate, validate.
+ * Smoke test for Studio's spec pipeline — parse, example-generate, validate.
  *
  * Run against real specs, not fixtures: the point is to find out whether the
  * parser survives Stripe-scale input and whether drift detection actually fires.

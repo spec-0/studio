@@ -1,9 +1,7 @@
 # Type-check, test and build on every push and pull request.
 #
-# This exists because a headline feature shipped broken. Response validation
-# threw on every request for two weeks, and nothing ran that would have noticed:
-# `release.yml` only fires on a tag, so the first execution of the test suite
-# was during the release that published the bug.
+# `release.yml` only runs on a tag, so without this the tests would first run
+# during a release, after the change had already been merged.
 
 name: CI
 

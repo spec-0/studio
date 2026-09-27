@@ -1,8 +1,8 @@
 /*
- * spec0 Studio — spike styling.
+ * spec0 Studio — styling.
  *
- * Tokens are lifted verbatim from the spec0 design system (the design
- * team's 12-ramp scheme): warm off-white surfaces, pure-gray neutrals, one
+ * Tokens are lifted verbatim from the spec0 design system (its
+ * 12-step colour ramps): warm off-white surfaces, pure-gray neutrals, one
  * accent — brand violet #5B4CF5. Typeface discipline follows the design system:
  * Geist for UI, JetBrains Mono for every path, method, status, ID and timing.
  * Both are bundled via @fontsource-variable, so the app never fetches a font.

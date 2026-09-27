@@ -119,14 +119,14 @@ export function parseDocument(text: string): Json {
     throw new Error("No `openapi` or `swagger` version field — is this an OpenAPI document?");
   }
   if (doc.swagger) {
-    throw new Error("Swagger 2.0 isn't supported in this spike. Convert to OpenAPI 3.x first.");
+    throw new Error("Swagger 2.0 isn't supported. Convert to OpenAPI 3.x first.");
   }
   return doc;
 }
 
 /** Resolve one `$ref` against the document root. Returns undefined if unresolvable. */
 export function resolveRef(doc: Json, ref: string): Json | undefined {
-  if (!ref.startsWith("#/")) return undefined; // remote/file refs are out of scope for the spike
+  if (!ref.startsWith("#/")) return undefined; // remote/file refs are out of scope for now
   let node: any = doc;
   for (const rawPart of ref.slice(2).split("/")) {
     const part = rawPart.replace(/~1/g, "/").replace(/~0/g, "~");
