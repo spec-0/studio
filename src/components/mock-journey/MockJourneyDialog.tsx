@@ -163,8 +163,12 @@ export function MockJourneyDialog(props: Props) {
         ? "Mock server"
         : "Create a mock server";
 
+  // No close on an outside click. This is a multi-step flow, and the sign-in
+  // step sends you to the browser: clicking the Studio window to come back
+  // would land on the backdrop and throw the whole journey away. Close with
+  // the × button or Escape.
   return (
-    <div className="scrim journey-scrim" onClick={onClose}>
+    <div className="scrim journey-scrim">
       <div
         ref={ref}
         className="modal journey"
