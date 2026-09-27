@@ -6,7 +6,7 @@
 
 Not a collection you maintain by hand. The spec you already have.
 
-[Download for macOS](https://github.com/spec-0/studio/releases/latest) ·
+[Download](https://github.com/spec-0/studio/releases/latest) for macOS, Windows and Linux ·
 [Build from source](#build-from-source) · MIT
 
 </div>
@@ -108,16 +108,47 @@ An API client for internal APIs has no business talking to anyone but your API.
   worse one.
 - **Certificate trust is per-host and deliberate.** There is no global "ignore TLS
   errors" switch, and skipping verification for a host is shown at send time.
+- **Update checks only when you ask.** *Check for Updates…* (in the app menu on
+  macOS, the Help menu on Windows and Linux) sends one request to github.com for
+  the latest release. There is also a setting to check each time Studio starts.
+  It is off unless you turn it on. The check carries nothing about your specs,
+  environments or history, and it uses the proxy from Connection settings.
 
 ## Install
 
-Download the latest `.dmg` from
-[Releases](https://github.com/spec-0/studio/releases/latest). Universal binary,
-macOS 11 or later, signed and notarized by Apple.
+Download from [Releases](https://github.com/spec-0/studio/releases/latest). These
+links always point at the newest version:
+
+| Platform | File | Notes |
+|---|---|---|
+| macOS 11 or later | [spec0-studio-macos-universal.dmg](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-macos-universal.dmg) | Universal (Apple silicon and Intel). Signed and notarized by Apple. |
+| Windows 10 and 11, x64 | [spec0-studio-windows-x64-setup.exe](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-windows-x64-setup.exe) | Installs for your user only, no admin rights needed. **Not code-signed** — see below. |
+| Linux x86_64 | [spec0-studio-linux-x86_64.AppImage](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-x86_64.AppImage) | Runs on most distributions. `chmod +x` it, then run it. |
+| Debian, Ubuntu, x86_64 | [spec0-studio-linux-amd64.deb](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-amd64.deb) | `sudo apt install ./spec0-studio-linux-amd64.deb` |
+
+Each release has a `SHA256SUMS.txt` you can check a download against.
+
+**The Windows installer is not code-signed.** We don't have a Windows
+code-signing certificate yet. So when you run the installer, Windows SmartScreen
+will probably show "Windows protected your PC" and name the publisher as
+unknown. To go on, click **More info**, then **Run anyway**. If you'd rather not,
+check the file against `SHA256SUMS.txt` first
+(`Get-FileHash .\spec0-studio-windows-x64-setup.exe` in PowerShell), or build from
+source. Studio on Windows uses Microsoft's WebView2 to draw its window. Windows 11
+and current Windows 10 already have it; if yours doesn't, the installer downloads
+it from Microsoft.
+
+**Updates.** Pick *Check for Updates…* to see if there is a newer version and
+install it. Every update is signed, and Studio refuses one whose signature
+doesn't match. An AppImage replaces itself. A `.deb` install asks for your
+password (through `pkexec`) to install the new package. On Windows the installer
+runs, then Studio starts again.
 
 ## Build from source
 
-Requires Node 20+ and a Rust toolchain.
+Requires Node 20+ and a Rust toolchain. On Linux you also need
+[Tauri's system packages](https://v2.tauri.app/start/prerequisites/#linux)
+(WebKitGTK 4.1 and friends).
 
 ```bash
 npm install
@@ -135,13 +166,22 @@ go out through Rust. The status bar tells you which mode you're in.
 ```bash
 npm test               # vitest
 npm run type-check     # tsc --noEmit
-npm run app:build      # bundle a .app and .dmg
+npm run app:build      # installers for this platform (.app/.dmg, .AppImage/.deb, .exe)
 ```
 
 ## Known limitations
 
-- **macOS only** for now. The Rust shell is portable; the packaging and signing
-  work isn't done for other platforms.
+- **Windows and Linux builds are new** and have had much less use than the Mac
+  build. Please [open an issue](https://github.com/spec-0/studio/issues) when
+  something looks or works wrong there.
+- **The Windows installer is not code-signed**, so SmartScreen warns about it
+  (see [Install](#install)).
+- **x86_64 only on Windows and Linux.** There are no ARM builds for those yet.
+- **Linux needs WebKitGTK 4.1**, which means Ubuntu 22.04, Debian 12 or newer
+  (or another distribution of about that age).
+- **Update checks use Studio's proxy setting, but not its certificate trust.** If
+  your network inspects TLS with a private certificate authority, the check may
+  fail. Download new versions from the releases page instead.
 - **Swagger 2.0 is rejected** with a message rather than converted. Convert to
   OpenAPI 3 first.
 - **Generated example values fall back to type** when a field has no `example`, no

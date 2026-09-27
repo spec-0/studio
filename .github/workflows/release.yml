@@ -1,7 +1,12 @@
 # Build, sign, notarize and publish a spec0 Studio release.
 #
 # Trigger: push a tag `vX.Y.Z` matching the version in src-tauri/tauri.conf.json,
-# or dispatch manually to produce an unpublished draft.
+# or dispatch manually to build every platform without publishing anything.
+#
+# Jobs: `preflight` checks the version and the update key, then `macos`,
+# `linux` and `windows` build in parallel and upload their files, and `publish`
+# writes `latest.json` and SHA256SUMS.txt and creates the release. Only a tag
+# publishes.
 #
 # Required repository secrets (see docs/RELEASING.md for how to produce each):
 #   MACOS_CERTIFICATE       base64 of the Developer ID Application .p12
@@ -10,6 +15,8 @@
 #   APPLE_API_KEY_P8        contents of the App Store Connect .p8 private key
 #   APPLE_API_KEY_ID        the key id, e.g. ABCD123456
 #   APPLE_API_ISSUER        the issuer UUID
+#   TAURI_SIGNING_PRIVATE_KEY           the update signing key (tauri signer generate)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password
 #
 # Notes learned the hard way, do not remove:
 #   * `security set-key-partition-list` is REQUIRED. Without it codesign blocks
@@ -20,6 +27,12 @@
 #     an `xcode-select` step pointing at the Command Line Tools, don't. That
 #     build of notarytool reports its version as `unknown (0)` and submissions
 #     made with it were never processed.
+#
+# Update signing: `bundle.createUpdaterArtifacts` is false in tauri.conf.json so
+# a local `tauri build` works without the key. The build jobs switch it on with
+# `--config updater.conf.json` when `preflight` says the key is set up. The
+# Windows installer is NOT code-signed — there is no certificate — and the docs
+# say so.
 
 name: Release
 
@@ -37,7 +50,73 @@ permissions:
   contents: write
 
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      updater: ${{ steps.updater.outputs.updater }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # A tag that disagrees with the manifest ships a version nobody chose, and
+      # a published release is awkward to retract. Fail before anything is built.
+      - name: Tag and manifest must agree
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          TAG="${REF#v}"
+          CONF=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          PKG=$(node -p "require('./package.json').version")
+          if [[ "$TAG" != "$CONF" || "$TAG" != "$PKG" ]]; then
+            echo "::error::Tag $REF implies $TAG but tauri.conf.json says $CONF and package.json says $PKG."
+            exit 1
+          fi
+          echo "Releasing $TAG"
+
+      # Every installed copy checks updates against the public key it was built
+      # with. Publishing a release without signed update files, or with the
+      # placeholder key, would ship copies that can never update themselves.
+      # So a tag stops here. A manual run carries on without update files, so
+      # the packaging can still be tested before the key exists.
+      - name: Update signing key must be set up
+        id: updater
+        env:
+          IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          HAS_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+          HAS_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
+        run: |
+          PUBKEY=$(node -p "require('./src-tauri/tauri.conf.json').plugins.updater.pubkey")
+          PROBLEMS=()
+          if [[ -z "$PUBKEY" || "$PUBKEY" == "REPLACE_WITH_UPDATER_PUBLIC_KEY" ]]; then
+            PROBLEMS+=("plugins.updater.pubkey in src-tauri/tauri.conf.json is still the placeholder")
+          fi
+          [[ "$HAS_KEY" == "true" ]] || PROBLEMS+=("secret TAURI_SIGNING_PRIVATE_KEY is not set")
+          [[ "$HAS_PASSWORD" == "true" ]] || PROBLEMS+=("secret TAURI_SIGNING_PRIVATE_KEY_PASSWORD is not set")
+
+          if [[ ${#PROBLEMS[@]} -eq 0 ]]; then
+            echo "updater=true" >> "$GITHUB_OUTPUT"
+            echo "Update files will be built and signed."
+            exit 0
+          fi
+
+          for problem in "${PROBLEMS[@]}"; do
+            if [[ "$IS_TAG" == "true" ]]; then
+              echo "::error::$problem"
+            else
+              echo "::notice::$problem"
+            fi
+          done
+          if [[ "$IS_TAG" == "true" ]]; then
+            echo "::error::A release needs signed update files. See 'Update signing key' in docs/RELEASING.md."
+            exit 1
+          fi
+          echo "::notice::Test build without update files. Installers are still built for every platform."
+          echo "updater=false" >> "$GITHUB_OUTPUT"
+
   macos:
+    needs: preflight
     runs-on: macos-15
     timeout-minutes: 90
 
@@ -56,22 +135,6 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-
-      # A tag that disagrees with the manifest ships a version nobody chose, and
-      # a published release is awkward to retract. Fail before anything is built.
-      - name: Tag and manifest must agree
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          REF: ${{ github.ref_name }}
-        run: |
-          TAG="${REF#v}"
-          CONF=$(node -p "require('./src-tauri/tauri.conf.json').version")
-          PKG=$(node -p "require('./package.json').version")
-          if [[ "$TAG" != "$CONF" || "$TAG" != "$PKG" ]]; then
-            echo "::error::Tag $REF implies $TAG but tauri.conf.json says $CONF and package.json says $PKG."
-            exit 1
-          fi
-          echo "Releasing $TAG"
 
       - name: Install dependencies
         run: npm ci
@@ -118,15 +181,26 @@ jobs:
       # Tauri signs, submits to the notary service, waits, and staples the ticket
       # into the .app before building the .dmg from it — so the app a user drags
       # out of the disk image carries its own ticket and launches offline.
+      #
+      # With update files on, the same invocation also archives the stapled
+      # .app as `.app.tar.gz` and signs that archive with the update key.
       - name: Build, sign, notarize
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          UPDATER: ${{ needs.preflight.outputs.updater }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           export APPLE_API_KEY_PATH=$RUNNER_TEMP/private_keys/AuthKey.p8
           echo "notarytool in use: $(xcrun --find notarytool)"
-          npx tauri build --target universal-apple-darwin --bundles app,dmg
+          EXTRA=()
+          if [[ "$UPDATER" == "true" ]]; then
+            echo '{"bundle":{"createUpdaterArtifacts":true}}' > updater.conf.json
+            EXTRA=(--config updater.conf.json)
+          fi
+          npx tauri build --target universal-apple-darwin --bundles app,dmg "${EXTRA[@]}"
 
       # The .dmg is what people download, and it needs its own notarization —
       # a signed-but-unnotarized disk image still raises "Apple cannot check it
@@ -167,6 +241,22 @@ jobs:
           spctl --assess --type execute --verbose=4 "$APP"
           hdiutil detach "$MNT" -quiet
 
+      # The update archive is what an installed copy swaps itself for, so it
+      # gets the same proof as the disk image: the app inside must carry its
+      # stapled ticket, or an updated Studio would fail to launch offline.
+      - name: Verify the update archive
+        if: needs.preflight.outputs.updater == 'true'
+        run: |
+          BUNDLE=src-tauri/target/universal-apple-darwin/release/bundle
+          ARCHIVE=$(ls "$BUNDLE"/macos/*.app.tar.gz)
+          test -s "$ARCHIVE.sig"
+          OUT=$(mktemp -d)
+          tar -xzf "$ARCHIVE" -C "$OUT"
+          APP="$OUT/spec0 Studio.app"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          xcrun stapler validate "$APP"
+          spctl --assess --type execute --verbose=4 "$APP"
+
       # Tauri names the image `spec0 Studio_<version>_universal.dmg`. That is the
       # right name to archive, but it is the wrong name to link to: GitHub's
       # permanent URL is /releases/latest/download/<exact-asset-name>, so a
@@ -183,27 +273,207 @@ jobs:
           # Copying preserves the stapled ticket, but prove it rather than assume.
           xcrun stapler validate spec0-studio-macos-universal.dmg
 
-      - name: Checksums
+      - name: Collect release files
+        env:
+          UPDATER: ${{ needs.preflight.outputs.updater }}
         run: |
           BUNDLE=src-tauri/target/universal-apple-darwin/release/bundle
-          cd "$BUNDLE/dmg"
-          shasum -a 256 *.dmg | tee SHA256SUMS.txt
+          mkdir -p release
+          cp "$BUNDLE"/dmg/*.dmg release/
+          if [[ "$UPDATER" == "true" ]]; then
+            cp "$BUNDLE"/macos/*.app.tar.gz release/spec0-studio-macos-universal.app.tar.gz
+            cp "$BUNDLE"/macos/*.app.tar.gz.sig release/spec0-studio-macos-universal.app.tar.gz.sig
+          fi
+          ls -la release
 
       - uses: actions/upload-artifact@v4
         with:
           name: spec0-studio-macos
-          path: |
-            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/universal-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
+          path: release/*
+          if-no-files-found: error
+
+  linux:
+    needs: preflight
+    # The oldest supported base with WebKitGTK 4.1. Building on a newer one
+    # raises the glibc the AppImage and .deb need, and they stop starting on
+    # older distributions.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Tauri's documented Linux build packages, plus libfuse2 for the AppImage
+      # tooling.
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libfuse2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          UPDATER: ${{ needs.preflight.outputs.updater }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          EXTRA=()
+          if [[ "$UPDATER" == "true" ]]; then
+            echo '{"bundle":{"createUpdaterArtifacts":true}}' > updater.conf.json
+            EXTRA=(--config updater.conf.json)
+          fi
+          npx tauri build --bundles appimage,deb "${EXTRA[@]}"
+
+      # Stable names, for the same reason as the macOS dmg: a permanent
+      # /releases/latest/download/<name> link, and no spaces in URLs.
+      - name: Collect release files
+        env:
+          UPDATER: ${{ needs.preflight.outputs.updater }}
+        run: |
+          BUNDLE=src-tauri/target/release/bundle
+          mkdir -p release
+          cp "$BUNDLE"/appimage/*.AppImage release/spec0-studio-linux-x86_64.AppImage
+          cp "$BUNDLE"/deb/*.deb release/spec0-studio-linux-amd64.deb
+          if [[ "$UPDATER" == "true" ]]; then
+            cp "$BUNDLE"/appimage/*.AppImage.sig release/spec0-studio-linux-x86_64.AppImage.sig
+            cp "$BUNDLE"/deb/*.deb.sig release/spec0-studio-linux-amd64.deb.sig
+          fi
+          ls -la release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spec0-studio-linux
+          path: release/*
+          if-no-files-found: error
+
+  windows:
+    needs: preflight
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies
+        run: npm ci
+
+      # NSIS only: one per-user installer that needs no admin rights. Not
+      # code-signed — see docs/RELEASING.md for what Windows shows because of it.
+      - name: Build
+        env:
+          UPDATER: ${{ needs.preflight.outputs.updater }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          EXTRA=()
+          if [[ "$UPDATER" == "true" ]]; then
+            echo '{"bundle":{"createUpdaterArtifacts":true}}' > updater.conf.json
+            EXTRA=(--config updater.conf.json)
+          fi
+          npx tauri build --bundles nsis "${EXTRA[@]}"
+
+      - name: Collect release files
+        env:
+          UPDATER: ${{ needs.preflight.outputs.updater }}
+        run: |
+          BUNDLE=src-tauri/target/release/bundle
+          mkdir -p release
+          cp "$BUNDLE"/nsis/*-setup.exe release/spec0-studio-windows-x64-setup.exe
+          if [[ "$UPDATER" == "true" ]]; then
+            cp "$BUNDLE"/nsis/*-setup.exe.sig release/spec0-studio-windows-x64-setup.exe.sig
+          fi
+          ls -la release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spec0-studio-windows
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    needs: [preflight, macos, linux, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          pattern: spec0-studio-*
+          merge-multiple: true
+
+      # The release is created as a draft first, so its generated notes can go
+      # into latest.json, and so /releases/latest never points at a release
+      # whose latest.json isn't uploaded yet.
+      - name: Create the draft release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --draft --title "spec0 Studio $TAG" --generate-notes
+          gh release view "$TAG" --json body -q .body > notes.md
+
+      - name: Write latest.json
+        if: needs.preflight.outputs.updater == 'true'
+        env:
+          TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+        run: |
+          if [[ -z "$TAG" ]]; then
+            # A test run: point at the version in the manifest, as a tag would.
+            TAG="v$(node -p "require('./src-tauri/tauri.conf.json').version")"
+            echo "Test build from ${GITHUB_SHA::7}. Not published." > notes.md
+          fi
+          node scripts/update-manifest.mjs assets "$TAG" notes.md assets/latest.json
+          cat assets/latest.json
+
+      - name: Checksums
+        run: |
+          cd assets
+          sha256sum * | tee ../SHA256SUMS.txt
+          mv ../SHA256SUMS.txt .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: assets/*
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
         run: |
-          BUNDLE=src-tauri/target/universal-apple-darwin/release/bundle
-          gh release create "${{ github.ref_name }}" \
-            --title "spec0 Studio ${{ github.ref_name }}" \
-            --generate-notes \
-            "$BUNDLE"/dmg/*.dmg \
-            "$BUNDLE"/dmg/SHA256SUMS.txt
+          gh release upload "$TAG" --clobber assets/*
+          gh release edit "$TAG" --draft=false --latest

@@ -71,11 +71,15 @@ jobs:
         run: npm run test:csp
 
   # The Rust shell has had tests since the first release and none of them had
-  # ever run in CI. macOS rather than Linux: the app ships for macOS only, and
-  # building Tauri here needs no system packages, so this tests the platform the
-  # code actually runs on instead of one it never will.
+  # ever run in CI. Studio now ships for macOS, Linux and Windows, and the
+  # shell has platform-specific code (menus, git discovery, the Windows console
+  # flag), so the tests run on all three rather than on one and hoping.
   rust:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
@@ -83,6 +87,14 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+
+      # Tauri's documented Linux build packages. macOS and Windows need none.
+      - name: Install system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
       # Tests only. `cargo fmt --check` and `clippy -D warnings` both fail on the
       # existing code, and reformatting the shell to satisfy a linter does not
