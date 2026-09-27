@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { OperationSpec, ParsedSpec, SchemaEntry } from "../lib/spec";
-import { relativeTime, search as searchHistory, type HistoryEntry } from "../lib/history";
+import { search as searchHistory, type HistoryEntry } from "../lib/history";
+import { HistoryList } from "./HistoryList";
 
 export type SidebarTab = "operations" | "schemas" | "history";
 
@@ -14,9 +15,14 @@ interface Props {
   onSelectOperation: (op: OperationSpec) => void;
   selectedSchema: string | null;
   onSelectSchema: (name: string) => void;
+  /** This API's recorded requests only — the full log is its own view. */
   history: HistoryEntry[];
-  onReplay: (entry: HistoryEntry) => void;
-  onClearHistory: () => void;
+  /** The recorded request open in the work area, if any. */
+  selectedRecord: string | null;
+  /** Open a recorded request, read-only. */
+  onOpenRecord: (entry: HistoryEntry) => void;
+  /** Go to the one list across every API. */
+  onOpenAllHistory: () => void;
 }
 
 /** Loose subsequence match — "gtusr" finds "GET /users". */
@@ -44,8 +50,9 @@ export function Sidebar({
   selectedSchema,
   onSelectSchema,
   history,
-  onReplay,
-  onClearHistory,
+  selectedRecord,
+  onOpenRecord,
+  onOpenAllHistory,
 }: Props) {
   const groupedOperations = useMemo(() => {
     const matches = spec.operations.filter((op) =>
@@ -152,36 +159,19 @@ export function Sidebar({
 
         {tab === "history" && (
           <>
-            {searchHistory(history, query).map((entry) => (
-              <button
-                key={entry.id}
-                className="row"
-                onClick={() => onReplay(entry)}
-                title={`${entry.url}\n${entry.status} · ${entry.ms}ms`}
-              >
-                <span className={`method ${entry.method.toLowerCase()}`}>{entry.method}</span>
-                <span style={{ minWidth: 0, display: "grid", flex: 1 }}>
-                  <span className="path">{entry.path}</span>
-                  <span className="summary">
-                    {entry.status} · {entry.ms}ms · {relativeTime(entry.at)}
-                    {entry.mock ? " · mock" : ""}
-                  </span>
-                </span>
-                {entry.validation === "mismatch" && (
-                  <span className="count" style={{ color: "hsl(var(--warning))" }}>
-                    drift
-                  </span>
-                )}
-              </button>
-            ))}
+            <HistoryList
+              entries={searchHistory(history, query)}
+              selectedId={selectedRecord}
+              onOpen={onOpenRecord}
+            />
             {history.length === 0 && (
-              <div className="group-label">Nothing sent yet — history stays on this machine</div>
+              <div className="group-label">
+                Nothing sent to this API yet — history stays on this machine
+              </div>
             )}
-            {history.length > 0 && (
-              <button className="btn" style={{ margin: 10 }} onClick={onClearHistory}>
-                Clear history
-              </button>
-            )}
+            <button className="btn history-more" onClick={onOpenAllHistory}>
+              All history, every API
+            </button>
           </>
         )}
 

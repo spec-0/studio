@@ -1,8 +1,8 @@
 /**
  * Reading a recorded request back.
  *
- * History stores the URL that went out, not the values that built it. Replay
- * restored headers and body but left every path and query field empty, so
+ * History stores the URL that went out, not the values that built it. Copying
+ * an entry restored headers and body but left every path and query field empty, so
  * clicking `GET /accounts/{accountId}` showed a blank `accountId` beside the
  * 200 it had returned — which reads as the app losing the record.
  */

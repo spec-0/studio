@@ -39,8 +39,8 @@ export const SCRATCH_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD",
  * How a scratch call is labelled in history.
  *
  * History is a log of what was sent, not an organising primitive, so scratch
- * calls belong in it — but they must be distinguishable, because replaying one
- * against an operation lookup would fail.
+ * calls belong in it — but they must be distinguishable, because copying one
+ * back out goes to the scratch pad, not to an operation.
  */
 export const SCRATCH_TITLE = "Scratch";
 export const SCRATCH_OPERATION_ID = "__scratch__";
@@ -119,7 +119,7 @@ export function scratchPath(url: string): string {
   }
 }
 
-/** Restore a pad from a recorded scratch call, so history stays replayable. */
+/** Fill the pad from a recorded call — "Copy to a new request" for scratch entries. */
 export function padFromHistory(entry: {
   method: string;
   url: string;
@@ -130,7 +130,7 @@ export function padFromHistory(entry: {
     method: entry.method,
     url: entry.url,
     // Content-Type/Accept are re-derived on send; keeping them would slowly turn
-    // every replay into a pad full of headers the user never typed.
+    // every copy into a pad full of headers the user never typed.
     headers: Object.entries(entry.headers)
       .filter(([key]) => !["content-type", "accept"].includes(key.toLowerCase()))
       .map(([key, value]) => ({ key, value })),

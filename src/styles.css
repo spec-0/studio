@@ -1489,51 +1489,200 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 }
 .btn.tight { padding: 4px 10px; font-size: 11.5px; }
 
+
 /*
- * "You are looking at a record."
+ * A recorded request.
  *
- * Sits above both panes because it qualifies both of them: the response is one
- * that already happened, and the request fields were restored from it rather
- * than typed. Deliberately quiet — it is a statement of context, not a warning,
- * and an alarming bar over an ordinary act (clicking history) would be noise
- * within a day. Tokens only; no colour is restated here.
+ * Has to read as a page in a log, never as the request editor: a different
+ * surface (the editor sits on --bg, a record on --surface), a dashed rule where
+ * the address bar would be, a "Recorded request · read-only" kicker, and no
+ * inputs anywhere. The only accent is the one action — copying it into a new
+ * request.
  */
-.record-bar {
+.record {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--surface));
+  user-select: text;
+}
+.record-head {
+  padding: 12px 20px 14px;
+  border-bottom: 1px dashed hsl(var(--border-strong));
+}
+.record-kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: hsl(var(--ink-3));
+}
+.record-kicker .spacer { flex: 1; }
+.record-ro {
+  padding: 0 6px;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+}
+.record-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 8px;
+  min-width: 0;
+}
+.record-title .method { font-size: 12px; }
+.record-path {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.record-when {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: hsl(var(--ink-2));
+}
+.record-when time { color: hsl(var(--ink)); }
+.record-sep { margin: 0 6px; color: hsl(var(--ink-3)); }
+.record-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin-top: 10px;
+}
+.record-facts dt {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: hsl(var(--ink-3));
+}
+.record-facts dd { font-size: 12px; color: hsl(var(--ink-2)); }
+.record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 12px;
+}
+.record-note { font-size: 11.5px; color: hsl(var(--ink-3)); }
+.record-note.block { display: block; margin-bottom: 8px; }
+.record-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.record-col {
+  flex: 1 1 50%;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 12px 20px 28px;
+}
+.record-col + .record-col { border-left: 1px solid hsl(var(--border)); }
+.record-h {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: hsl(var(--ink-3));
+  margin-bottom: 8px;
+}
+.record-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--ink-2));
+}
+.record-line { margin-bottom: 4px; }
+.record-line .method { margin-right: 4px; }
+.record-status { display: flex; align-items: center; gap: 10px; }
+.record-seg {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 6px;
+  overflow: hidden;
+}
+.record-seg button {
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  color: hsl(var(--ink-2));
+}
+.record-seg button + button { border-left: 1px solid hsl(var(--border-strong)); }
+.record-seg button[aria-selected="true"] { background: hsl(var(--bg)); color: hsl(var(--ink)); }
+.record-recheck { margin: 2px 0 4px; }
+.record-headers { margin-top: 14px; }
+.record-headers summary {
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: hsl(var(--ink-2));
+  margin-bottom: 6px;
+}
+.record-headers table.fields td { font-size: 11.5px; padding: 4px 6px; }
+
+/* The per-API list's way to the full log. */
+.history-more { margin: 4px 10px 0; }
+
+/* The one list across every API: a sidebar with a title and a few filters. */
+.history-side-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 12px 4px;
+}
+.history-side-head h2 { font-size: 13px; font-weight: 600; }
+.history-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.history-filters select { font-size: 12px; padding: 3px 6px; }
+.history-filters select:first-child { grid-column: 1 / -1; }
+.history-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: hsl(var(--ink-2));
+  cursor: pointer;
+}
+.history-check input { width: auto; }
+
+/*
+ * Above an editor that was filled from a recording. Unlike a record this is a
+ * genuinely new request, so the note is quiet and can be dismissed.
+ */
+.copied-note {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 12px;
+  padding: 7px 16px;
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--accent-soft));
   color: hsl(var(--ink-2));
   font-size: 12px;
 }
-.record-bar-dot {
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: 50%;
-  background: hsl(var(--primary));
-}
-.record-bar-text {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.record-bar-text strong {
-  color: hsl(var(--ink));
-  font-weight: 600;
-}
-.record-bar-close {
+.copied-note span { flex: 1; min-width: 0; }
+.copied-note-close {
   flex: none;
   padding: 0 4px;
-  border: 0;
-  background: none;
   color: hsl(var(--ink-3));
   font-size: 15px;
   line-height: 1;
-  cursor: pointer;
 }
-.record-bar-close:hover { color: hsl(var(--ink)); }
+.copied-note-close:hover { color: hsl(var(--ink)); }

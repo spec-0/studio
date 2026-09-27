@@ -1,5 +1,5 @@
 import { Validator, type OutputUnit } from "@cfworker/json-schema";
-import { deref, type Json } from "./spec";
+import { deref, type Json, type ResponseSpec } from "./spec";
 
 /**
  * Validate a live response against the schema the spec declares for its status
@@ -250,4 +250,28 @@ export function validateResponse(
     // Whatever goes wrong next, the pane stays readable.
     return { status: "error", findings: [], note: `Couldn't validate: ${brief(error)}` };
   }
+}
+
+/**
+ * The response the spec declares for a status code: the exact code, then its
+ * range (`2XX`), then `default`.
+ *
+ * One function for every place that checks a response — a single send, a bulk
+ * run, and re-checking a recorded response. They used to each carry their own
+ * copy, and the copy that re-checked history had lost the range step, so a
+ * response the live check matched against `2XX` came back from history as "no
+ * schema". Range keys are matched case-insensitively; OpenAPI says uppercase,
+ * specs in the wild don't always agree.
+ */
+export function declaredResponse<T extends Pick<ResponseSpec, "status">>(
+  responses: readonly T[],
+  status: number,
+): T | undefined {
+  const exact = String(status);
+  const range = `${Math.floor(status / 100)}XX`;
+  return (
+    responses.find((r) => r.status === exact) ??
+    responses.find((r) => r.status.toUpperCase() === range) ??
+    responses.find((r) => r.status === "default")
+  );
 }

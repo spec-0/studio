@@ -413,8 +413,8 @@ function buildBody(
  * A readable rendering of a body, for history.
  *
  * File contents are never recorded — a 40MB upload must not end up in
- * `history.json`, and a summary that says which file it was is more use on a
- * replay than bytes we'd have to re-read anyway.
+ * `history.json`, and a summary that says which file it was is more use when the
+ * request is copied again than bytes we'd have to re-read anyway.
  */
 export function describeBody(body: PlanBody | undefined): string | undefined {
   if (!body) return undefined;

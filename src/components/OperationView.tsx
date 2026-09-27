@@ -24,12 +24,13 @@ interface Props {
   /** One line on whether a usable token is currently held. */
   oauthStatus?: { ok: boolean; label: string } | null;
   /**
-   * Values captured from a replayed history entry, applied once on mount.
+   * Values to start from instead of generated examples — set when a recorded
+   * request is copied into a new one. Applied once when the operation opens.
    *
-   * Path and query values are recovered from the recorded URL — without them a
-   * replayed request shows empty fields beside the response it produced.
+   * Path and query values are recovered from the recorded URL; without them the
+   * copy would come back with its path fields empty.
    */
-  replay?: {
+  prefill?: {
     headers: Record<string, string>;
     body?: string;
     pathParams?: Record<string, string>;
@@ -56,7 +57,7 @@ export function OperationView({
   auth,
   onAuthChange,
   onValuesChange,
-  replay,
+  prefill,
   onConfigureOAuth,
   oauthStatus,
 }: Props) {
@@ -85,19 +86,19 @@ export function OperationView({
           .filter((p) => p.in === where)
           .map((p) => [p.name, p.required ? exampleParam(spec.doc, p.schema, p.name) : ""]),
       );
-    // A replayed entry supplies the values that were actually sent; only fall
-    // back to generated examples when there is nothing recorded to restore.
-    setPathParams(replay?.pathParams ?? seed("path"));
-    setQueryParams(replay?.queryParams ?? seed("query"));
-    setHeaderParams(replay?.headers ?? seed("header"));
-    setBody(replay?.body ?? (op.requestBody ? exampleBody(spec.doc, op.requestBody.schema) : ""));
+    // A copied recording supplies the values that were actually sent; only fall
+    // back to generated examples when there is nothing to start from.
+    setPathParams(prefill?.pathParams ?? seed("path"));
+    setQueryParams(prefill?.queryParams ?? seed("query"));
+    setHeaderParams(prefill?.headers ?? seed("header"));
+    setBody(prefill?.body ?? (op.requestBody ? exampleBody(spec.doc, op.requestBody.schema) : ""));
     // Seed form fields and multipart parts from the names the schema declares, so
     // an upload endpoint opens with its parts already listed.
     const declared = bodyFieldNames(spec.doc, op.requestBody?.schema);
     setFormFields(declared.map((name) => ({ key: name, value: "" })));
     setParts(declared.map((name) => ({ name, value: "" })));
     setCustom([]);
-  }, [op, spec.doc, replay]);
+  }, [op, spec.doc, prefill]);
 
   // Keep the frame's send bar in sync — it owns the base URL and the Send button.
   useEffect(() => {
