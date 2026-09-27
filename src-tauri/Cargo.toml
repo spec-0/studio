@@ -1,6 +1,6 @@
 [package]
 name = "spec0-studio"
-version = "0.1.1"
+version = "0.1.2"
 description = "spec0 Studio — spec-native API client"
 edition = "2021"
 rust-version = "1.77"
