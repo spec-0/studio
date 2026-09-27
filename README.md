@@ -59,7 +59,7 @@ Read-only by default, sequential, cancellable, exportable as markdown for a PR.
 **Environments.** Named variable sets interpolated as `{{name}}` into the URL,
 parameters, headers, auth and body. A variable can be marked secret — the
 environment file then records that it exists and is secret, but not its value, so
-the file stays safe to commit.
+the file stays safe to commit. The value goes to your OS credential store.
 
 **OAuth 2.0 that Studio performs for you.** Client credentials, or authorization
 code + PKCE through your browser. Token URL, authorize URL and scopes pre-fill from
@@ -106,6 +106,10 @@ An API client for internal APIs has no business talking to anyone but your API.
 - **Auth values are never stored per API.** They live in an environment where they
   can be marked secret, so there's exactly one secret store rather than a second,
   worse one.
+- **Secret values live in your OS credential store**: the macOS Keychain, Windows
+  Credential Manager, or the Secret Service on Linux. The environment file records
+  only that a variable is secret. History, error messages and exported reports show
+  a `{{name}}` reference in place of a secret value.
 - **Certificate trust is per-host and deliberate.** There is no global "ignore TLS
   errors" switch, and skipping verification for a host is shown at send time.
 - **Update checks only when you ask.** *Check for Updates…* (in the app menu on
@@ -187,9 +191,12 @@ npm run app:build      # installers for this platform (.app/.dmg, .AppImage/.deb
 - **Generated example values fall back to type** when a field has no `example`, no
   `format`, and an unrecognised name — so some bodies arrive with `"string"`
   placeholders you'll want to replace.
-- **Secret environment values are not encrypted at rest.** They live in a separate
-  local file so the main environment file stays committable, but Tauri ships no
-  first-party OS-keychain integration. The environments dialog says so plainly.
+- **Secrets fall back to a plain file if the OS credential store can't be
+  reached.** This mostly affects Linux without a running, unlocked keyring (for
+  example GNOME Keyring or KWallet). Studio keeps working, keeps secret values in a
+  local file that is not encrypted, and says so in the environments dialog. The
+  values move into the credential store the next time Studio starts and can reach
+  it.
 - The app requests broad outbound HTTP scope, because an API client has to be able
   to reach any host you point it at.
 

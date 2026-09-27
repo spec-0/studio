@@ -38,9 +38,20 @@ origin. Don't reintroduce the plugin.
 
 ## Architecture
 
-- **Rust owns three things only**: outbound HTTP (`http.rs`), the sign-in loopback
-  listener (`oauth.rs` — a webview can't hold a socket), and file IO
-  (`storage.rs`). Everything else is React.
+- **Rust owns five things only**: outbound HTTP (`http.rs`), the sign-in loopback
+  listener (`oauth.rs` — a webview can't hold a socket), file IO (`storage.rs`),
+  the OS credential store (`secrets.rs` — only native code can reach it), and
+  checking for and installing updates (`updates.rs`, with the menu in `menu.rs`).
+  Everything else is React.
+- **Secrets are narrow commands too.** The webview names an environment id and a
+  variable name; Rust builds the account under one fixed service name. There is no
+  command that reads an arbitrary keychain item. Credential stores can't be listed
+  portably, so Rust keeps an index of what it wrote (names, never values), and that
+  is what lets a renamed or deleted variable be cleaned up. The logic around it —
+  migrating from the old plaintext file, falling back to it when the store can't be
+  reached, pruning — is in `src/lib/secrets.ts` and tested there. A value that
+  can't reach the store falls back to the local file and the UI says so; it is
+  never dropped.
 - **File IO is narrow commands, not the `fs` plugin.** "Read the file the user just
   picked in a dialog" and "read `~/.spec0/config.json`" are different in kind and
   shouldn't share a scope. The dialog *is* the consent step for the first.

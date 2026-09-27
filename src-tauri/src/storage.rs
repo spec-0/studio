@@ -51,6 +51,17 @@ pub fn store_write(app: tauri::AppHandle, name: String, contents: String) -> Res
     fs::write(&path, contents).map_err(|error| format!("{}: {error}", path.display()))
 }
 
+/// Remove a store file. Removing one that isn't there is not an error.
+#[tauri::command]
+pub fn store_delete(app: tauri::AppHandle, name: String) -> Result<(), String> {
+    let path = store_path(&app, &name)?;
+    match fs::remove_file(&path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("{}: {error}", path.display())),
+    }
+}
+
 /// Where the store lives, so the UI can tell the user (environments are meant to be inspectable).
 #[tauri::command]
 pub fn store_location(app: tauri::AppHandle) -> Result<String, String> {

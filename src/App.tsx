@@ -252,6 +252,8 @@ export default function App() {
     void (async () => {
       setSettings(await readStore<Settings>(STORE.settings, DEFAULT_SETTINGS));
       setEnvFile(await loadEnvironments());
+      // Secrets are known now; strip any that older versions wrote into history.
+      await history.scrubHistory();
       setRequests(await history.loadHistory());
       setSession(await loadSession());
       setEntries(await library.loadLibrary());
