@@ -166,7 +166,67 @@ export async function adoptCliSession(): Promise<Session | null> {
   };
 }
 
-/** Browser sign-in: the CLI's loopback flow, with the listener held in Rust. */
+/** Raised when the user pressed Cancel on the sign-in page. Not an error to show as one. */
+export class SignInCancelled extends Error {
+  constructor() {
+    super("Sign-in cancelled");
+    this.name = "SignInCancelled";
+  }
+}
+
+/**
+ * A fresh `state` value for one sign-in attempt: 32 random bytes from the
+ * platform's cryptographic generator, hex-encoded. `Math.random` is not good
+ * enough here — the value is what stops another page from completing a sign-in
+ * the user never started.
+ */
+export function newSignInState(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** What came back to the loopback listener, decided. */
+export type SignInOutcome =
+  | { kind: "ok"; token: string; orgId: string; orgName: string | null }
+  | { kind: "cancelled" }
+  | { kind: "error"; message: string };
+
+/**
+ * Decide what a sign-in callback means. Pure, so every branch is tested.
+ *
+ * - `state` present and different from the one we sent: rejected, nothing is kept.
+ * - `state` absent: accepted. Older sign-in pages don't send it back yet, and
+ *   refusing those would lock people out of a flow that works today.
+ * - `error=access_denied`: the user pressed Cancel. Reported as cancelled, not failed.
+ */
+export function readSignInCallback(
+  params: Record<string, string>,
+  expectedState: string,
+): SignInOutcome {
+  if (params.state !== undefined && params.state !== expectedState) {
+    return {
+      kind: "error",
+      message: "The sign-in response didn't match this request, so it was ignored. Please try again.",
+    };
+  }
+  if (params.error === "access_denied") return { kind: "cancelled" };
+  if (params.error) {
+    const detail = params.error_description?.trim();
+    return { kind: "error", message: `Sign-in failed: ${detail || params.error}` };
+  }
+  if (!params.token || !params.org) {
+    return { kind: "error", message: "Sign-in didn't return a token. Please try again." };
+  }
+  return { kind: "ok", token: params.token, orgId: params.org, orgName: params.org_name || null };
+}
+
+/**
+ * Browser sign-in: the CLI's loopback flow, with the listener held in Rust.
+ *
+ * Sent with `client=studio` so Studio gets a token of its own and signing in
+ * here doesn't sign the CLI out.
+ */
 export async function signInViaBrowser(
   appUrl = DEFAULT_APP_URL,
   apiUrl = DEFAULT_API_URL,
@@ -174,28 +234,28 @@ export async function signInViaBrowser(
   // Same port range the CLI uses, so a firewall prompt the user already accepted carries over.
   const port = 38473 + Math.floor(Math.random() * 1000);
   const redirectUri = `http://127.0.0.1:${port}/callback`;
-  const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  const state = newSignInState();
 
   const authUrl = new URL("/cli-auth", appUrl);
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("client", "studio");
 
   // Start listening before the browser opens, or a fast redirect races the bind.
-  const pending = awaitOAuthCallback(port, 120);
+  const pending = awaitOAuthCallback(port, 120, state);
   await openInBrowser(authUrl.toString());
 
-  const params = await pending;
-  const token = params.token;
-  const orgId = params.org;
-  if (!token || !orgId) throw new Error("Sign-in didn't return a token. Please try again.");
+  const outcome = readSignInCallback(await pending, state);
+  if (outcome.kind === "cancelled") throw new SignInCancelled();
+  if (outcome.kind === "error") throw new Error(outcome.message);
 
   return {
     apiUrl,
     appUrl,
-    orgId,
-    orgName: params.org_name || "your org",
-    orgSlug: slugify(params.org_name || ""),
-    token,
+    orgId: outcome.orgId,
+    orgName: outcome.orgName || "your org",
+    orgSlug: slugify(outcome.orgName || ""),
+    token: outcome.token,
     source: "browser",
     connectedAt: new Date().toISOString(),
   };
@@ -305,6 +365,10 @@ async function request(
       url,
       body,
     );
+  }
+  if (response.status === 402) {
+    // A limit reached. The server's own sentence is the message, as is.
+    throw new Spec0Error(detail ?? "Your organisation has reached a limit.", 402, url, body);
   }
   if (response.status === 404) {
     throw new Spec0Error(
@@ -614,6 +678,8 @@ export function mockUrlFor(mocks: MockServer[], apiName: string): string | null 
 export interface MockRow {
   /** Stable key for the list. */
   key: string;
+  mockServerId: string | null;
+  apiId: string | null;
   /** The API the mock serves. */
   apiName: string;
   /** The mock's own name, when it has one different from the API's. */
@@ -636,6 +702,8 @@ export function describeMocks(mocks: MockServer[], apiUrl: string): MockRow[] {
     const name = mock.name?.trim() && mock.name.trim() !== apiName ? mock.name.trim() : null;
     rows.push({
       key: mock.mockServerId ?? url,
+      mockServerId: mock.mockServerId ?? null,
+      apiId: mock.apiId ?? null,
       apiName,
       name,
       url,
@@ -651,10 +719,8 @@ export interface CreatedMock {
   mockUrl: string | null;
   created?: boolean;
   /**
-   * Returned **only on first creation**. The list endpoint never carries it, and
-   * creating again on an existing mock returns null — so if this is missing, the
-   * key has to come from the dashboard. Studio captures it when it can and says so
-   * plainly when it can't, rather than pretending it can fetch it later.
+   * Returned on first creation. The list endpoint never carries it, and creating
+   * again on an existing mock returns null — then `getMockApiKey` fetches it.
    */
   apiKey?: string | null;
 }
@@ -662,13 +728,31 @@ export interface CreatedMock {
 /** Provision a mock for an API. Idempotent: an existing mock is returned as-is. */
 export async function createMock(session: Session, apiId: string): Promise<CreatedMock> {
   const base = session.apiUrl.replace(/\/$/, "");
-  const response = await appFetch(`${base}/api/v1/public/mocks`, {
+  let response: Response;
+  try {
+    response = await appFetch(`${base}/api/v1/public/mocks`, {
     method: "POST",
     headers: { ...headers(session), "Content-Type": "application/json" },
     body: JSON.stringify({ apiId }),
   });
+  } catch (error) {
+    throw new Spec0Error(
+      `Couldn't reach ${base} — ${error instanceof Error ? error.message : String(error)}`,
+      0,
+      `${base}/api/v1/public/mocks`,
+      "",
+    );
+  }
   if (!response.ok) {
     const body = await response.text().catch(() => "");
+    if (response.status === 402) {
+      throw new Spec0Error(
+        describeBody(body) ?? "Your organisation has reached a limit.",
+        402,
+        `${base}/api/v1/public/mocks`,
+        body,
+      );
+    }
     throw new Spec0Error(
       `Couldn't create the mock (HTTP ${response.status}). ${describeBody(body) ?? ""}`,
       response.status,
@@ -790,4 +874,137 @@ export async function refreshMock(session: Session, mockServerId: string): Promi
     );
   }
   return (await response.json()) as RefreshedMock;
+}
+
+// ── Mock keys ──────────────────────────────────────────────────────────────────
+
+export interface MockKey {
+  mockServerId: string;
+  apiKey: string;
+  apiKeyPreview?: string | null;
+}
+
+function toMockKey(json: Record<string, unknown>, mockServerId: string): MockKey | null {
+  const apiKey = typeof json.apiKey === "string" ? json.apiKey : "";
+  if (!apiKey) return null;
+  return {
+    mockServerId: typeof json.mockServerId === "string" ? json.mockServerId : mockServerId,
+    apiKey,
+    apiKeyPreview: typeof json.apiKeyPreview === "string" ? json.apiKeyPreview : null,
+  };
+}
+
+/**
+ * A mock's API key, for a mock Studio didn't create (or created before it
+ * could fetch keys).
+ *
+ * Null when the platform won't give it: a 404 means the route isn't there yet,
+ * the mock is unknown, or this token may not read it. The caller then falls back
+ * to asking the user to paste the key.
+ */
+export async function getMockApiKey(session: Session, mockServerId: string): Promise<MockKey | null> {
+  try {
+    const json = await get<Record<string, unknown>>(
+      session,
+      `/api/v1/public/mocks/${encodeURIComponent(mockServerId)}/api-key`,
+    );
+    return toMockKey(json, mockServerId);
+  } catch (error) {
+    if (error instanceof Spec0Error && (error.status === 404 || error.status === 403)) return null;
+    throw error;
+  }
+}
+
+/**
+ * The key for a mock Studio knows by id, or only by its API's id (older
+ * library entries). Null — never an error — when Spec0 won't give it, so the
+ * caller can fall back to asking the user to paste it.
+ */
+export async function resolveMockKey(
+  session: Session,
+  known: { mockServerId: string | null; apiId: string | null },
+): Promise<MockKey | null> {
+  try {
+    let id = known.mockServerId;
+    if (!id && known.apiId) {
+      id = (await listMocks(session)).find((row) => row.apiId === known.apiId)?.mockServerId ?? null;
+    }
+    return id ? await getMockApiKey(session, id) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Replace a mock's API key. The old key stops working straight away. */
+export async function regenerateMockApiKey(session: Session, mockServerId: string): Promise<MockKey> {
+  const response = await request(
+    session,
+    `/api/v1/public/mocks/${encodeURIComponent(mockServerId)}/api-key/regenerate`,
+    "application/json",
+    { method: "POST" },
+  );
+  const key = toMockKey((await response.json()) as Record<string, unknown>, mockServerId);
+  if (!key) throw new Spec0Error("Spec0 didn't return a new key.", response.status, response.url, "");
+  return key;
+}
+
+// ── Entitlements ───────────────────────────────────────────────────────────────
+
+/** One counted allowance, as the platform reports it. `limit: -1` means no limit. */
+export interface Allowance {
+  key: string;
+  limit: number;
+  used: number;
+  enabled: boolean;
+}
+
+export interface Entitlements {
+  features: Allowance[];
+}
+
+/**
+ * What the organisation may still create, if the platform says.
+ *
+ * Null when it doesn't — a 404 from a platform without this route, or a
+ * refusal. Callers treat null as "unknown" and simply don't show usage; the
+ * create call itself still reports a limit if one is hit.
+ */
+export async function getEntitlements(session: Session): Promise<Entitlements | null> {
+  try {
+    const json = await get<Record<string, unknown>>(session, "/api/v1/public/orgs/entitlements");
+    const rows = Array.isArray(json.features) ? (json.features as Array<Record<string, unknown>>) : [];
+    return {
+      features: rows
+        .map((row) => ({
+          key: String(row.key ?? ""),
+          limit: Number(row.limit ?? -1),
+          used: Number(row.used ?? 0),
+          enabled: row.enabled !== false,
+        }))
+        .filter((row) => row.key && Number.isFinite(row.limit) && Number.isFinite(row.used)),
+    };
+  } catch (error) {
+    if (error instanceof Spec0Error && (error.status === 404 || error.status === 403)) return null;
+    throw error;
+  }
+}
+
+/** The fields of a limit-reached (402) Problem that Studio uses. */
+export interface PlanLimit {
+  detail: string;
+  feature: string | null;
+}
+
+/** Read a 402 Problem body. Null when the error isn't one. */
+export function planLimitOf(error: unknown): PlanLimit | null {
+  if (!(error instanceof Spec0Error) || error.status !== 402) return null;
+  try {
+    const json = JSON.parse(error.body) as Record<string, unknown>;
+    return {
+      detail: typeof json.detail === "string" && json.detail.trim() ? json.detail.trim() : error.message,
+      feature: typeof json.feature === "string" ? json.feature : null,
+    };
+  } catch {
+    return { detail: error.message, feature: null };
+  }
 }

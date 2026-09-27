@@ -11,6 +11,7 @@ import { Library } from "./components/Library";
 import { McpView } from "./components/McpView";
 import { MockKeyBar } from "./components/MockKeyBar";
 import { MocksView } from "./components/MocksView";
+import { MockJourneyDialog } from "./components/mock-journey/MockJourneyDialog";
 import { OAuthDialog } from "./components/OAuthDialog";
 import { OpenDialog } from "./components/OpenDialog";
 import { OperationView } from "./components/OperationView";
@@ -39,6 +40,9 @@ import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { useHistoryRecords } from "./hooks/useHistoryRecords";
 import { useLibrary } from "./hooks/useLibrary";
+import { targetOf, useMockJourney } from "./hooks/useMockJourney";
+import { journeyAvailable } from "./lib/mockJourney";
+import { useMockKey } from "./hooks/useMockKey";
 import { useMocks } from "./hooks/useMocks";
 import { useNavigation } from "./hooks/useNavigation";
 import { useOAuth } from "./hooks/useOAuth";
@@ -64,7 +68,7 @@ import { toMarkdown } from "./lib/runner";
 import { sendTargetFor } from "./lib/shortcuts";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import type { ParsedSpec } from "./lib/spec";
-import { apiIdFromRef, apiUrl, consumersUrl } from "./lib/spec0";
+import { apiIdFromRef, apiUrl, consumersUrl, DEFAULT_API_URL, DEFAULT_APP_URL } from "./lib/spec0";
 import { openInBrowser } from "./lib/store";
 
 /**
@@ -243,7 +247,21 @@ export default function App() {
 
   const nav = useNavigation({ route, setRoute, hasOpenApi: Boolean(spec) });
   const updater = useUpdater();
-  const mocks = useMocks(session, route === "mocks");
+  const mocks = useMocks(session, route === "mocks", {
+    storedKey: useCallback(
+      (mockServerId: string) => entries.find((entry) => entry.mockServerId === mockServerId)?.mockApiKey ?? null,
+      [entries],
+    ),
+    onKeyChanged: useCallback(
+      (mockServerId: string, key: string) => {
+        void library.setMockKeyFor(mockServerId, key).then((next) => {
+          setEntries(next);
+          setCurrent((open) => (open ? next.find((entry) => entry.id === open.id) ?? open : open));
+        });
+      },
+      [setEntries, setCurrent],
+    ),
+  });
 
   const goLibrary = useCallback(() => {
     setRoute("library");
@@ -367,6 +385,29 @@ export default function App() {
     }
   };
 
+  const journey = useMockJourney({
+    session,
+    updateSession,
+    entries,
+    setEntries,
+    current,
+    setCurrent,
+    setServer,
+    spec,
+    operation,
+    server,
+    route,
+    openEntry,
+    showOperation,
+    doSend,
+    onMocksChanged: () => void mocks.refresh(),
+  });
+
+  /** Ask for the mock key by hand only when Spec0 couldn't provide it. */
+  const askForMockKey = useMockKey({ session, current, targetingMock, setEntries, setCurrent });
+
+  const openSpec0 = () => void openInBrowser(session?.appUrl ?? DEFAULT_APP_URL);
+
   const showGraph = view === "graph";
   const showDocument = view === "document";
   const inspectorVisible = settings.inspectorOpen && !showGraph && !showDocument;
@@ -416,6 +457,14 @@ export default function App() {
           title={spec!.title || current?.title || "Untitled API"}
           version={spec!.version}
           fromSpec0={current?.source.kind === "spec0"}
+          mock={
+            current && (current.mockUrl || journeyAvailable(targetOf(current, session?.apiUrl ?? DEFAULT_API_URL)))
+              ? {
+                  has: Boolean(current.mockUrl),
+                  onOpen: () => journey.start(entries.find((entry) => entry.id === current.id) ?? current),
+                }
+              : null
+          }
           section={section}
           onSection={showSection}
           onGoLibrary={goLibrary}
@@ -489,6 +538,10 @@ export default function App() {
             error={mocks.error}
             onRefresh={() => void mocks.refresh()}
             onSignIn={openSignIn}
+            onCreate={journey.startPicking}
+            keys={mocks.keys}
+            onLoadKey={mocks.loadKey}
+            onRegenerateKey={(id) => void mocks.regenerateKey(id)}
           />
           <StatusBar
             summary={session ? `Mocks · ${session.orgName}` : "Mocks · sign in to see hosted mocks"}
@@ -578,6 +631,7 @@ export default function App() {
           onCheckUpdates={() => void checkForUpdates()}
           onApplyUpdate={(entry) => void applyUpdate(entry)}
           onRefreshMock={session ? (entry) => void doRefreshMock(entry) : undefined}
+          onMock={journey.start}
           checking={checking}
           syncReport={syncReport}
           onDismissReport={() => setSyncReport(null)}
@@ -681,7 +735,7 @@ export default function App() {
                       onOpenConnection={openNetworkFor}
                       envSkew={envVersionSkew}
                     />
-                    {targetingMock && !current?.mockApiKey && (
+                    {askForMockKey && (
                       <MockKeyBar
                         apiName={current?.title ?? "this API"}
                         onSave={(key) => void saveMockKey(key)}
@@ -873,6 +927,41 @@ export default function App() {
           }}
           onTrySample={() => void ingest(SAMPLE_SPEC, SAMPLE_NAME, { kind: "sample", ref: "sample" })}
           onClose={closeOpen}
+        />
+      )}
+
+      {journey.open && (
+        <MockJourneyDialog
+          mode={journey.open}
+          state={journey.state}
+          view={journey.view}
+          orgName={session?.orgName ?? null}
+          entries={entries}
+          apiUrl={session?.apiUrl ?? DEFAULT_API_URL}
+          cliAvailable={journey.cliAvailable}
+          retargeted={journey.retargeted}
+          rebuildLines={journey.rebuildLines}
+          onPick={journey.start}
+          onAddApi={() => {
+            journey.close();
+            setShowOpen(true);
+          }}
+          onConnect={(how) => void journey.connect(how)}
+          onChooseTeam={journey.chooseTeam}
+          onRetryTeams={journey.retryTeams}
+          onPublish={(name, version) => void journey.publish(name, version)}
+          onCreateMock={() => void journey.makeMock()}
+          onSaveKey={(key) => void journey.saveKey(key)}
+          onRebuild={() => void journey.rebuild()}
+          onRegenerateKey={() => void journey.regenerateKey()}
+          onSendTest={() => void journey.sendTest()}
+          onOpenSpec0={openSpec0}
+          onOpenApiOnSpec0={
+            journey.state.apiId && session
+              ? () => void openInBrowser(apiUrl(session.appUrl, journey.state.apiId!))
+              : null
+          }
+          onClose={journey.close}
         />
       )}
 

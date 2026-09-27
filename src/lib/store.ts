@@ -147,13 +147,23 @@ export async function openInBrowser(url: string): Promise<void> {
   await openUrl(url);
 }
 
-/** Wait for the browser to redirect back to `127.0.0.1:<port>/callback`. */
+/**
+ * Wait for the browser to redirect back to `127.0.0.1:<port>/callback`.
+ *
+ * `expectedState` only chooses the page the browser tab shows; the caller
+ * still checks the returned `state` itself.
+ */
 export async function awaitOAuthCallback(
   port: number,
   timeoutSecs = 120,
+  expectedState?: string,
 ): Promise<Record<string, string>> {
   if (!inTauri) throw new Error("Browser sign-in needs the desktop app.");
-  return invoke<Record<string, string>>("oauth_listen", { port, timeoutSecs });
+  return invoke<Record<string, string>>("oauth_listen", {
+    port,
+    timeoutSecs,
+    expectedState: expectedState ?? null,
+  });
 }
 
 export interface CliOrgConfig {

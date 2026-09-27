@@ -2,10 +2,14 @@
  * Drive the real Studio UI in headless Chrome and capture the user journey:
  * empty library → sample API → back → second API → switcher → operation →
  * scratch → history list and a recorded request → every Settings section →
- * Mocks (signed out and in) → MCP, in both themes, then the main screens at
- * the minimum window width.
+ * Mocks (signed out and in) → MCP, in both themes → "Create a mock server",
+ * step by step, and with a limit already reached → the main screens at the
+ * minimum window width.
  *
  *   node scripts/capture.mjs <spec-file> <out-dir>
+ *
+ * The limit-reached shot needs a second spec: SECOND_SPEC, or `<spec>-2.yaml`
+ * next to the first.
  */
 import puppeteer from "puppeteer-core";
 
@@ -399,9 +403,91 @@ await toggleTheme();
 await shootSettings("light", 21);
 await shootTabs("light", 22);
 
+/** Screenshot now, then in the other theme, and switch back. */
+const shootBoth = async (name, theme) => {
+  const other = theme === "light" ? "dark" : "light";
+  await page.screenshot({ path: `${outDir}/${name}-${theme}.png` });
+  console.log(`${name}-${theme}`);
+  await toggleTheme();
+  await page.screenshot({ path: `${outDir}/${name}-${other}.png` });
+  console.log(`${name}-${other}`);
+  await toggleTheme();
+};
+const openJourneyFromLibrary = async (title) => {
+  await must(clickTab(".nav-tab", "APIs"), "the APIs tab");
+  await wait(400);
+  await page.evaluate(() => document.querySelector('[aria-label="Back to all APIs"]')?.click());
+  await wait(400);
+  const found = await page.evaluate((needle) => {
+    const card = [...document.querySelectorAll(".api-card")].find((c) =>
+      c.querySelector(".api-title")?.textContent?.includes(needle),
+    );
+    const button = card?.querySelector(".card-mock");
+    button?.click();
+    return Boolean(button);
+  }, title);
+  if (!found) throw new Error(`No mock button on ${title}`);
+  await page.waitForSelector(".modal.journey", { timeout: 5000 });
+  await wait(400);
+};
+const closeJourney = async () => {
+  await page.keyboard.press("Escape");
+  await wait(300);
+};
+
+// The theme is light here. The library card offers "Create mock"; signed
+// out, the journey starts at sign-in.
+await must(clickTab(".nav-tab", "APIs"), "the APIs tab");
+await wait(400);
+await page.evaluate(() => document.querySelector('[aria-label="Back to all APIs"]')?.click());
+await wait(400);
+const UPLOADED = await page.evaluate(
+  () =>
+    [...document.querySelectorAll(".api-card")]
+      .find((card) => card.querySelector(".tag.src-file"))
+      ?.querySelector(".api-title")?.textContent ?? "",
+);
+await openJourneyFromLibrary(UPLOADED);
+await shootBoth("24a-journey-sign-in", "light");
+await closeJourney();
+
 // Signed in: a session and the org's mocks, answered here so no request
 // leaves the machine.
 const FAKE_API = "https://spec0.invalid";
+// What the fake Spec0 answers. Changed between shots to show each state.
+const fake = {
+  entitlements: {
+    features: [
+      { key: "max_mock_servers", limit: 4, used: 3, enabled: true },
+      { key: "max_internal_apis", limit: 10, used: 2, enabled: true },
+    ],
+  },
+  teams: [
+    { id: "t1", name: "Payments" },
+    { id: "t2", name: "Checkout" },
+  ],
+  mocks: [
+    { mockServerId: "m1", apiId: "a1", apiName: "Orders API", mockBaseUrl: "/mock/acme/orders-api", specVersion: "1.4.0" },
+    { mockServerId: "m2", apiId: "a2", apiName: "Payments", name: "Payments sandbox", mockBaseUrl: "/mock/acme/payments", specVersion: "2.0.1" },
+    { mockServerId: "m3", apiId: "a3", apiName: "Inventory", mockBaseUrl: "/mock/acme/inventory" },
+  ],
+};
+const answer = (method, path) => {
+  if (path.endsWith("/orgs/entitlements")) return fake.entitlements ? [200, fake.entitlements] : [404, {}];
+  if (path.endsWith("/teams")) return [200, fake.teams];
+  if (method === "POST" && path.endsWith("/apis/team")) {
+    return [200, { apiId: "a9", apiName: "demo-api", version: "1.0.0", created: true }];
+  }
+  if (method === "POST" && path.endsWith("/mocks")) {
+    // No key on create, so the journey has to fetch it.
+    return [200, { mockServerId: "m9", apiId: "a9", apiName: "demo-api", mockBaseUrl: "/mock/acme/demo-api", created: true }];
+  }
+  const key = path.match(/\/mocks\/([^/]+)\/api-key(\/regenerate)?$/);
+  if (key) return [200, { mockServerId: key[1], apiKey: `mk_demo_${key[1]}_${key[2] ? "new" : "7f3a9c21"}`, apiKeyPreview: "mk_…" }];
+  if (path.endsWith("/mocks")) return [200, fake.mocks];
+  if (path.endsWith("/orgs/summary")) return [200, { name: "Acme" }];
+  return [200, []];
+};
 await page.setRequestInterception(true);
 page.on("request", (request) => {
   if (!request.url().startsWith(FAKE_API)) return void request.continue();
@@ -411,14 +497,8 @@ page.on("request", (request) => {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
   if (request.method() === "OPTIONS") return void request.respond({ status: 204, headers: cors });
-  const body = request.url().includes("/api/v1/public/mocks")
-    ? [
-        { mockServerId: "m1", apiName: "Orders API", mockBaseUrl: "/mock/acme/orders-api", specVersion: "1.4.0" },
-        { mockServerId: "m2", apiName: "Payments", name: "Payments sandbox", mockBaseUrl: "/mock/acme/payments", specVersion: "2.0.1" },
-        { mockServerId: "m3", apiName: "Inventory", mockBaseUrl: "/mock/acme/inventory" },
-      ]
-    : [];
-  void request.respond({ status: 200, headers: cors, contentType: "application/json", body: JSON.stringify(body) });
+  const [status, body] = answer(request.method(), new globalThis.URL(request.url()).pathname);
+  void request.respond({ status, headers: cors, contentType: "application/json", body: JSON.stringify(body) });
 });
 await page.evaluate((apiUrl) => {
   window.localStorage.setItem(
@@ -451,6 +531,80 @@ await must(clickTab(".nav-tab", "Mocks"), "the Mocks tab");
 await wait(400);
 await page.screenshot({ path: `${outDir}/26-mocks-signed-in-dark.png` });
 console.log("26-mocks-signed-in-dark");
+
+// "Create a mock server" signed in, dark theme here. Two teams, so the team
+// step shows; usage comes from the (fake) server's numbers.
+await openJourneyFromLibrary(UPLOADED);
+await page.waitForSelector(".journey-main select", { timeout: 5000 });
+await shootBoth("26a-journey-team", "dark");
+await clickByText(".journey-main .btn", "Continue");
+await page.waitForSelector(".journey-main input", { timeout: 5000 });
+await wait(300);
+await shootBoth("26b-journey-publish", "dark");
+await clickByText(".journey-main .btn", "Publish");
+await page.waitForFunction(() => document.querySelector(".journey-heading")?.textContent === "Create the mock", { timeout: 5000 });
+await wait(300);
+await shootBoth("26c-journey-mock", "dark");
+await clickByText(".journey-main .btn", "Create mock");
+await page.waitForFunction(() => document.querySelector(".journey-heading")?.textContent?.includes("ready"), { timeout: 5000 });
+await wait(600);
+await shootBoth("26d-journey-done", "dark");
+await clickLabel("Show the key");
+await wait(200);
+await clickByText(".journey-main .btn", "Regenerate key");
+await wait(300);
+await shootBoth("26e-journey-regenerate-confirm", "dark");
+await closeJourney();
+
+// The library now shows the mock on that card, and the API bar offers it.
+await page.screenshot({ path: `${outDir}/26f-library-after-dark.png` });
+console.log("26f-library-after-dark");
+await page.evaluate((needle) => {
+  [...document.querySelectorAll(".api-title")].find((el) => el.textContent?.includes(needle))?.click();
+}, UPLOADED);
+await page.waitForSelector(".apibar", { timeout: 15000 });
+await wait(600);
+await page.screenshot({ path: `${outDir}/26g-api-targets-mock-dark.png` });
+console.log("26g-api-targets-mock-dark");
+
+// A limit already reached: said up front, before any step.
+fake.entitlements = {
+  features: [
+    { key: "max_mock_servers", limit: 2, used: 2, enabled: true },
+    { key: "max_internal_apis", limit: 10, used: 3, enabled: true },
+  ],
+};
+await clickLabel("Back to all APIs");
+await wait(400);
+const second = await page.$('input[type="file"]');
+await second.uploadFile(process.env.SECOND_SPEC ?? specPath.replace(/\.ya?ml$/, "-2.yaml"));
+await page.waitForSelector(".sidebar", { timeout: 15000 });
+await wait(500);
+const SECOND = await page.evaluate(() => document.querySelector(".api-switch .spec-name")?.textContent ?? "");
+await openJourneyFromLibrary(SECOND);
+await page.waitForSelector(".journey-main .verdict.warn", { timeout: 5000 });
+await shootBoth("26h-journey-limit-reached", "dark");
+await closeJourney();
+
+// The Mocks tab: create from here (pick an API), and key actions per mock.
+fake.entitlements = null;
+await must(clickTab(".nav-tab", "Mocks"), "the Mocks tab");
+await page.waitForSelector(".mocks-table", { timeout: 15000 });
+await clickByText(".btn", "Refresh");
+await wait(600);
+await clickLabel("Show the Orders API mock key");
+await wait(500);
+await shootBoth("26i-mocks-keys", "dark");
+await clickLabel("Regenerate the Payments mock key");
+await wait(300);
+await page.screenshot({ path: `${outDir}/26j-mocks-regenerate-confirm-dark.png` });
+console.log("26j-mocks-regenerate-confirm-dark");
+await clickByText(".mock-key-confirm .btn", "Keep");
+await clickByText(".library-head .btn", "Create a mock server");
+await page.waitForSelector(".modal.journey", { timeout: 5000 });
+await wait(300);
+await shootBoth("26k-journey-pick", "dark");
+await closeJourney();
 
 // The minimum window width, 960 by 600: the two bars must still fit.
 await page.setViewport({ width: 960, height: 600, deviceScaleFactor: 2 });

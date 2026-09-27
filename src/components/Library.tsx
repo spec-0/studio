@@ -15,7 +15,8 @@ import {
   X,
 } from "lucide-react";
 import { mockIsBehind } from "../lib/sync";
-import { relativeTime, sourceLabel, type ApiSource, type LibraryEntry } from "../lib/library";
+import { relativeTime, sourceLabel, spec0ApiIdOf, type ApiSource, type LibraryEntry } from "../lib/library";
+import { journeyAvailable } from "../lib/mockJourney";
 import { Wordmark } from "./Logo";
 import { shortcut } from "../lib/platform";
 import { SWAGGER2_CONVERT_COMMAND, SWAGGER2_ISSUE_URL } from "../lib/spec";
@@ -68,6 +69,8 @@ interface Props {
   onApplyUpdate: (entry: LibraryEntry) => void;
   /** Rebuild an entry's mock against the spec we hold. Absent when disconnected. */
   onRefreshMock?: (entry: LibraryEntry) => void;
+  /** Create a mock for an entry, or show the one it has (address, key, rebuild). */
+  onMock: (entry: LibraryEntry) => void;
   checking: boolean;
   /** What the last applied update did to local state, if anything worth saying. */
   syncReport: { title: string; lines: string[] } | null;
@@ -99,6 +102,7 @@ export function Library({
   onCheckUpdates,
   onApplyUpdate,
   onRefreshMock,
+  onMock,
   checking,
   syncReport,
   onDismissReport,
@@ -298,6 +302,25 @@ export function Library({
                 {entry.syncedAt ? ` · pulled ${relativeTime(entry.syncedAt)}` : ""}
               </span>
               <span className="spacer" />
+              {entry.mockUrl ? (
+                <button
+                  className="btn ghost card-mock"
+                  onClick={() => onMock(entry)}
+                  title="The mock's address and key; rebuild it"
+                >
+                  <ServerCog size={12} /> Mock
+                </button>
+              ) : (
+                journeyAvailable({ apiId: spec0ApiIdOf(entry), sourceKind: entry.source.kind }) && (
+                  <button
+                    className="btn card-mock"
+                    onClick={() => onMock(entry)}
+                    title="Create a hosted mock server for this API"
+                  >
+                    <Plus size={12} /> Create mock
+                  </button>
+                )
+              )}
               <div className="api-card-actions">
                 {entry.source.kind !== "sample" && (
                   <button

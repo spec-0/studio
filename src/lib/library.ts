@@ -58,7 +58,14 @@ export interface LibraryEntry {
    * and so "which target am I hitting" never depends on a network call.
    */
   mockUrl?: string;
-  /** Captured when Studio created the mock — the API only ever returns it once. */
+  /**
+   * The Spec0 API this entry was published as, when Studio published it.
+   *
+   * A spec0-sourced entry already carries its id in `source.ref`; this is the
+   * same link for a local file, so Studio knows the document is on Spec0.
+   */
+  spec0ApiId?: string;
+  /** The mock's API key, captured at creation or fetched from Spec0. */
   mockApiKey?: string;
   /** The mock server's id, needed to refresh it. */
   mockServerId?: string;
@@ -186,6 +193,7 @@ export async function addToLibrary(input: AddInput): Promise<LibraryEntry> {
     mockSpecVersion: input.mockSpecVersion ?? existing?.mockSpecVersion,
     // A fresh import is by definition current, so any pending update is resolved.
     mockMayBeStale: existing?.mockUrl ? true : undefined,
+    spec0ApiId: existing?.spec0ApiId,
     update: undefined,
     state: existing?.state,
   };
@@ -309,6 +317,33 @@ export async function setMock(
             mock.mockUrl || mock.clearStale ? undefined : entry.mockMayBeStale,
         }
       : entry,
+  );
+  await writeIndex(next);
+  return next;
+}
+
+/** The Spec0 API id an entry is published as, from its source or its recorded link. */
+export function spec0ApiIdOf(entry: Pick<LibraryEntry, "source" | "spec0ApiId">): string | null {
+  if (entry.source.kind === "spec0") {
+    const id = entry.source.ref.startsWith("spec0:") ? entry.source.ref.slice("spec0:".length) : "";
+    return id || null;
+  }
+  return entry.spec0ApiId || null;
+}
+
+/** Remember that an entry was published to Spec0 as `apiId`. */
+export async function linkSpec0Api(id: string, apiId: string): Promise<LibraryEntry[]> {
+  const entries = await loadLibrary();
+  const next = entries.map((entry) => (entry.id === id ? { ...entry, spec0ApiId: apiId } : entry));
+  await writeIndex(next);
+  return next;
+}
+
+/** Store a mock key on every entry that uses that mock — after a regenerate, all of them. */
+export async function setMockKeyFor(mockServerId: string, apiKey: string): Promise<LibraryEntry[]> {
+  const entries = await loadLibrary();
+  const next = entries.map((entry) =>
+    entry.mockServerId === mockServerId ? { ...entry, mockApiKey: apiKey } : entry,
   );
   await writeIndex(next);
   return next;

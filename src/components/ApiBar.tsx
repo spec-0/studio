@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, PanelRightClose, PanelRightOpen, Play, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, PanelRightClose, PanelRightOpen, Play, Plus, Server } from "lucide-react";
 import { TabList } from "./TabList";
 import { API_SECTIONS, type ApiSection } from "../lib/navigation";
 import { shortcut } from "../lib/platform";
@@ -23,6 +23,11 @@ interface ApiProps extends CommonProps {
   onSwitchApi: () => void;
   onRun: () => void;
   onAddApi: () => void;
+  /**
+   * The API's hosted mock: create one, or see it (address, key, rebuild).
+   * Offered whether or not Studio has noticed drift.
+   */
+  mock?: { has: boolean; onOpen: () => void } | null;
 }
 
 /** The id of the region the API tabs control. */
@@ -97,6 +102,15 @@ export function ApiBar(props: Props) {
 
       <span className="spacer" />
 
+      {props.mock && (
+        <button
+          className="btn ghost"
+          onClick={props.mock.onOpen}
+          title={props.mock.has ? "The mock's address and key; rebuild it" : "Create a hosted mock server for this API"}
+        >
+          <Server size={13} /> {props.mock.has ? "Mock" : "Create mock"}
+        </button>
+      )}
       <button className="btn ghost" onClick={props.onRun} title="Run operations against the spec and check each response">
         <Play size={13} /> Run
       </button>

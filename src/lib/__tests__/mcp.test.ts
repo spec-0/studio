@@ -112,6 +112,7 @@ function makeDeps(overrides: Partial<ToolDeps> = {}, entries?: LibraryEntry[]): 
     listMocks: async () => [],
     createMock: vi.fn(),
     refreshMock: vi.fn(),
+    getMockApiKey: vi.fn(async () => null),
     setMock: vi.fn(async () => []),
     libraryChanged: vi.fn(),
     ...overrides,
@@ -316,6 +317,49 @@ describe("signed-in tools", () => {
     const body = json(await runTool("get_mock_server", { api: "Orders" }, deps));
     expect(body.apiKey).toBeNull();
     expect(body.note).toMatch(/dashboard/);
+  });
+
+  it("get_mock_server fetches a missing key from Spec0 and keeps it", async () => {
+    const getMockApiKey = vi.fn(async () => ({ mockServerId: "m1", apiKey: "mk_fetched" }));
+    const deps = makeDeps({ loadSession: async () => SESSION, getMockApiKey }, [
+      entry("spec0_orders", "Orders", {
+        source: { kind: "spec0", ref: "spec0:api-1" },
+        mockServerId: "m1",
+        mockUrl: "https://api.example.com/mock/orders",
+      }),
+    ]);
+    const body = json(await runTool("get_mock_server", { api: "Orders" }, deps));
+    expect(getMockApiKey).toHaveBeenCalledWith(SESSION, "m1");
+    expect(body.apiKey).toBe("mk_fetched");
+    expect(body.note).toBeUndefined();
+    expect(deps.setMock).toHaveBeenCalledWith("spec0_orders", { mockApiKey: "mk_fetched", mockServerId: "m1" });
+    expect(deps.libraryChanged).toHaveBeenCalled();
+  });
+
+  it("get_mock_server falls back to the dashboard note when the key can't be fetched", async () => {
+    const getMockApiKey = vi.fn(async () => {
+      throw new Spec0Error("offline", 0, "u", "");
+    });
+    const deps = makeDeps({ loadSession: async () => SESSION, getMockApiKey }, [
+      entry("spec0_orders", "Orders", {
+        source: { kind: "spec0", ref: "spec0:api-1" },
+        mockServerId: "m1",
+        mockUrl: "https://api.example.com/mock/orders",
+      }),
+    ]);
+    const body = json(await runTool("get_mock_server", { api: "Orders" }, deps));
+    expect(body.apiKey).toBeNull();
+    expect(body.note).toMatch(/dashboard/);
+    expect(deps.setMock).not.toHaveBeenCalled();
+  });
+
+  it("create_mock_server uses the API a file was published as", async () => {
+    const createMock = vi.fn(async () => ({ mockServerId: "m3", mockUrl: "https://api.example.com/mock/o", apiKey: "k" }));
+    const deps = makeDeps({ loadSession: async () => SESSION, createMock }, [
+      entry("file_orders", "Orders", { spec0ApiId: "api-linked" }),
+    ]);
+    await runTool("create_mock_server", { api: "Orders" }, deps);
+    expect(createMock).toHaveBeenCalledWith(SESSION, "api-linked");
   });
 
   it("create_mock_server refuses an API that isn't published, and says how to publish", async () => {

@@ -4,7 +4,7 @@ import { currentVersion } from "./appUpdates";
 import * as library from "./library";
 import { runTool, type ToolDeps } from "./mcp";
 import { inTauri } from "./request";
-import { createMock, listMocks, listTeamApis, loadSession, refreshMock } from "./spec0";
+import { createMock, getMockApiKey, listMocks, listTeamApis, loadSession, refreshMock } from "./spec0";
 import { readStore, writeStore } from "./store";
 
 /**
@@ -138,6 +138,7 @@ const deps: ToolDeps = {
   listMocks,
   createMock,
   refreshMock,
+  getMockApiKey,
   setMock: library.setMock,
   libraryChanged: () => window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)),
 };

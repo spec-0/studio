@@ -53,10 +53,11 @@ export function usePublish(
       try {
         const result = await publishTeamApi<PublishResult>(session, body);
         setPublishResult(result);
-        // The document now exists upstream; remember it so the entry stops
-        // looking like a purely local file.
+        // The document now exists upstream; remember which API it became, so
+        // Studio knows it's published and can offer a mock for it.
         if (result.apiId) {
-          setEntries(await library.touchOpened(current.id));
+          await library.touchOpened(current.id);
+          setEntries(await library.linkSpec0Api(current.id, result.apiId));
         }
       } catch (error) {
         setPublishError(error instanceof Error ? error.message : String(error));
