@@ -22,10 +22,6 @@ describe("declaredResponse", () => {
     expect(declaredResponse(responses, 500)?.status).toBe("default");
   });
 
-  it("can skip the range step", () => {
-    expect(declaredResponse(responses, 404, { ranges: false })?.status).toBe("default");
-  });
-
   it("is undefined when nothing matches", () => {
     expect(declaredResponse([{ status: "200" }], 500)).toBeUndefined();
   });

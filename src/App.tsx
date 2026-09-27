@@ -1,9 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ApiSwitcher } from "./components/ApiSwitcher";
 import { ConnectionDialog } from "./components/ConnectionDialog";
 import { DocumentView } from "./components/DocumentView";
 import { EnvironmentsDialog } from "./components/EnvironmentsDialog";
 import { GraphView } from "./components/GraphView";
+import { CopiedNote, HistoryDetail } from "./components/HistoryDetail";
+import { HistoryView } from "./components/HistoryView";
 import { Inspector } from "./components/Inspector";
 import { Library } from "./components/Library";
 import { MockKeyBar } from "./components/MockKeyBar";
@@ -11,7 +13,6 @@ import { OAuthDialog } from "./components/OAuthDialog";
 import { OpenDialog } from "./components/OpenDialog";
 import { OperationView } from "./components/OperationView";
 import { PublishDialog } from "./components/PublishDialog";
-import { RecordBar } from "./components/RecordBar";
 import { RunDialog } from "./components/RunDialog";
 import { SchemaView } from "./components/SchemaView";
 import { ScratchView } from "./components/ScratchView";
@@ -26,6 +27,7 @@ import { useConnectionSettings } from "./hooks/useConnectionSettings";
 import { useDialogs } from "./hooks/useDialogs";
 import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useEnvironments } from "./hooks/useEnvironments";
+import { useHistoryRecords } from "./hooks/useHistoryRecords";
 import { useLibrary } from "./hooks/useLibrary";
 import { useOAuth } from "./hooks/useOAuth";
 import { usePublish } from "./hooks/usePublish";
@@ -39,6 +41,7 @@ import { useTargeting } from "./hooks/useTargeting";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { hostOf } from "./lib/connection";
 import { interpolate } from "./lib/env";
+import { attachApiIds, belongsTo } from "./lib/history";
 import * as library from "./lib/library";
 import type { LibraryEntry } from "./lib/library";
 import { describeExpiry } from "./lib/oauth";
@@ -83,10 +86,13 @@ export default function App() {
     docText,
     docTab,
     setDocTab,
-    replay,
-    setReplay,
-    viewingRecord,
-    setViewingRecord,
+    prefill,
+    setPrefill,
+    record,
+    setRecord,
+    copiedFrom,
+    setCopiedFrom,
+    specFingerprint,
     server,
     setServer,
     auth,
@@ -133,6 +139,8 @@ export default function App() {
     mockUrl,
     connection,
     currentId: current?.id,
+    environmentName: activeEnv?.name,
+    specFingerprint,
     setRequests,
   });
 
@@ -147,8 +155,6 @@ export default function App() {
     doSend,
     saveResponseBody,
     doScratchSend,
-    replayScratch,
-    doReplay,
   } = useRequestSender({
     spec,
     operation,
@@ -159,17 +165,13 @@ export default function App() {
     mockUrl,
     connection,
     currentId: current?.id,
+    environmentName: activeEnv?.name,
+    specFingerprint,
     usableToken,
     pad,
-    updatePad,
     patchSettings,
     setRequests,
-    setOperation,
-    setReplay,
-    setViewingRecord,
-    setTab,
-    setView,
-    setServer,
+    setCopiedFrom,
   });
 
   const { git, consumers, resetDocumentFacts } = useDocumentFacts(route, current, session);
@@ -229,8 +231,41 @@ export default function App() {
 
   const goLibrary = useCallback(() => {
     setRoute("library");
+    setRecord(null);
     setShowSwitcher(false);
-  }, [setRoute, setShowSwitcher]);
+  }, [setRoute, setRecord, setShowSwitcher]);
+
+  /**
+   * History with older entries matched to their API by title where that's
+   * unambiguous, so one API never appears twice in the log.
+   */
+  const log = useMemo(() => attachApiIds(requests, entries), [requests, entries]);
+  const apiLog = useMemo(
+    () => (current ? log.filter((entry) => belongsTo(entry, current)) : []),
+    [log, current],
+  );
+
+  const { specFor, copyRecord } = useHistoryRecords({
+    entries,
+    current,
+    spec,
+    openEntry,
+    setRoute,
+    setOperation,
+    setPrefill,
+    setServer,
+    setTab,
+    setView,
+    setRecord,
+    setCopiedFrom,
+    updatePad,
+    clearResponse,
+  });
+
+  const openHistory = useCallback(() => {
+    setRecord(null);
+    setRoute("history");
+  }, [setRecord, setRoute]);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
@@ -244,11 +279,15 @@ export default function App() {
 
   const openScratch = useCallback(() => {
     setRoute("scratch");
+    setRecord(null);
+    setCopiedFrom(null);
     clearResponse({ curl: true });
-  }, [setRoute, clearResponse]);
+  }, [setRoute, setRecord, setCopiedFrom, clearResponse]);
 
   useShortcuts({
     send: () => {
+      // A recorded request has no Send; the shortcut mustn't reach the editor hidden behind it.
+      if (record) return;
       const target = sendTargetFor(route);
       if (target === "scratch") void doScratchSend();
       else if (target === "operation") void doSend();
@@ -270,6 +309,9 @@ export default function App() {
     const found = spec?.operations.find((op) => op.id === id);
     if (found) {
       setOperation(found);
+      setPrefill(null);
+      setCopiedFrom(null);
+      setRecord(null);
       setTab("operations");
       setView("operation");
     }
@@ -280,6 +322,12 @@ export default function App() {
   const inspectorVisible = settings.inspectorOpen && !showGraph && !showDocument;
   const onApi = route === "api" && Boolean(spec);
   const onScratch = route === "scratch";
+  const onHistory = route === "history";
+  /** Switching what the work area shows closes a recorded request that was open in it. */
+  const showView = (next: typeof view) => {
+    setRecord(null);
+    setView(next);
+  };
 
   return (
     <div
@@ -305,6 +353,8 @@ export default function App() {
       <TitleBar
         onScratch={onScratch}
         onApi={onApi}
+        onHistory={onHistory}
+        onOpenHistory={openHistory}
         specTitle={spec?.title}
         specVersion={spec?.version}
         fromSpec0={current?.source.kind === "spec0"}
@@ -316,9 +366,9 @@ export default function App() {
         inspectorOpen={settings.inspectorOpen}
         onToggleInspector={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
         showDocument={showDocument}
-        onToggleDocument={() => setView(showDocument ? "operation" : "document")}
+        onToggleDocument={() => showView(showDocument ? "operation" : "document")}
         showGraph={showGraph}
-        onToggleGraph={() => setView(showGraph ? "operation" : "graph")}
+        onToggleGraph={() => showView(showGraph ? "operation" : "graph")}
         dark={settings.dark}
         onToggleTheme={() => patchSettings({ dark: !settings.dark })}
         onGoLibrary={goLibrary}
@@ -329,7 +379,21 @@ export default function App() {
         onAddApi={() => setShowOpen(true)}
       />
 
-      {onScratch ? (
+      {onHistory ? (
+        <>
+          <HistoryView
+            entries={log}
+            specFor={specFor}
+            onCopy={copyRecord}
+            onClear={clearHistory}
+          />
+          <StatusBar
+            summary="History · kept 30 days, only on this machine"
+            envName={activeEnv?.name}
+            result={null}
+          />
+        </>
+      ) : onScratch ? (
         <>
           <ScratchView
             pad={pad}
@@ -338,7 +402,26 @@ export default function App() {
             sending={sending}
             onSend={() => void doScratchSend()}
             history={scratchHistory}
-            onReplay={replayScratch}
+            onOpenRecord={setRecord}
+            record={
+              record
+                ? {
+                    id: record.id,
+                    view: (
+                      <HistoryDetail
+                        key={record.id}
+                        entry={record}
+                        spec={null}
+                        onCopy={copyRecord}
+                        onClose={() => setRecord(null)}
+                      />
+                    ),
+                  }
+                : null
+            }
+            notice={
+              copiedFrom && <CopiedNote at={copiedFrom} onDismiss={() => setCopiedFrom(null)} />
+            }
             inspector={
               settings.inspectorOpen && (
                 <section className="pane response">
@@ -391,29 +474,41 @@ export default function App() {
               onTabChange={(next) => {
                 setTab(next);
                 setQuery("");
-                if (next === "operations") setView("operation");
-                if (next === "schemas") setView("schema");
+                if (next === "operations") showView("operation");
+                if (next === "schemas") showView("schema");
               }}
               query={query}
               onQueryChange={setQuery}
               selectedOperation={operation?.id ?? null}
               onSelectOperation={(op) => {
                 setOperation(op);
-                setReplay(null);
-                setViewingRecord(null);
-                setView("operation");
+                setPrefill(null);
+                setCopiedFrom(null);
+                showView("operation");
               }}
               selectedSchema={schemaName}
               onSelectSchema={(name) => {
                 setSchemaName(name);
-                setView("schema");
+                showView("schema");
               }}
-              history={requests}
-              onReplay={doReplay}
-              onClearHistory={clearHistory}
+              history={apiLog}
+              selectedRecord={record?.id ?? null}
+              onOpenRecord={setRecord}
+              onOpenAllHistory={openHistory}
             />
 
             <div className="workarea">
+              {record && (
+                <HistoryDetail
+                  key={record.id}
+                  entry={record}
+                  spec={spec}
+                  onCopy={copyRecord}
+                  onClose={() => setRecord(null)}
+                />
+              )}
+              {!record && (
+              <>
               {showDocument && (
                 <DocumentView
                   title={spec!.title || current?.title || "Document"}
@@ -470,8 +565,8 @@ export default function App() {
                         onSave={(key) => void saveMockKey(key)}
                       />
                     )}
-                    {viewingRecord && (
-                      <RecordBar entry={viewingRecord} onDismiss={() => setViewingRecord(null)} />
+                    {copiedFrom && (
+                      <CopiedNote at={copiedFrom} onDismiss={() => setCopiedFrom(null)} />
                     )}
                     <div className="split">
                       <section className="pane request">
@@ -481,7 +576,7 @@ export default function App() {
                           auth={auth}
                           onAuthChange={setAuth}
                           onValuesChange={onValuesChange}
-                          replay={replay}
+                          prefill={prefill}
                           onConfigureOAuth={(schemeName) => setShowOAuth({ prefill: schemeName })}
                           oauthStatus={
                             current?.oauth
@@ -534,6 +629,8 @@ export default function App() {
                     <p>This spec declares no component schemas.</p>
                   </div>
                 ))}
+              </>
+              )}
             </div>
           </div>
 

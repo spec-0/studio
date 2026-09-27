@@ -3,7 +3,7 @@ import { transportFor, type ConnectionSettings } from "../lib/connection";
 import * as history from "../lib/history";
 import type { HistoryEntry } from "../lib/history";
 import { buildPlan, describeBody, send, type AuthState } from "../lib/request";
-import { declaredResponse } from "../lib/response";
+import { declaredResponse, storedResponseBody } from "../lib/response";
 import { planRun, type RunOptions, type RunResult } from "../lib/runner";
 import type { OperationSpec, ParsedSpec } from "../lib/spec";
 import { sentToMock } from "../lib/targets";
@@ -23,6 +23,8 @@ export function useBulkRun({
   mockUrl,
   connection,
   currentId,
+  environmentName,
+  specFingerprint,
   setRequests,
 }: {
   spec: ParsedSpec | null;
@@ -32,8 +34,10 @@ export function useBulkRun({
   mock: { url: string; key?: string; bearer?: string } | null;
   mockUrl: string | null;
   connection: ConnectionSettings;
-  /** The library entry whose cookie jar the run uses. */
+  /** The library entry whose cookie jar the run uses, and whose history it joins. */
   currentId: string | undefined;
+  environmentName: string | undefined;
+  specFingerprint: string | undefined;
   setRequests: Dispatch<SetStateAction<HistoryEntry[]>>;
 }) {
   const [runResults, setRunResults] = useState<RunResult[]>([]);
@@ -103,14 +107,16 @@ export function useBulkRun({
             bytes: response.bytes,
             specTitle: spec.title,
             operationId: item.operation.id,
+            apiId: currentId,
+            environment: environmentName,
             headers: plan.headers,
             body: describeBody(plan.body),
             bodyKind: plan.body?.kind,
-            validation: verdict.status,
+            ...history.checkFields(verdict, { version: spec.version, fingerprint: specFingerprint }),
             mock: sentToMock(plan.url, mockUrl),
             statusText: response.statusText,
             responseHeaders: response.headers,
-            responseBody: response.binary ? "(binary — not stored)" : response.bodyText,
+            responseBody: storedResponseBody(response),
             runId,
           });
         } catch (error) {
@@ -126,7 +132,7 @@ export function useBulkRun({
       setRunningOp(null);
       setRequests(await history.loadHistory());
     },
-    [spec, server, auth, vars, mock, mockUrl, connection, currentId, setRequests],
+    [spec, server, auth, vars, mock, mockUrl, connection, currentId, environmentName, specFingerprint, setRequests],
   );
 
   /** Stop after the request in flight; results so far are kept. */

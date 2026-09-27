@@ -13,4 +13,8 @@ describe("sendTargetFor", () => {
   it("sends nothing from the library", () => {
     expect(sendTargetFor("library")).toBeNull();
   });
+
+  it("sends nothing from the history list", () => {
+    expect(sendTargetFor("history")).toBeNull();
+  });
 });

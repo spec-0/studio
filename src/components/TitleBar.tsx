@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronLeft,
   FileText,
+  History,
   Layers,
   Moon,
   PanelRightClose,
@@ -23,6 +24,10 @@ interface Props {
   onScratch: boolean;
   /** An API is open. */
   onApi: boolean;
+  /** The history log is on screen. */
+  onHistory: boolean;
+  /** Open the history log — every API and the scratch pad. */
+  onOpenHistory: () => void;
   specTitle?: string;
   specVersion?: string;
   /** The open API came from spec0. */
@@ -54,6 +59,8 @@ interface Props {
 export function TitleBar({
   onScratch,
   onApi,
+  onHistory,
+  onOpenHistory,
   specTitle,
   specVersion,
   fromSpec0,
@@ -90,6 +97,19 @@ export function TitleBar({
             <span className="api-switch static">
               <span className="spec-name">Scratch</span>
               <span className="tag">no spec</span>
+            </span>
+          </>
+        )}
+
+        {onHistory && (
+          <>
+            <span className="rule" />
+            <button className="icon-btn" onClick={onGoLibrary} title={`All APIs (${shortcut("L")})`} aria-label="Back to all APIs">
+              <ChevronLeft size={16} />
+            </button>
+            <span className="api-switch static">
+              <span className="spec-name">History</span>
+              <span className="tag">read-only</span>
             </span>
           </>
         )}
@@ -189,6 +209,14 @@ export function TitleBar({
             </button>
           </>
         )}
+        <button
+          className={`icon-btn${onHistory ? " on" : ""}`}
+          onClick={onOpenHistory}
+          title="History — every request, across all APIs"
+          aria-label="History"
+        >
+          <History size={16} />
+        </button>
         <button
           className="icon-btn"
           onClick={onToggleTheme}

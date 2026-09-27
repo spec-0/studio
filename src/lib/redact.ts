@@ -43,7 +43,7 @@ export function setKnownSecrets(environments: Environment[]): void {
  * Replace every secret value with its `{{name}}` reference.
  *
  * The reference rather than a row of dots: it says which secret was there, and a
- * replayed request resolves it again from the environment.
+ * request copied from history resolves it again from the environment.
  */
 export function redact(text: string): string;
 export function redact(text: string | undefined): string | undefined;

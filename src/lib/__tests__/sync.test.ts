@@ -52,7 +52,7 @@ describe("diffSpecs", () => {
     expect(impact.operationsAdded).toEqual(["GET /c"]);
   });
 
-  it("counts history entries that can no longer be replayed", () => {
+  it("counts history entries whose operation is gone", () => {
     const before = spec(["https://a"], { "/a": GET, "/b": GET });
     const after = spec(["https://a"], { "/a": GET });
     const impact = diffSpecs(before, after, {

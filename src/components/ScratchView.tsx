@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { CornerDownLeft, Loader2, Send, TriangleAlert } from "lucide-react";
 import { interpolate, unresolved } from "../lib/env";
-import { relativeTime, type HistoryEntry } from "../lib/history";
+import type { HistoryEntry } from "../lib/history";
+import { HistoryList } from "./HistoryList";
 import { SCRATCH_METHODS, sendsBody, type ScratchPad } from "../lib/scratch";
 
 interface Props {
@@ -12,7 +13,12 @@ interface Props {
   onSend: () => void;
   /** Scratch calls only — the spec-driven log lives with its API. */
   history: HistoryEntry[];
-  onReplay: (entry: HistoryEntry) => void;
+  /** Open a recorded scratch call, read-only. */
+  onOpenRecord: (entry: HistoryEntry) => void;
+  /** The recorded call open in the work area; it replaces the editor while it's open. */
+  record?: { id: string; view: ReactNode } | null;
+  /** A note above the editor, e.g. that it was filled from a recording. */
+  notice?: ReactNode;
   /** The response pane. Passed in so all Inspector wiring stays in one place. */
   inspector: ReactNode;
 }
@@ -32,7 +38,9 @@ export function ScratchView({
   sending,
   onSend,
   history,
-  onReplay,
+  onOpenRecord,
+  record = null,
+  notice = null,
   inspector,
 }: Props) {
   const resolved = interpolate(pad.url, vars);
@@ -55,22 +63,11 @@ export function ScratchView({
           </div>
         </div>
         <div className="side-list">
-          {history.map((entry) => (
-            <button
-              key={entry.id}
-              className="row"
-              onClick={() => onReplay(entry)}
-              title={`${entry.url}\n${entry.status} · ${entry.ms}ms`}
-            >
-              <span className={`method ${entry.method.toLowerCase()}`}>{entry.method}</span>
-              <span style={{ minWidth: 0, display: "grid", flex: 1 }}>
-                <span className="path">{entry.path}</span>
-                <span className="summary">
-                  {entry.status} · {entry.ms}ms · {relativeTime(entry.at)}
-                </span>
-              </span>
-            </button>
-          ))}
+          <HistoryList
+            entries={history}
+            selectedId={record?.id ?? null}
+            onOpen={onOpenRecord}
+          />
           {history.length === 0 && (
             <div className="group-label">
               Nothing sent from here yet — history stays on this machine
@@ -80,6 +77,11 @@ export function ScratchView({
       </aside>
 
       <div className="workarea">
+        {record ? (
+          record.view
+        ) : (
+        <>
+        {notice}
         <div className="urlbar">
           <select
             className="method-select"
@@ -216,6 +218,8 @@ export function ScratchView({
           </section>
           {inspector}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ export interface SyncImpact {
   /** Operation ids (`METHOD /path`) that existed before and don't now. */
   operationsRemoved: string[];
   operationsAdded: string[];
-  /** History entries whose operation is gone — they can be read but not replayed. */
+  /** History entries whose operation is gone — they can be read but not opened as an operation. */
   historyOrphaned: number;
   /**
    * The base URL in use, when it was one of the spec's declared servers before
@@ -76,7 +76,7 @@ export function describeImpact(impact: SyncImpact): string[] {
   }
   if (impact.historyOrphaned) {
     lines.push(
-      `${impact.historyOrphaned} history entr${impact.historyOrphaned > 1 ? "ies" : "y"} can no longer be replayed — their operation is gone`,
+      `${impact.historyOrphaned} history entr${impact.historyOrphaned > 1 ? "ies" : "y"} can no longer open as their operation, which is gone — they can still be read`,
     );
   }
   if (impact.serverNoLongerDeclared) {

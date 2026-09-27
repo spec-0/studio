@@ -92,8 +92,11 @@ then Studio starts again.
   cookie jar per API that you can inspect and clear.
 
 **History**
-- Every request is saved on your computer for 30 days, and you can search and
-  replay it. History is never synced anywhere.
+- Every request is saved on your computer for 30 days, with what came back and
+  the check result. One list covers all your APIs and scratch requests, and you
+  can filter it by API, status, drift, or mock and real.
+- A saved request opens read-only. To run it again, copy it to a new request.
+  History is never synced anywhere.
 
 Keyboard shortcuts (use Ctrl instead of ⌘ on Windows and Linux): `⌘↵` send ·
 `⌘O` add API · `⌘P` switch API · `⌘L` library · `⌘E` environments ·
