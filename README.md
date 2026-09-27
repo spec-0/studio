@@ -22,7 +22,9 @@ Studio is young, and we'd like to hear what breaks.
 
 Free and open source (MIT). Works without an account.
 
-<!-- screenshot: main window -->
+<p align="center">
+  <img alt="Opening the Swagger Petstore spec from a URL in spec0 Studio, sending a request that passes the schema check, then looking at it in History" src=".github/assets/studio-demo.gif" width="900">
+</p>
 
 ## Download
 
