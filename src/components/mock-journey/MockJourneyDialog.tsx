@@ -164,7 +164,7 @@ export function MockJourneyDialog(props: Props) {
         : "Create a mock server";
 
   return (
-    <div className="scrim" onClick={onClose}>
+    <div className="scrim journey-scrim" onClick={onClose}>
       <div
         ref={ref}
         className="modal journey"
@@ -425,7 +425,7 @@ function MockStep({ state, onCreateMock, onOpenSpec0 }: Props) {
     <>
       <StepHead>Create the mock</StepHead>
       <p className="journey-lead">
-        Spec0 hosts a mock of {state.target.title} that answers with the examples in the spec. It has
+        Spec0 hosts a mock of {state.target.title} that answers with example data generated from the spec. It has
         its own address and key; Studio keeps both for you.
       </p>
       <Problem state={state} onOpenSpec0={onOpenSpec0} />
@@ -545,6 +545,25 @@ function DoneStep({
         </p>
       )}
 
+      <div className="journey-actions">
+        <button className="btn primary" onClick={onSendTest} disabled={busy} data-autofocus>
+          <Send size={12} /> Send a test request
+        </button>
+        <button className="btn" onClick={onRebuild} disabled={busy || !state.signedIn}>
+          <RefreshCw size={12} /> Rebuild mock
+        </button>
+        {state.signedIn && (
+          <button className="btn" onClick={() => setConfirming(true)} disabled={busy || confirming}>
+            <KeyRound size={12} /> Regenerate key
+          </button>
+        )}
+        {onOpenApiOnSpec0 && (
+          <button className="btn ghost" onClick={onOpenApiOnSpec0}>
+            Open in Spec0 <ExternalLink size={12} />
+          </button>
+        )}
+      </div>
+      {/* Results go below the buttons, so the buttons never move under the pointer. */}
       {confirming && (
         <div className="verdict warn journey-problem" role="alert">
           <span className="glyph">!</span>
@@ -582,24 +601,6 @@ function DoneStep({
       <Problem state={state} onOpenSpec0={onOpenSpec0} />
       <Busy label={state.busy} />
 
-      <div className="journey-actions">
-        <button className="btn primary" onClick={onSendTest} disabled={busy} data-autofocus>
-          <Send size={12} /> Send a test request
-        </button>
-        <button className="btn" onClick={onRebuild} disabled={busy || !state.signedIn}>
-          <RefreshCw size={12} /> Rebuild mock
-        </button>
-        {state.signedIn && (
-          <button className="btn" onClick={() => setConfirming(true)} disabled={busy || confirming}>
-            <KeyRound size={12} /> Regenerate key
-          </button>
-        )}
-        {onOpenApiOnSpec0 && (
-          <button className="btn ghost" onClick={onOpenApiOnSpec0}>
-            Open in Spec0 <ExternalLink size={12} />
-          </button>
-        )}
-      </div>
       <p className="field-meta journey-note">
         Rebuild makes the mock serve the spec as it is on Spec0 now. Its address and key stay the same.
       </p>

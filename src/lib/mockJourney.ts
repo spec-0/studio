@@ -375,6 +375,40 @@ export function pickTestOperation<T extends { method: string; parameters: Array<
   );
 }
 
+/** A "Send a test request" waiting for the screen to catch up. */
+export interface PendingTestSend {
+  entryId: string;
+  opId: string;
+  server: string;
+  /** The key the send must carry, when Studio has one. */
+  apiKey: string | null;
+}
+
+/**
+ * Is everything the test request depends on on screen yet: the API open, the
+ * operation selected, the address bar on the mock and the key stored? Sending
+ * any earlier sends whatever was there before, or nothing at all.
+ */
+export function readyToSend(
+  pending: PendingTestSend | null,
+  now: {
+    route: string;
+    entryId: string | null;
+    opId: string | null;
+    server: string;
+    apiKey: string | null;
+  },
+): boolean {
+  if (!pending) return false;
+  return (
+    now.route === "api" &&
+    now.entryId === pending.entryId &&
+    now.opId === pending.opId &&
+    now.server === pending.server &&
+    (pending.apiKey === null || now.apiKey === pending.apiKey)
+  );
+}
+
 /** Show a key without giving it away: the last four characters. */
 export function maskKey(key: string): string {
   return key.length <= 4 ? "••••" : `••••••••${key.slice(-4)}`;

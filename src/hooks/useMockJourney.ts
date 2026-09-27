@@ -2,7 +2,6 @@ import {
   useCallback,
   useEffect,
   useReducer,
-  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -14,7 +13,9 @@ import {
   initialJourney,
   journeyReducer,
   pickTestOperation,
+  readyToSend,
   type JourneyMock,
+  type PendingTestSend,
   type JourneyState,
   type JourneyTarget,
 } from "../lib/mockJourney";
@@ -112,7 +113,12 @@ export function useMockJourney({
   /** Set after the mock was created here, so the done screen can say where requests go. */
   const [retargeted, setRetargeted] = useState(false);
   const [rebuildLines, setRebuildLines] = useState<string[] | null>(null);
-  const pendingSend = useRef<{ opId: string; server: string } | null>(null);
+  /**
+   * State, not a ref: setting it must re-run the effect that sends, even when
+   * the address and operation already matched (they often do right after the
+   * mock is created, and a ref change alone would never trigger a send).
+   */
+  const [pendingSend, setPendingSend] = useState<PendingTestSend | null>(null);
   const apiUrl = session?.apiUrl ?? DEFAULT_API_URL;
 
   const refreshEntries = useCallback(
@@ -375,7 +381,7 @@ export function useMockJourney({
     const op = pickTestOperation(operations);
     if (!op) return;
 
-    pendingSend.current = { opId: op.id, server: mock.url };
+    setPendingSend({ entryId: entry.id, opId: op.id, server: mock.url, apiKey: mock.apiKey });
     if (current?.id === entry.id) {
       setServer(mock.url);
       showOperation(op.id);
@@ -387,13 +393,20 @@ export function useMockJourney({
     }
   }, [state.mock, state.target.entryId, entries, current?.id, spec, setServer, showOperation, setEntries, openEntry]);
 
+  // `doSend` is rebuilt whenever what it sends changes (address, operation,
+  // the mock's key), so by the time this condition holds it sends the new state.
   useEffect(() => {
-    const pending = pendingSend.current;
-    if (!pending || route !== "api") return;
-    if (operation?.id !== pending.opId || server !== pending.server) return;
-    pendingSend.current = null;
+    const ready = readyToSend(pendingSend, {
+      route,
+      entryId: current?.id ?? null,
+      opId: operation?.id ?? null,
+      server,
+      apiKey: current?.mockApiKey ?? null,
+    });
+    if (!ready) return;
+    setPendingSend(null);
     void doSend();
-  }, [route, operation?.id, server, doSend]);
+  }, [pendingSend, route, current?.id, current?.mockApiKey, operation?.id, server, doSend]);
 
   return {
     open,

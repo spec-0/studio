@@ -9,6 +9,7 @@ import {
   limitMessage,
   maskKey,
   pickTestOperation,
+  readyToSend,
   upfrontBlock,
   usageLine,
   type JourneyEvent,
@@ -269,5 +270,38 @@ describe("helpers", () => {
   it("masks a key down to its last four characters", () => {
     expect(maskKey("mk_abcdef1234")).toBe("••••••••1234");
     expect(maskKey("abc")).toBe("••••");
+  });
+});
+
+describe("sending the test request", () => {
+  const pending = { entryId: "e1", opId: "GET /orders", server: MOCK.url, apiKey: "k_new" };
+  const screen = {
+    route: "api",
+    entryId: "e1",
+    opId: "GET /orders",
+    server: MOCK.url,
+    apiKey: "k_new",
+  };
+
+  it("sends once the API, operation, mock address and key are all on screen", () => {
+    expect(readyToSend(pending, screen)).toBe(true);
+  });
+
+  it("waits while any of them is still the old one", () => {
+    expect(readyToSend(pending, { ...screen, route: "library" })).toBe(false);
+    expect(readyToSend(pending, { ...screen, entryId: "other" })).toBe(false);
+    expect(readyToSend(pending, { ...screen, opId: "POST /orders" })).toBe(false);
+    expect(readyToSend(pending, { ...screen, server: "https://api.example.com/v1" })).toBe(false);
+    // The key from before the mock was created, or none yet: not ready.
+    expect(readyToSend(pending, { ...screen, apiKey: null })).toBe(false);
+    expect(readyToSend(pending, { ...screen, apiKey: "k_old" })).toBe(false);
+  });
+
+  it("doesn't wait for a key Studio doesn't have", () => {
+    expect(readyToSend({ ...pending, apiKey: null }, { ...screen, apiKey: null })).toBe(true);
+  });
+
+  it("does nothing when nothing is pending", () => {
+    expect(readyToSend(null, screen)).toBe(false);
   });
 });

@@ -472,6 +472,7 @@ const fake = {
     { mockServerId: "m3", apiId: "a3", apiName: "Inventory", mockBaseUrl: "/mock/acme/inventory" },
   ],
 };
+const mockCalls = [];
 const answer = (method, path) => {
   if (path.endsWith("/orgs/entitlements")) return fake.entitlements ? [200, fake.entitlements] : [404, {}];
   if (path.endsWith("/teams")) return [200, fake.teams];
@@ -497,7 +498,10 @@ page.on("request", (request) => {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
   if (request.method() === "OPTIONS") return void request.respond({ status: 204, headers: cors });
-  const [status, body] = answer(request.method(), new globalThis.URL(request.url()).pathname);
+  const path = new globalThis.URL(request.url()).pathname;
+  // Calls to a mock itself: remember the key they carried.
+  if (path.startsWith("/mock/")) mockCalls.push({ path, key: request.headers()["x-mock-api-key"] ?? null });
+  const [status, body] = answer(request.method(), path);
   void request.respond({ status, headers: cors, contentType: "application/json", body: JSON.stringify(body) });
 });
 await page.evaluate((apiUrl) => {
@@ -549,23 +553,41 @@ await clickByText(".journey-main .btn", "Create mock");
 await page.waitForFunction(() => document.querySelector(".journey-heading")?.textContent?.includes("ready"), { timeout: 5000 });
 await wait(600);
 await shootBoth("26d-journey-done", "dark");
-await clickLabel("Show the key");
-await wait(200);
+// "Send a test request" straight after creating must send, first time, with the key.
+const expectTestSend = async (what) => {
+  const before = mockCalls.length;
+  await clickByText(".journey-main .btn", "Send a test request");
+  await page.waitForSelector(".status-pill", { timeout: 10000 }).catch(() => {});
+  await wait(500);
+  const call = mockCalls[before];
+  if (!call) throw new Error(`${what}: no request reached the mock`);
+  if (call.key !== "mk_demo_m9_7f3a9c21") throw new Error(`${what}: sent without the stored key`);
+  console.log(`${what}: sent ${call.path} with the key`);
+};
+await expectTestSend("test request from the library");
+await page.screenshot({ path: `${outDir}/26g-api-targets-mock-dark.png` });
+console.log("26g-api-targets-mock-dark");
+
+// Again from the API bar, where the address and operation already match.
+await clickByText(".apibar .btn", "Mock");
+await page.waitForSelector(".modal.journey", { timeout: 5000 });
+await wait(300);
+await expectTestSend("test request from the API bar");
+
+// Regenerating asks first.
+await clickByText(".apibar .btn", "Mock");
+await page.waitForSelector(".modal.journey", { timeout: 5000 });
+await wait(300);
 await clickByText(".journey-main .btn", "Regenerate key");
 await wait(300);
 await shootBoth("26e-journey-regenerate-confirm", "dark");
 await closeJourney();
 
-// The library now shows the mock on that card, and the API bar offers it.
+// The library now shows the mock on that card.
+await clickLabel("Back to all APIs");
+await wait(500);
 await page.screenshot({ path: `${outDir}/26f-library-after-dark.png` });
 console.log("26f-library-after-dark");
-await page.evaluate((needle) => {
-  [...document.querySelectorAll(".api-title")].find((el) => el.textContent?.includes(needle))?.click();
-}, UPLOADED);
-await page.waitForSelector(".apibar", { timeout: 15000 });
-await wait(600);
-await page.screenshot({ path: `${outDir}/26g-api-targets-mock-dark.png` });
-console.log("26g-api-targets-mock-dark");
 
 // A limit already reached: said up front, before any step.
 fake.entitlements = {

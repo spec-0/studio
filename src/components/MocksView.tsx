@@ -56,7 +56,7 @@ export function MocksView({
           <div>
             <h1>Mocks</h1>
             <p className="page-sub">
-              Hosted mock servers answer with examples from the spec, so you can call an API before
+              Hosted mock servers answer with example data generated from the spec, so you can call an API before
               it exists.
             </p>
           </div>
