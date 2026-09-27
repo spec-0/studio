@@ -7,6 +7,7 @@ import { appFetch, inTauri } from "../lib/request";
 import { parseSpec, type ParsedSpec } from "../lib/spec";
 import {
   apiIdFromRef,
+  environmentSyncApiId,
   fetchTeamApiSpec,
   listApiEnvironments,
   refreshMock,
@@ -137,28 +138,6 @@ export function useLibrary({
     [openSpec],
   );
 
-  const openEntry = useCallback(
-    async (entry: LibraryEntry) => {
-      setLoading(`Opening ${entry.title}…`);
-      setLoadError(null);
-      try {
-        const text = await library.readSpecText(entry.id);
-        if (!text) {
-          setLoadError(`${entry.title}: the stored document is missing. Refresh or re-add it.`);
-          return;
-        }
-        openSpec(parseSpec(text, entry.title), entry, text);
-        setEntries(await library.touchOpened(entry.id));
-        void syncEnvironments(entry);
-      } catch (error) {
-        setLoadError(`${entry.title}: ${error instanceof Error ? error.message : String(error)}`);
-      } finally {
-        setLoading(null);
-      }
-    },
-    [openSpec],
-  );
-
   /**
    * Refresh the cached environment list for a spec0-sourced API.
    *
@@ -172,9 +151,8 @@ export function useLibrary({
    */
   const syncEnvironments = useCallback(
     async (entry: LibraryEntry) => {
-      if (!session || entry.source.kind !== "spec0") return;
-      const apiId = apiIdFromRef(entry.source.ref);
-      if (!apiId) return;
+      const apiId = environmentSyncApiId(session, entry.source);
+      if (!session || !apiId) return;
       try {
         const rows = await listApiEnvironments(session, apiId);
         const next = await library.setEnvironments(
@@ -195,6 +173,28 @@ export function useLibrary({
       }
     },
     [session],
+  );
+
+  const openEntry = useCallback(
+    async (entry: LibraryEntry) => {
+      setLoading(`Opening ${entry.title}…`);
+      setLoadError(null);
+      try {
+        const text = await library.readSpecText(entry.id);
+        if (!text) {
+          setLoadError(`${entry.title}: the stored document is missing. Refresh or re-add it.`);
+          return;
+        }
+        openSpec(parseSpec(text, entry.title), entry, text);
+        setEntries(await library.touchOpened(entry.id));
+        void syncEnvironments(entry);
+      } catch (error) {
+        setLoadError(`${entry.title}: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        setLoading(null);
+      }
+    },
+    [openSpec, syncEnvironments],
   );
 
   // ── updates ──────────────────────────────────────────────────────────────────
@@ -292,7 +292,11 @@ export function useLibrary({
     }
   }, [ingest]);
 
-  const openUrl = useCallback(
+  /**
+   * Fetch a spec from `url` and add it to the library. Not for showing a page to
+   * the user — that is `openInBrowser` in `lib/store`.
+   */
+  const addFromUrl = useCallback(
     async (url: string) => {
       setLoading(`Fetching ${url}…`);
       setLoadError(null);
@@ -363,7 +367,7 @@ export function useLibrary({
     ingest,
     openEntry,
     openFile,
-    openUrl,
+    addFromUrl,
     refreshEntry,
     removeEntry,
     checkForUpdates,
