@@ -66,9 +66,14 @@ built into the app (`plugins.updater.pubkey` in `src-tauri/tauri.conf.json`).
 This key has nothing to do with Apple's certificate; it is a separate
 [minisign](https://jedisct1.github.io/minisign/) key pair that Tauri makes.
 
-Until it is set up, the public key in the config is the placeholder
-`REPLACE_WITH_UPDATER_PUBLIC_KEY`, and a tag build stops in the `preflight` job
-with a message saying what is missing.
+The key in use has the minisign id `DE10FBDDA60B7F58` (you can see it by
+decoding the `pubkey` value with `base64 -d`). If the config ever holds the
+placeholder `REPLACE_WITH_UPDATER_PUBLIC_KEY` instead, or the secrets are missing,
+a tag build stops in the `preflight` job with a message saying what is missing.
+
+The steps below are how the key was made, and how to make a new one if it is ever
+lost. Replacing the key has a real cost: copies already installed only trust the
+old key, so their users have to download the next version by hand once.
 
 1. Make the key pair on your own machine, outside the repository. Choose a
    password when asked; GitHub can't store an empty secret.

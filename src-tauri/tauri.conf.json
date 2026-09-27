@@ -52,7 +52,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "REPLACE_WITH_UPDATER_PUBLIC_KEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERFMTBGQkREQTYwQjdGNTgKUldSWWZ3dW0zZnNRM2hVdXJjdEhlUTdFaGhyTlFzdW83c0pxYnA5QVdQYklCbWdxanlRV0JqRUMK",
       "endpoints": [
         "https://github.com/spec-0/studio/releases/latest/download/latest.json"
       ],
