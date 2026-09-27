@@ -9,9 +9,13 @@ is the useful part: it tells you when a rule applies and when it doesn't.
 
 ## Reporting bugs and asking for features
 
-Open an [issue](https://github.com/spec-0/studio/issues/new/choose). For a bug,
-the most helpful things are your operating system, the Studio version (shown
-under *About*), what you did, what you expected, and what happened. If you can
+Questions, ideas and general feedback are best in
+[Discussions](https://github.com/spec-0/studio/discussions).
+
+For a bug or a specific feature request, open an
+[issue](https://github.com/spec-0/studio/issues/new/choose). For a bug, the most
+helpful things are your operating system, the Studio version (shown under
+*About*), what you did, what you expected, and what happened. If you can
 share a small spec that shows the problem, even better. Please remove any tokens
 or private URLs first.
 

@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Questions, ideas and feedback
+    url: https://github.com/spec-0/studio/discussions
+    about: Ask a question, suggest an idea, or tell us how Studio worked for you.
   - name: Report a security problem
     url: https://github.com/spec-0/studio/security/advisories/new
     about: Please report security problems privately. See SECURITY.md.
