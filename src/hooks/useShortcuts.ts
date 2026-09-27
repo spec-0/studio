@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { SidebarTab } from "../components/Sidebar";
 
 export interface ShortcutActions {
-  /** ⌘/Ctrl+Enter */
+  /** ⌘/Ctrl+Enter — sends the request on screen; see `sendTargetFor`. */
   send: () => void;
   /** ⌘/Ctrl+O */
   openAdd: () => void;

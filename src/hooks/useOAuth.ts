@@ -14,7 +14,7 @@ import {
   type CachedToken,
   type OAuthConfig,
 } from "../lib/oauth";
-import { awaitOAuthCallback, openExternal } from "../lib/store";
+import { awaitOAuthCallback, openInBrowser } from "../lib/store";
 
 /**
  * The OAuth token for the open API in the active environment.
@@ -66,7 +66,7 @@ export function useOAuth(
           // Reuses the loopback listener built for spec0 sign-in — a webview
           // can't hold a socket, and this is the same shape of handshake.
           const waiting = awaitOAuthCallback(port, 180);
-          await openExternal(buildAuthorizeUrl(config, challenge, state, redirectUri));
+          await openInBrowser(buildAuthorizeUrl(config, challenge, state, redirectUri));
           const params = await waiting;
 
           if (params.state !== state) {
