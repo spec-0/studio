@@ -84,6 +84,10 @@ the plugin back.
 - **`src/lib/` holds the logic, `src/components/` holds the interface.** Spec
   parsing, example generation, validation, environments, history and the spec0
   client don't depend on React and can be tested without it.
+- **`src/hooks/` holds React state and effects.** Each hook owns one area (the
+  library, environments, history, sending a request, and so on). `App.tsx` only
+  connects hooks to components; new behaviour goes in a hook or in `src/lib/`,
+  not in `App.tsx`.
 - **Never expand a whole spec.** `$ref` references are looked up when needed,
   with a record of what has been seen. That keeps large specs fast (Stripe's
   parses in about 30 ms) and stops schemas that refer to themselves from looping
