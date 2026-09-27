@@ -17,4 +17,10 @@ describe("sendTargetFor", () => {
   it("sends nothing from the history list", () => {
     expect(sendTargetFor("history")).toBeNull();
   });
+
+  it("sends nothing from Mocks, MCP or Settings", () => {
+    expect(sendTargetFor("mocks")).toBeNull();
+    expect(sendTargetFor("mcp")).toBeNull();
+    expect(sendTargetFor("settings")).toBeNull();
+  });
 });

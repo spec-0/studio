@@ -1,7 +1,9 @@
 /**
  * Drive the real Studio UI in headless Chrome and capture the user journey:
  * empty library → sample API → back → second API → switcher → operation →
- * scratch → history list and a recorded request, in both themes.
+ * scratch → history list and a recorded request → every Settings section →
+ * Mocks (signed out and in) → MCP, in both themes, then the main screens at
+ * the minimum window width.
  *
  *   node scripts/capture.mjs <spec-file> <out-dir>
  */
@@ -58,16 +60,41 @@ await wait(900);
 await page.screenshot({ path: `${outDir}/02-sample-open.png` });
 console.log("02-sample-open");
 
-// The graph, on a spec built to have a Customer → Order → Customer cycle.
-// Toolbar actions are icon-only now — target them by aria-label, not text.
+// Icon buttons are targeted by aria-label; tabs by their text.
 const clickLabel = (label) =>
   page.evaluate((l) => {
-    const el = document.querySelector(`[aria-label="${l}"]`);
+    const el = document.querySelector(`[aria-label^="${l}"]`);
     if (el) el.click();
     return Boolean(el);
   }, label);
 
-await clickLabel("Schema graph");
+/** A tab in the top bar (`.nav-tab`), the API bar (`.segment`) or Settings (`.settings-tab`). */
+const clickTab = (selector, text) =>
+  page.evaluate(
+    (sel, needle) => {
+      const tab = [...document.querySelectorAll(`${sel}[role="tab"]`)].find(
+        (el) => el.textContent?.trim() === needle,
+      );
+      tab?.click();
+      return Boolean(tab);
+    },
+    selector,
+    text,
+  );
+
+const must = async (promise, what) => {
+  if (!(await promise)) throw new Error(`Couldn't find ${what}`);
+};
+
+const toggleTheme = async () => {
+  await page.keyboard.down("Control");
+  await page.keyboard.press("d");
+  await page.keyboard.up("Control");
+  await wait(400);
+};
+
+// The graph is a tab of its own now, next to Operations, Schemas and Document.
+await must(clickTab(".segment", "Graph"), "the Graph tab");
 await wait(2400);
 // Click a node so the detail panel is on screen in the shot.
 await page.evaluate(() => {
@@ -77,7 +104,15 @@ await page.evaluate(() => {
 await wait(900);
 await page.screenshot({ path: `${outDir}/03-graph.png` });
 console.log("03-graph");
-await clickLabel("Schema graph");
+await must(clickTab(".segment", "Document"), "the Document tab");
+await wait(1500);
+await page.screenshot({ path: `${outDir}/03b-document.png` });
+console.log("03b-document");
+await must(clickTab(".segment", "Schemas"), "the Schemas tab");
+await wait(500);
+await page.screenshot({ path: `${outDir}/03c-schemas.png` });
+console.log("03c-schemas");
+await must(clickTab(".segment", "Operations"), "the Operations tab");
 await wait(400);
 
 // Back to the library — the way out that didn't exist before.
@@ -117,8 +152,7 @@ await page.screenshot({ path: `${outDir}/07-request.png` });
 console.log("07-request");
 
 // Light theme.
-await clickLabel("Toggle theme");
-await wait(500);
+await toggleTheme();
 await page.screenshot({ path: `${outDir}/08-light.png` });
 console.log("08-light");
 
@@ -254,7 +288,7 @@ await page.reload({ waitUntil: "networkidle0" });
 await wait(700);
 
 // Light theme is on from step 08. The one list across every API.
-await clickLabel("History");
+await must(clickTab(".nav-tab", "History"), "the History tab");
 await page.waitForSelector(".history-filters", { timeout: 15000 });
 await wait(500);
 await page.screenshot({ path: `${outDir}/10-history-list-light.png` });
@@ -280,8 +314,7 @@ await wait(500);
 await page.screenshot({ path: `${outDir}/12-history-recheck-light.png` });
 console.log("12-history-recheck-light");
 
-await clickLabel("Toggle theme");
-await wait(500);
+await toggleTheme();
 await openRecord(`/orders/${order.id}?expand`);
 await wait(500);
 await page.screenshot({ path: `${outDir}/13-history-detail-dark.png` });
@@ -303,7 +336,7 @@ await page.screenshot({ path: `${outDir}/15-history-drift-filter-dark.png` });
 console.log("15-history-drift-filter-dark");
 
 // The API's own History tab opens the same read-only view in its work area…
-await clickLabel("Back to all APIs");
+await must(clickTab(".nav-tab", "APIs"), "the APIs tab");
 await wait(600);
 await clickByText(".api-title", SAMPLE);
 await page.waitForSelector(".sidebar .tab", { timeout: 15000 });
@@ -327,6 +360,121 @@ await page.waitForSelector(".copied-note", { timeout: 15000 });
 await wait(500);
 await page.screenshot({ path: `${outDir}/17-copied-request-dark.png` });
 console.log("17-copied-request-dark");
+
+// Settings, a full page with a section list. Dark first (the theme is dark
+// from step 13), then light.
+const SECTIONS = [
+  ["account", "Account & Spec0"],
+  ["network", "Network"],
+  ["updates", "Updates"],
+  ["appearance", "Appearance"],
+  ["mcp", "MCP"],
+  ["data", "Data & privacy"],
+];
+const shootSettings = async (theme, n) => {
+  await must(clickLabel("Settings"), "the Settings button");
+  await page.waitForSelector(".settings-nav", { timeout: 15000 });
+  for (const [id, label] of SECTIONS) {
+    await must(clickTab(".settings-tab", label), `the ${label} section`);
+    await page.waitForSelector(`[data-section="${id}"]`, { timeout: 5000 });
+    await wait(350);
+    await page.screenshot({ path: `${outDir}/${n}-settings-${id}-${theme}.png` });
+    console.log(`${n}-settings-${id}-${theme}`);
+  }
+};
+const shootTabs = async (theme, n, suffix = "") => {
+  await must(clickTab(".nav-tab", "Mocks"), "the Mocks tab");
+  await wait(600);
+  await page.screenshot({ path: `${outDir}/${n}-mocks${suffix}-${theme}.png` });
+  console.log(`${n}-mocks${suffix}-${theme}`);
+  await must(clickTab(".nav-tab", "MCP"), "the MCP tab");
+  await wait(400);
+  await page.screenshot({ path: `${outDir}/${n + 1}-mcp-${theme}.png` });
+  console.log(`${n + 1}-mcp-${theme}`);
+};
+
+await shootSettings("dark", 18);
+await shootTabs("dark", 19);
+await toggleTheme();
+await shootSettings("light", 21);
+await shootTabs("light", 22);
+
+// Signed in: a session and the org's mocks, answered here so no request
+// leaves the machine.
+const FAKE_API = "https://spec0.invalid";
+await page.setRequestInterception(true);
+page.on("request", (request) => {
+  if (!request.url().startsWith(FAKE_API)) return void request.continue();
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  };
+  if (request.method() === "OPTIONS") return void request.respond({ status: 204, headers: cors });
+  const body = request.url().includes("/api/v1/public/mocks")
+    ? [
+        { mockServerId: "m1", apiName: "Orders API", mockBaseUrl: "/mock/acme/orders-api", specVersion: "1.4.0" },
+        { mockServerId: "m2", apiName: "Payments", name: "Payments sandbox", mockBaseUrl: "/mock/acme/payments", specVersion: "2.0.1" },
+        { mockServerId: "m3", apiName: "Inventory", mockBaseUrl: "/mock/acme/inventory" },
+      ]
+    : [];
+  void request.respond({ status: 200, headers: cors, contentType: "application/json", body: JSON.stringify(body) });
+});
+await page.evaluate((apiUrl) => {
+  window.localStorage.setItem(
+    "studio:session.json",
+    JSON.stringify({
+      apiUrl,
+      appUrl: apiUrl,
+      orgId: "org_demo",
+      orgName: "Acme",
+      token: "demo",
+      source: "cli",
+      connectedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    }),
+  );
+}, FAKE_API);
+await page.reload({ waitUntil: "networkidle0" });
+await wait(600);
+await must(clickTab(".nav-tab", "Mocks"), "the Mocks tab");
+await page.waitForSelector(".mocks-table", { timeout: 15000 });
+await wait(400);
+await page.screenshot({ path: `${outDir}/24-mocks-signed-in-light.png` });
+console.log("24-mocks-signed-in-light");
+await must(clickLabel("Signed in"), "the status chip");
+await page.waitForSelector('[data-section="account"]', { timeout: 5000 });
+await wait(350);
+await page.screenshot({ path: `${outDir}/25-settings-account-signed-in-light.png` });
+console.log("25-settings-account-signed-in-light");
+await toggleTheme();
+await must(clickTab(".nav-tab", "Mocks"), "the Mocks tab");
+await wait(400);
+await page.screenshot({ path: `${outDir}/26-mocks-signed-in-dark.png` });
+console.log("26-mocks-signed-in-dark");
+
+// The minimum window width, 960 by 600: the two bars must still fit.
+await page.setViewport({ width: 960, height: 600, deviceScaleFactor: 2 });
+await must(clickTab(".nav-tab", "APIs"), "the APIs tab");
+await wait(300);
+await clickByText(".api-title", SAMPLE);
+await page.waitForSelector(".apibar", { timeout: 15000 });
+await wait(600);
+await page.screenshot({ path: `${outDir}/27-min-width-api-dark.png` });
+console.log("27-min-width-api-dark");
+await must(clickTab(".segment", "Graph"), "the Graph tab");
+await wait(1500);
+await page.screenshot({ path: `${outDir}/28-min-width-graph-dark.png` });
+console.log("28-min-width-graph-dark");
+await toggleTheme();
+await must(clickTab(".segment", "Operations"), "the Operations tab");
+await wait(400);
+await page.screenshot({ path: `${outDir}/29-min-width-api-light.png` });
+console.log("29-min-width-api-light");
+await must(clickLabel("Settings"), "the Settings button");
+await must(clickTab(".settings-tab", "Network"), "the Network section");
+await wait(400);
+await page.screenshot({ path: `${outDir}/30-min-width-settings-light.png` });
+console.log("30-min-width-settings-light");
 
 console.log("page errors:", errors.length);
 for (const error of errors.slice(0, 5)) console.log("  ", error);

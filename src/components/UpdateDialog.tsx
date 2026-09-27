@@ -1,110 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import {
-  DEFAULT_UPDATE_PREFS,
-  RELEASES_PAGE,
-  checkForUpdate,
-  currentVersion,
-  describeProgress,
-  installUpdate,
-  loadUpdatePrefs,
-  onCheckRequested,
-  onUpdateProgress,
-  saveUpdatePrefs,
-  type AvailableUpdate,
-  type UpdatePrefs,
-  type UpdateProgress,
-} from "../lib/appUpdates";
-import { loadConnection } from "../lib/connection";
-import { inTauri } from "../lib/request";
+import { RELEASES_PAGE, describeProgress } from "../lib/appUpdates";
 import { openInBrowser } from "../lib/store";
-
-type Phase =
-  | { kind: "checking" }
-  | { kind: "current" }
-  | { kind: "available"; update: AvailableUpdate }
-  | { kind: "installing"; update: AvailableUpdate }
-  | { kind: "error"; message: string };
+import type { Updater } from "../hooks/useUpdater";
 
 /**
- * "Check for Updates…" — the dialog, and the optional check at start.
+ * "Check for Updates…" — the dialog.
  *
- * Renders nothing until the menu item is picked, or until a check at start
- * (only if the user turned that on) finds a newer version. A check at start
- * that finds nothing, or fails, stays silent: nobody asked to see it.
+ * Renders nothing until a check is asked for (from the menu, or from Settings),
+ * or until a check at start (only if the user turned that on) finds a newer
+ * version. The state is in `useUpdater`, which Settings shares.
  */
-export function Updater() {
-  const [open, setOpen] = useState(false);
-  const [phase, setPhase] = useState<Phase>({ kind: "checking" });
-  const [prefs, setPrefs] = useState<UpdatePrefs>(DEFAULT_UPDATE_PREFS);
-  const [version, setVersion] = useState<string | null>(null);
-  const [progress, setProgress] = useState<UpdateProgress | null>(null);
-  // Only the most recent check may change what the dialog shows.
-  const latest = useRef(0);
-
-  const check = useCallback(async (quiet: boolean) => {
-    const id = ++latest.current;
-    if (!quiet) {
-      setOpen(true);
-      setPhase({ kind: "checking" });
-    }
-    try {
-      const update = await checkForUpdate(await loadConnection());
-      if (id !== latest.current) return;
-      if (update) {
-        setPhase({ kind: "available", update });
-        setOpen(true);
-      } else if (!quiet) {
-        setPhase({ kind: "current" });
-      }
-    } catch (error) {
-      if (!quiet && id === latest.current) {
-        setPhase({ kind: "error", message: error instanceof Error ? error.message : String(error) });
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!inTauri) return;
-    let stopped = false;
-    const unlisten: Array<() => void> = [];
-    void onCheckRequested(() => void check(false)).then((stop) =>
-      stopped ? stop() : unlisten.push(stop),
-    );
-    void onUpdateProgress(setProgress).then((stop) => (stopped ? stop() : unlisten.push(stop)));
-    void currentVersion().then(setVersion);
-    void loadUpdatePrefs().then((loaded) => {
-      if (stopped) return;
-      setPrefs(loaded);
-      if (loaded.checkOnStart) void check(true);
-    });
-    return () => {
-      stopped = true;
-      unlisten.forEach((stop) => stop());
-    };
-  }, [check]);
-
-  const setCheckOnStart = (checkOnStart: boolean) => {
-    const next = { ...prefs, checkOnStart };
-    setPrefs(next);
-    void saveUpdatePrefs(next);
-  };
-
-  const install = async (update: AvailableUpdate) => {
-    setProgress(null);
-    setPhase({ kind: "installing", update });
-    try {
-      await installUpdate(); // relaunches on success, so this rarely returns
-    } catch (error) {
-      setPhase({ kind: "error", message: error instanceof Error ? error.message : String(error) });
-    }
-  };
-
+export function UpdateDialog({ updater }: { updater: Updater }) {
+  const { open, phase, prefs, version, progress, check, install, setCheckOnStart, close } = updater;
   if (!open) return null;
   const installing = phase.kind === "installing";
-  const close = () => {
-    if (!installing) setOpen(false);
-  };
 
   return (
     <div className="scrim" onClick={close}>
@@ -151,7 +60,7 @@ export function Updater() {
 
           <p className="field-meta" style={{ marginTop: 12 }}>
             A check sends one request to github.com for the latest release. It carries nothing
-            about your specs, environments or history, and it uses the proxy from Connection
+            about your specs, environments or history, and it uses the proxy from Network
             settings.
           </p>
 

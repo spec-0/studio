@@ -144,8 +144,8 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
    Windows and Linux keep their own native title bar above this row. */
 :root.platform-mac .titlebar { padding-left: 82px; }
 
-.titlebar .spec-name { font-weight: 600; font-size: 12.5px; }
-.titlebar .spec-version {
+.titlebar .spec-name, .apibar .spec-name { font-weight: 600; font-size: 12.5px; }
+.titlebar .spec-version, .apibar .spec-version {
   font-family: var(--font-mono);
   font-size: 11px;
   color: hsl(var(--ink-3));
@@ -154,7 +154,7 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
   border-radius: 4px;
   padding: 1px 5px;
 }
-.titlebar .spacer { flex: 1; }
+.titlebar .spacer, .apibar .spacer { flex: 1; min-width: 4px; }
 .titlebar .rule {
   width: 1px;
   height: 17px;
@@ -1731,3 +1731,209 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .mcp-tools li.off { opacity: 0.45; }
 .mcp-tool-title { color: hsl(var(--ink-2)); }
 .mcp-privacy { margin: var(--s3) 0 0; }
+
+/* ─── Navigation ──────────────────────────────────────────────────────────── */
+
+/* The app's sections, as text tabs in the top bar. The tab fills the bar's
+   height so its underline sits on the bar's bottom edge. */
+.nav-tabs {
+  display: flex;
+  align-self: stretch;
+  gap: 2px;
+  margin-left: 6px;
+}
+.nav-tab {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: hsl(var(--ink-2));
+  border-bottom: 2px solid transparent;
+  border-top: 2px solid transparent;
+  white-space: nowrap;
+  transition: color var(--fast), border-color var(--fast);
+}
+.nav-tab:hover { color: hsl(var(--ink)); }
+.nav-tab[aria-selected="true"] {
+  color: hsl(var(--ink));
+  border-bottom-color: hsl(var(--primary));
+}
+.nav-tab:focus-visible { outline-offset: -4px; }
+
+/* Settings: a quiet icon; a small dot when certificate checks are off
+   somewhere, which used to show on the Connection button. */
+.settings-btn { position: relative; }
+.settings-btn.warn-dot::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsl(var(--danger));
+  box-shadow: 0 0 0 2px hsl(var(--surface));
+}
+
+/* The open API: which one, its four views, its actions. */
+.apibar {
+  height: 40px;
+  flex: 0 0 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 8px;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--bg));
+  min-width: 0;
+}
+.apibar .api-switch { min-width: 0; max-width: 260px; }
+.apibar .btn { padding: 4px 10px; }
+.apibar > .tag { flex: none; }
+
+/* A segmented control: neutral, so the one accent in this bar stays on Add API. */
+.segmented {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+  padding: 2px;
+  margin-left: 6px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 7px;
+  background: hsl(var(--surface));
+}
+.segment {
+  padding: 3px 11px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--ink-2));
+  white-space: nowrap;
+  transition: background-color var(--fast), color var(--fast), box-shadow var(--fast);
+}
+.segment:hover { color: hsl(var(--ink)); }
+.segment[aria-selected="true"] {
+  color: hsl(var(--ink));
+  background: hsl(var(--bg));
+  box-shadow: 0 0 0 1px hsl(var(--border-strong)), var(--shadow-1);
+}
+.dark .segment[aria-selected="true"] { background: hsl(var(--surface-hover)); }
+
+/* At the minimum window width, give the tabs the room and let the names shrink. */
+@media (max-width: 1100px) {
+  .titlebar { gap: 8px; }
+  .titlebar .brand-product { display: none; }
+  .env-picker select { max-width: 110px; }
+  .conn-chip { max-width: 150px; }
+  .apibar .api-switch { max-width: 190px; }
+  .segment { padding: 3px 9px; }
+}
+
+/* ─── Pages: Settings, Mocks, MCP ─────────────────────────────────────────── */
+
+.settings { background: hsl(var(--bg)); }
+.settings-nav {
+  width: 220px;
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid hsl(var(--border));
+  background: hsl(var(--surface));
+  padding: 14px 10px;
+  gap: 8px;
+}
+.settings-nav h2 { font-size: 13px; font-weight: 600; padding: 0 8px; }
+.settings-tabs { display: flex; flex-direction: column; gap: 1px; }
+.settings-tab {
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: hsl(var(--ink-2));
+  transition: background-color var(--fast), color var(--fast);
+}
+.settings-tab:hover { background: hsl(var(--surface-hover)); color: hsl(var(--ink)); }
+.settings-tab[aria-selected="true"] {
+  background: hsl(var(--accent-soft));
+  color: hsl(var(--ink));
+  font-weight: 500;
+}
+.settings-main { flex: 1; min-width: 0; overflow-y: auto; padding: 26px 36px 48px; }
+.settings-section { max-width: 700px; animation: rise 220ms var(--ease) backwards; }
+.settings-head { margin-bottom: 16px; }
+.settings-head h1 { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; }
+.settings-head p { color: hsl(var(--ink-2)); margin-top: 3px; }
+.settings-section > .section:first-of-type { margin-top: 4px; }
+.settings-lead { color: hsl(var(--ink-2)); margin-bottom: 12px; max-width: 620px; }
+.settings-card {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--surface));
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.settings-card-row { display: flex; align-items: center; gap: 9px; font-size: 14px; }
+.settings-facts {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 5px 12px;
+  margin: 12px 0 4px;
+  font-size: 12px;
+}
+.settings-facts dt { color: hsl(var(--ink-3)); }
+.settings-facts dd { min-width: 0; overflow-wrap: anywhere; }
+.settings-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 6px;
+}
+.settings-actions .spacer { flex: 1; }
+.settings-section .modes { margin-top: 4px; }
+
+.choice-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.choice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: hsl(var(--ink-2));
+  cursor: pointer;
+}
+.choice:hover { background: hsl(var(--surface-hover)); }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.choice.on {
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.55);
+  background: hsl(var(--accent-soft));
+}
+.choice:focus-within { outline: 2px solid hsl(var(--primary)); outline-offset: 1px; }
+
+.placeholder-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px dashed hsl(var(--border-strong));
+  border-radius: var(--radius);
+  color: hsl(var(--ink));
+  max-width: 700px;
+}
+.placeholder-card > svg { flex: none; color: hsl(var(--ink-3)); margin-top: 1px; }
+.placeholder-card p + p { margin-top: 4px; }
+
+.page { flex: 1; min-height: 0; overflow-y: auto; }
+.page-inner { max-width: 1040px; padding: 26px 32px 48px; }
+.page-sub { color: hsl(var(--ink-2)); margin-top: 3px; max-width: 560px; }
+.library-head > div { min-width: 0; }
+
+.mocks-table td { vertical-align: middle; }
+.mocks-table td.mock-url { white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
+.mocks-table td.mock-api { white-space: nowrap; }
+.mocks-table td.mock-actions { width: 36px; text-align: right; }

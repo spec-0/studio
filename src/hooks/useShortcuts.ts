@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { SidebarTab } from "../components/Sidebar";
+import { sectionForKey, type ApiSection } from "../lib/navigation";
 
 export interface ShortcutActions {
   /** ⌘/Ctrl+Enter — sends the request on screen; see `sendTargetFor`. */
@@ -14,8 +14,10 @@ export interface ShortcutActions {
   goLibrary: () => void;
   /** ⌘/Ctrl+\ */
   toggleInspector: () => void;
-  /** ⌘/Ctrl+1, 2, 3 */
-  showTab: (tab: SidebarTab) => void;
+  /** ⌘/Ctrl+1–4: Operations, Schemas, Graph, Document */
+  showSection: (section: ApiSection) => void;
+  /** ⌘/Ctrl+, */
+  openSettings: () => void;
   /** ⌘/Ctrl+D */
   toggleTheme: () => void;
   /** Escape */
@@ -54,9 +56,12 @@ export function useShortcuts(actions: ShortcutActions) {
       } else if (meta && event.key === "\\") {
         event.preventDefault();
         act.toggleInspector();
-      } else if (meta && ["1", "2", "3"].includes(event.key)) {
+      } else if (meta && sectionForKey(event.key)) {
         event.preventDefault();
-        act.showTab(event.key === "1" ? "operations" : event.key === "2" ? "schemas" : "history");
+        act.showSection(sectionForKey(event.key)!);
+      } else if (meta && event.key === ",") {
+        event.preventDefault();
+        act.openSettings();
       } else if (meta && event.key === "d") {
         event.preventDefault();
         act.toggleTheme();

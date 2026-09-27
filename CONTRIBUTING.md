@@ -232,10 +232,10 @@ are never written to disk; keeping a session across restarts would be a decision
 about credentials that nobody made.
 
 **No update check the user didn't ask for.** Studio promises it makes no request
-you didn't ask for, and an update check is a request. It runs from the menu, or
-at start only if the user turned that setting on. The setting is off by default,
+you didn't ask for, and an update check is a request. It runs from the menu or
+from Settings, or at start only if the user turned that setting on. The setting is off by default,
 and a test checks that. The check runs in Rust (`updates.rs`) so it can use the
-proxy from connection settings; the updater's JavaScript API isn't available to
+proxy from Network settings; the updater's JavaScript API isn't available to
 the web view.
 
 **The local MCP server is off until the user starts it, and hands out facts,

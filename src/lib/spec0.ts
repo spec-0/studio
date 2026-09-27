@@ -610,6 +610,41 @@ export function mockUrlFor(mocks: MockServer[], apiName: string): string | null 
   return mocks.find((mock) => mock.apiName === apiName)?.mockBaseUrl ?? null;
 }
 
+/** One hosted mock as the Mocks tab lists it. */
+export interface MockRow {
+  /** Stable key for the list. */
+  key: string;
+  /** The API the mock serves. */
+  apiName: string;
+  /** The mock's own name, when it has one different from the API's. */
+  name: string | null;
+  /** Absolute, so it can be copied into a terminal as is. */
+  url: string;
+  specVersion: string | null;
+}
+
+/**
+ * Hosted mocks as rows to show: absolute URLs, one name per API, sorted by API
+ * name. A mock with no usable URL is left out, since there's nothing to call.
+ */
+export function describeMocks(mocks: MockServer[], apiUrl: string): MockRow[] {
+  const rows: MockRow[] = [];
+  for (const mock of mocks) {
+    const url = absoluteMockUrl(apiUrl, mock.mockBaseUrl);
+    if (!url) continue;
+    const apiName = mock.apiName?.trim() || mock.name?.trim() || "Unnamed API";
+    const name = mock.name?.trim() && mock.name.trim() !== apiName ? mock.name.trim() : null;
+    rows.push({
+      key: mock.mockServerId ?? url,
+      apiName,
+      name,
+      url,
+      specVersion: mock.specVersion ?? null,
+    });
+  }
+  return rows.sort((a, b) => a.apiName.localeCompare(b.apiName) || a.url.localeCompare(b.url));
+}
+
 export interface CreatedMock {
   mockServerId?: string;
   apiName?: string;

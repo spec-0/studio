@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
+import { ApiBar, API_PANEL_ID } from "./components/ApiBar";
 import { ApiSwitcher } from "./components/ApiSwitcher";
-import { ConnectionDialog } from "./components/ConnectionDialog";
 import { DocumentView } from "./components/DocumentView";
 import { EnvironmentsDialog } from "./components/EnvironmentsDialog";
 import { GraphView } from "./components/GraphView";
@@ -8,7 +8,9 @@ import { CopiedNote, HistoryDetail } from "./components/HistoryDetail";
 import { HistoryView } from "./components/HistoryView";
 import { Inspector } from "./components/Inspector";
 import { Library } from "./components/Library";
+import { McpView } from "./components/McpView";
 import { MockKeyBar } from "./components/MockKeyBar";
+import { MocksView } from "./components/MocksView";
 import { OAuthDialog } from "./components/OAuthDialog";
 import { OpenDialog } from "./components/OpenDialog";
 import { OperationView } from "./components/OperationView";
@@ -16,10 +18,17 @@ import { PublishDialog } from "./components/PublishDialog";
 import { RunDialog } from "./components/RunDialog";
 import { SchemaView } from "./components/SchemaView";
 import { ScratchView } from "./components/ScratchView";
+import { AccountSettings } from "./components/settings/AccountSettings";
+import { AppearanceSettings } from "./components/settings/AppearanceSettings";
+import { DataSettings } from "./components/settings/DataSettings";
+import { McpSettings } from "./components/settings/McpSettings";
+import { NetworkSettings } from "./components/settings/NetworkSettings";
+import { UpdateSettings } from "./components/settings/UpdateSettings";
+import { SettingsView } from "./components/SettingsView";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { TitleBar } from "./components/TitleBar";
-import { Updater } from "./components/UpdateDialog";
+import { UpdateDialog } from "./components/UpdateDialog";
 import { McpHost } from "./components/mcp/McpHost";
 import { UrlBar } from "./components/UrlBar";
 import { useBoot } from "./hooks/useBoot";
@@ -30,6 +39,8 @@ import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { useHistoryRecords } from "./hooks/useHistoryRecords";
 import { useLibrary } from "./hooks/useLibrary";
+import { useMocks } from "./hooks/useMocks";
+import { useNavigation } from "./hooks/useNavigation";
 import { useOAuth } from "./hooks/useOAuth";
 import { usePublish } from "./hooks/usePublish";
 import { useRequestHistory } from "./hooks/useRequestHistory";
@@ -39,12 +50,14 @@ import { useSession } from "./hooks/useSession";
 import { useSettings } from "./hooks/useSettings";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { useTargeting } from "./hooks/useTargeting";
+import { useUpdater } from "./hooks/useUpdater";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { hostOf } from "./lib/connection";
 import { interpolate } from "./lib/env";
 import { attachApiIds, belongsTo } from "./lib/history";
 import * as library from "./lib/library";
 import type { LibraryEntry } from "./lib/library";
+import type { ApiSection, TopTab } from "./lib/navigation";
 import { describeExpiry } from "./lib/oauth";
 import { canPublish, whyNotPublishable } from "./lib/publish";
 import { toMarkdown } from "./lib/runner";
@@ -110,8 +123,6 @@ export default function App() {
     openTab,
     showEnvs,
     setShowEnvs,
-    showConnection,
-    setShowConnection,
     showRun,
     setShowRun,
     showOAuth,
@@ -230,6 +241,10 @@ export default function App() {
     connection: setConnection,
   });
 
+  const nav = useNavigation({ route, setRoute, hasOpenApi: Boolean(spec) });
+  const updater = useUpdater();
+  const mocks = useMocks(session, route === "mocks");
+
   const goLibrary = useCallback(() => {
     setRoute("library");
     setRecord(null);
@@ -285,6 +300,39 @@ export default function App() {
     clearResponse({ curl: true });
   }, [setRoute, setRecord, setCopiedFrom, clearResponse]);
 
+  /** The open API's four views, as the tabs under the top bar show them. */
+  const section: ApiSection =
+    view === "schema" ? "schemas" : view === "graph" ? "graph" : view === "document" ? "document" : "operations";
+
+  /** Switching what the work area shows closes a recorded request that was open in it. */
+  const showView = (next: typeof view) => {
+    setRecord(null);
+    setView(next);
+  };
+
+  const showSection = (next: ApiSection) => {
+    if (route !== "api" || !spec) return;
+    if (next === "operations") {
+      if (tab === "schemas") {
+        setTab("operations");
+        setQuery("");
+      }
+      showView("operation");
+    } else if (next === "schemas") {
+      if (tab !== "schemas") setQuery("");
+      setTab("schemas");
+      showView("schema");
+    } else {
+      showView(next);
+    }
+  };
+
+  const onTopTab = (next: TopTab) => {
+    setShowSwitcher(false);
+    if (next === "history") setRecord(null);
+    nav.goTop(next);
+  };
+
   useShortcuts({
     send: () => {
       // A recorded request has no Send; the shortcut mustn't reach the editor hidden behind it.
@@ -300,7 +348,8 @@ export default function App() {
     openEnvironments: () => setShowEnvs(true),
     goLibrary,
     toggleInspector: () => patchSettings({ inspectorOpen: !settings.inspectorOpen }),
-    showTab: setTab,
+    showSection,
+    openSettings: () => nav.openSettings(),
     toggleTheme: () => patchSettings({ dark: !settings.dark }),
     closeDialogs: closeOnEscape,
   });
@@ -324,11 +373,8 @@ export default function App() {
   const onApi = route === "api" && Boolean(spec);
   const onScratch = route === "scratch";
   const onHistory = route === "history";
-  /** Switching what the work area shows closes a recorded request that was open in it. */
-  const showView = (next: typeof view) => {
-    setRecord(null);
-    setView(next);
-  };
+  const showSidebar = view === "operation" || view === "schema";
+  const openNetworkFor = () => nav.openSettings("network", { host: hostOf(interpolate(server, vars)) });
 
   return (
     <div
@@ -352,35 +398,110 @@ export default function App() {
       />
 
       <TitleBar
-        onScratch={onScratch}
-        onApi={onApi}
-        onHistory={onHistory}
-        onOpenHistory={openHistory}
-        specTitle={spec?.title}
-        specVersion={spec?.version}
-        fromSpec0={current?.source.kind === "spec0"}
+        topTab={nav.topTab}
+        onTopTab={onTopTab}
         session={session}
         insecureHosts={connection.trusted.some((t) => t.insecure)}
         envFile={envFile}
         onSelectEnvironment={(activeId) => saveEnvFile({ ...envFile, activeId })}
         onEditEnvironments={() => setShowEnvs(true)}
-        inspectorOpen={settings.inspectorOpen}
-        onToggleInspector={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
-        showDocument={showDocument}
-        onToggleDocument={() => showView(showDocument ? "operation" : "document")}
-        showGraph={showGraph}
-        onToggleGraph={() => showView(showGraph ? "operation" : "graph")}
-        dark={settings.dark}
-        onToggleTheme={() => patchSettings({ dark: !settings.dark })}
-        onGoLibrary={goLibrary}
-        onSwitchApi={() => setShowSwitcher(true)}
-        onSignIn={openSignIn}
-        onOpenConnection={() => setShowConnection(true)}
-        onRun={() => setShowRun(true)}
-        onAddApi={() => setShowOpen(true)}
+        onOpenAccount={() => nav.openSettings("account")}
+        settingsOpen={route === "settings"}
+        onOpenSettings={() => nav.openSettings()}
       />
 
-      {onHistory ? (
+      {onApi && (
+        <ApiBar
+          kind="api"
+          title={spec!.title || current?.title || "Untitled API"}
+          version={spec!.version}
+          fromSpec0={current?.source.kind === "spec0"}
+          section={section}
+          onSection={showSection}
+          onGoLibrary={goLibrary}
+          onSwitchApi={() => setShowSwitcher(true)}
+          onRun={() => setShowRun(true)}
+          onAddApi={() => setShowOpen(true)}
+          inspectorOpen={settings.inspectorOpen}
+          onToggleInspector={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
+        />
+      )}
+      {onScratch && (
+        <ApiBar
+          kind="scratch"
+          onGoLibrary={goLibrary}
+          inspectorOpen={settings.inspectorOpen}
+          onToggleInspector={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
+        />
+      )}
+
+      {route === "settings" ? (
+        <>
+          <SettingsView
+            section={nav.settingsSection}
+            onSection={nav.setSettingsSection}
+            content={{
+              account: (
+                <AccountSettings
+                  session={session}
+                  onSignIn={openSignIn}
+                  onBrowseCatalog={openSignIn}
+                  onSignOut={() => updateSession(null)}
+                  onOpenSpec0={() => void openInBrowser(session?.appUrl ?? "")}
+                />
+              ),
+              network: (
+                <NetworkSettings
+                  settings={connection}
+                  onSave={saveConnectionSettings}
+                  jar={
+                    nav.lastApisRoute === "scratch"
+                      ? { id: "__scratch__", title: "Scratch" }
+                      : current
+                        ? { id: current.id, title: current.title }
+                        : null
+                  }
+                  suggestHost={nav.suggestHost}
+                />
+              ),
+              updates: <UpdateSettings updater={updater} />,
+              appearance: (
+                <AppearanceSettings
+                  dark={settings.dark}
+                  onDark={(dark) => patchSettings({ dark })}
+                  inspectorOpen={settings.inspectorOpen}
+                  onInspectorOpen={(inspectorOpen) => patchSettings({ inspectorOpen })}
+                />
+              ),
+              mcp: <McpSettings signedIn={Boolean(session)} />,
+              data: <DataSettings historyCount={requests.length} onClearHistory={clearHistory} />,
+            }}
+          />
+          <StatusBar summary="Settings · saved as you change them" envName={activeEnv?.name} result={null} />
+        </>
+      ) : route === "mocks" ? (
+        <>
+          <MocksView
+            signedIn={Boolean(session)}
+            orgName={session?.orgName}
+            mocks={mocks.mocks}
+            loading={mocks.loading}
+            error={mocks.error}
+            onRefresh={() => void mocks.refresh()}
+            onSignIn={openSignIn}
+          />
+          <StatusBar
+            summary={session ? `Mocks · ${session.orgName}` : "Mocks · sign in to see hosted mocks"}
+            envName={activeEnv?.name}
+            result={null}
+          />
+        </>
+      ) : route === "mcp" ? (
+        <>
+          <McpView signedIn={Boolean(session)} onOpenSettings={() => nav.openSettings("mcp")} />
+          <StatusBar summary="MCP" envName={activeEnv?.name} result={null} />
+        </>
+      ) : onHistory ? (
         <>
           <HistoryView
             entries={log}
@@ -468,15 +589,14 @@ export default function App() {
         />
       ) : (
         <>
-          <div className="panes">
+          <div className="panes" id={API_PANEL_ID} role="tabpanel" aria-labelledby={`api-tab-${section}`}>
+            {showSidebar && (
             <Sidebar
               spec={spec!}
-              tab={tab}
+              tab={view === "schema" ? "schemas" : tab === "history" ? "history" : "operations"}
               onTabChange={(next) => {
                 setTab(next);
                 setQuery("");
-                if (next === "operations") showView("operation");
-                if (next === "schemas") showView("schema");
               }}
               query={query}
               onQueryChange={setQuery}
@@ -497,6 +617,7 @@ export default function App() {
               onOpenRecord={setRecord}
               onOpenAllHistory={openHistory}
             />
+            )}
 
             <div className="workarea">
               {record && (
@@ -557,7 +678,7 @@ export default function App() {
                       onSend={() => void doSend()}
                       onSaveTarget={saveTarget}
                       unverified={unverifiedTarget}
-                      onOpenConnection={() => setShowConnection(true)}
+                      onOpenConnection={openNetworkFor}
                       envSkew={envVersionSkew}
                     />
                     {targetingMock && !current?.mockApiKey && (
@@ -710,16 +831,6 @@ export default function App() {
         />
       )}
 
-      {showConnection && (
-        <ConnectionDialog
-          settings={connection}
-          onSave={saveConnectionSettings}
-          jar={onScratch ? { id: "__scratch__", title: "Scratch" } : current ? { id: current.id, title: current.title } : null}
-          suggestHost={hostOf(interpolate(server, vars))}
-          onClose={() => setShowConnection(false)}
-        />
-      )}
-
       {showPublish && current && spec && (
         <PublishDialog
           signedIn={Boolean(session)}
@@ -765,8 +876,8 @@ export default function App() {
         />
       )}
 
-      <Updater />
-      <McpHost signedIn={Boolean(session)} />
+      <UpdateDialog updater={updater} />
+      <McpHost />
     </div>
   );
 }

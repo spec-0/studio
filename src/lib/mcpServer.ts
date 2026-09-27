@@ -163,8 +163,3 @@ export function ensureBridge(): Promise<UnlistenFn> {
   return bridge;
 }
 
-/** The menu item that opens the MCP panel was picked. */
-export async function onOpenRequested(handler: () => void): Promise<UnlistenFn> {
-  if (!inTauri) return () => {};
-  return listen("studio://open-mcp", handler);
-}
