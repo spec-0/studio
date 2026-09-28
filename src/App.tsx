@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { ApiBar, API_PANEL_ID } from "./components/ApiBar";
 import { ApiSwitcher } from "./components/ApiSwitcher";
+import { DeepLinkDialog } from "./components/DeepLinkDialog";
 import { DocumentView } from "./components/DocumentView";
 import { EnvironmentsDialog } from "./components/EnvironmentsDialog";
 import { GraphView } from "./components/GraphView";
@@ -35,6 +36,7 @@ import { UrlBar } from "./components/UrlBar";
 import { useBoot } from "./hooks/useBoot";
 import { useBulkRun } from "./hooks/useBulkRun";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
+import { useDeepLinks } from "./hooks/useDeepLinks";
 import { useDialogs } from "./hooks/useDialogs";
 import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useEnvironments } from "./hooks/useEnvironments";
@@ -269,6 +271,8 @@ export default function App() {
     setRecord(null);
     setShowSwitcher(false);
   }, [setRoute, setRecord, setShowSwitcher]);
+
+  const deepLinks = useDeepLinks({ entries, openEntry, addFromUrl, showLibrary: goLibrary });
 
   /**
    * History with older entries matched to their API by title where that's
@@ -972,6 +976,7 @@ export default function App() {
       )}
 
       <UpdateDialog updater={updater} />
+      <DeepLinkDialog links={deepLinks} />
       <McpHost />
     </div>
   );
