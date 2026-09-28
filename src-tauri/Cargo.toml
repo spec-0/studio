@@ -26,6 +26,15 @@ cookie_store = "0.22"
 url = "2"
 base64 = "0.23.1"
 tauri-plugin-updater = "2"
+# `spec0://` links. Handled in Rust (src/deep_link.rs) and handed to the web view
+# through one narrow command, so the web view gets no deep-link permission.
+tauri-plugin-deep-link = "2"
+
+# On Windows and Linux a link starts a second copy of the app; this forwards the
+# link to the copy already running instead. macOS delivers links to the running
+# app itself, so it isn't needed there.
+[target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 # Secret environment values go to the OS credential store (see src/secrets.rs).
 # `keyring` needs one native backend per platform, so the features are gated by

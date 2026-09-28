@@ -66,12 +66,13 @@ the plugin back.
 
 ## How the code is organised
 
-- **Rust does six things**: outbound HTTP (`http.rs`), the local listener used
+- **Rust does seven things**: outbound HTTP (`http.rs`), the local listener used
   during OAuth sign-in (`oauth.rs`, because a web view can't open a socket), file
   reading and writing (`storage.rs`), the OS credential store (`secrets.rs`,
   because only native code can reach it), checking for and installing updates
-  (`updates.rs`, with the menu in `menu.rs`), and the local MCP server's socket
-  (`mcp.rs`, for the same reason as sign-in). Everything else is React.
+  (`updates.rs`, with the menu in `menu.rs`), the local MCP server's socket
+  (`mcp.rs`, for the same reason as sign-in), and receiving `spec0://` links
+  from the OS (`deep_link.rs`). Everything else is React.
 - **Secrets go through narrow commands.** The web view passes an environment id
   and a variable name; Rust builds the credential store entry under one fixed
   service name. There is no command that reads an arbitrary keychain item.
@@ -275,6 +276,22 @@ no bug in the interface can make a secret come back. Tool definitions live in
 `src/lib/mcp-tools.json`, read by both sides. Don't add a tool that repeats what
 the remote Spec0 MCP server already offers for the whole organisation; this one
 is for what only Studio knows.
+
+**A `spec0://` link is a suggestion, never an instruction.** Any web page can
+trigger one, so Studio asks before it downloads anything, and shows the host
+the spec comes from, because that is what the user is agreeing to. Rust
+(`src-tauri/src/deep_link.rs`) only receives links, queues them and brings the
+window forward; it has no command that fetches. Parsing and the rules (only
+`spec0://open`, only `https` on a public host, no credentials in the address,
+the name shown as plain text) are in `src/lib/deepLink.ts` and tested there; the
+dialog's state is in `src/hooks/useDeepLinks.ts`. Pressing Open goes through the
+ordinary add-from-URL path. A spec already in the library opens from the saved
+copy, still after the same confirmation, so a page can't switch what's on screen
+without the user noticing. Cancel has focus, so a reflexive Enter does nothing.
+The scheme is registered by the macOS bundle, the Windows installer and the
+`.deb`'s desktop entry; an AppImage and development builds register themselves
+at start. On Windows and Linux, `tauri-plugin-single-instance` passes a link
+from a second launch to the running copy.
 
 **No `tauri-plugin-http` and no `fs` plugin** (see above).
 

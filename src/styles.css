@@ -2085,3 +2085,44 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 /* Anchored near the top rather than centred, so the buttons don't move under
    the pointer when a result appears above them. */
 .scrim.journey-scrim { align-items: start; padding-top: min(12vh, 96px); }
+
+/* ─── spec0:// links ──────────────────────────────────────────────────────── */
+
+/* The host is what the user is agreeing to download from, so it is the largest
+   thing in the dialog; the full address is below it, cut to one line. */
+.modal.deep-link { width: min(480px, 100%); }
+.deep-link-name { overflow-wrap: anywhere; }
+.deep-link-source {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: hsl(var(--surface));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+.deep-link-host { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.deep-link-url {
+  font-size: 11px;
+  color: hsl(var(--ink-2));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deep-link-notice {
+  position: fixed;
+  right: 16px;
+  bottom: 40px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 420px;
+  padding: 8px 8px 8px 12px;
+  font-size: 12px;
+  color: hsl(var(--ink-2));
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px hsl(0 0% 0% / 0.2);
+}

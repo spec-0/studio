@@ -1,4 +1,5 @@
 mod cookies;
+mod deep_link;
 mod git;
 mod http;
 mod mcp;
@@ -18,8 +19,21 @@ mod updates;
 ///  - **Sign-in** needs a loopback socket, which a webview cannot hold.
 ///  - **Secrets** go to the OS credential store, which only native code can reach.
 ///  - **The local MCP server** (off unless the user starts it) needs a socket too.
+///
+/// `spec0://` links are received here and handed to the web view (see `deep_link`).
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // Must come before the deep-link plugin: with its `deep-link` feature it
+    // passes a link from a second launch to the running copy, then this
+    // callback brings the window forward.
+    #[cfg(any(windows, target_os = "linux"))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        deep_link::focus(app);
+    }));
+
+    builder
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -27,6 +41,7 @@ pub fn run() {
         .on_menu_event(menu::on_event)
         .setup(|app| {
             updates::manage(app.handle());
+            deep_link::setup(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -54,6 +69,7 @@ pub fn run() {
             mcp::mcp_stop,
             mcp::mcp_status,
             mcp::mcp_respond,
+            deep_link::deep_link_take,
         ])
         .run(tauri::generate_context!())
         .expect("error while running spec0 Studio");

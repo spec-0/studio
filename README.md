@@ -93,6 +93,10 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
 - **Swagger 2.0 too.** Studio converts a Swagger 2.0 spec to OpenAPI 3.0 when you
   open it, on your computer, and says so on the API. The Raw tab still shows the
   file as imported.
+- **Open in Studio.** "Open in Studio" buttons on Spec0's public API registry
+  (links starting with `spec0://`) open the API here, after you confirm.
+  Studio shows where the spec would be downloaded from and fetches nothing
+  until you press Open.
 - **Kept locally.** Studio keeps a copy of the spec's text, so it opens quickly,
   works offline and still works if the file moves.
 - **Operations and schemas.** Browse operations by tag, and browse schemas (the
@@ -203,6 +207,11 @@ servers you point it at.
   time Studio starts; it is off unless you turn it on. The check sends nothing
   about your specs, environments or history, and it uses the proxy from your
   Network settings.
+- **Links from web pages ask first.** A `spec0://` link can be triggered by any
+  web page, so Studio shows the API's name, the host it would download from and
+  the full address, and downloads nothing until you press Open. It only accepts
+  `https` addresses on public hosts: never `localhost`, your private network,
+  or an address with a password in it.
 - **The local MCP server exists only when you turn it on.** It listens on this
   computer only (`127.0.0.1`), answers only requests that carry its token, turns
   away web pages, and stops when Studio quits. It never shares secret values.
