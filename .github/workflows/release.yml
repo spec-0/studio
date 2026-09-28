@@ -76,6 +76,21 @@ jobs:
           fi
           echo "Releasing $TAG"
 
+      # The release notes are written by hand and kept in the repository. They
+      # are what people read on the release page and in the app's update
+      # dialog, and a list of commit titles is not a release note. Checked
+      # before anything is built, so a missing file costs seconds, not a build.
+      - name: Release notes must exist
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          NOTES="docs/release-notes/$REF.md"
+          if [[ ! -s "$NOTES" ]]; then
+            echo "::error::Write the release notes in $NOTES before tagging $REF."
+            exit 1
+          fi
+
       # Every installed copy checks updates against the public key it was built
       # with. Publishing a release without signed update files, or with the
       # placeholder key, would ship copies that can never update themselves.
@@ -433,18 +448,22 @@ jobs:
           pattern: spec0-studio-*
           merge-multiple: true
 
-      # The release is created as a draft first, so its generated notes can go
-      # into latest.json, and so /releases/latest never points at a release
-      # whose latest.json isn't uploaded yet.
+      # The release is created as a draft first, so /releases/latest never
+      # points at a release whose latest.json isn't uploaded yet. Its notes
+      # come from docs/release-notes/<tag>.md, and the same text goes into
+      # latest.json, so the release page and the in-app update dialog agree.
       - name: Create the draft release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release view "$TAG" >/dev/null 2>&1 || \
-            gh release create "$TAG" --draft --title "spec0 Studio $TAG" --generate-notes
-          gh release view "$TAG" --json body -q .body > notes.md
+          cp "docs/release-notes/$TAG.md" notes.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" --draft --title "Spec0 Studio $TAG" --notes-file notes.md
+          fi
 
       - name: Write latest.json
         if: needs.preflight.outputs.updater == 'true'
