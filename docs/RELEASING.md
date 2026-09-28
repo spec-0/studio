@@ -29,8 +29,12 @@ one release to the next.
 
    CI stops before building anything if the tag doesn't match `package.json` and
    `tauri.conf.json`. It doesn't check `Cargo.toml`, so don't forget that one.
-2. Commit, then create the tag `vX.Y.Z` and push it.
-3. The `Release` workflow (`.github/workflows/release.yml`) runs these jobs:
+2. Write the release notes in `docs/release-notes/vX.Y.Z.md`. Write them for
+   people using Studio: what's new, what's fixed, anything they need to know.
+   They appear on the release page and in the app's update dialog, so a list of
+   commit titles won't do. CI stops before building if the file is missing.
+3. Commit, then create the tag `vX.Y.Z` and push it.
+4. The `Release` workflow (`.github/workflows/release.yml`) runs these jobs:
 
    | Job | Runs on | What it does |
    |---|---|---|
@@ -43,9 +47,16 @@ one release to the next.
    The three build jobs run in parallel. When the update key is set up, each one
    also produces its updater file and signs it with that key.
 
-The release is created as a draft first, so its generated notes can go into
-`latest.json`, and so `/releases/latest` never points at a release whose
-`latest.json` isn't uploaded yet.
+The release is created as a draft first, so `/releases/latest` never points at a
+release whose `latest.json` isn't uploaded yet. Its notes come from
+`docs/release-notes/<tag>.md`, and the same text goes into `latest.json`, so the
+release page and the update dialog always say the same thing.
+
+**Changing notes after publishing.** Editing the release page alone doesn't
+change what the update dialog shows. Also update `notes` in `latest.json`,
+recompute its line in `SHA256SUMS.txt`, and upload both with
+`gh release upload vX.Y.Z latest.json SHA256SUMS.txt --clobber`. The update
+signatures cover the downloaded files, not the notes, so they stay valid.
 
 **Test runs.** Running the workflow by hand (`workflow_dispatch`) does
 everything except publish. Use it to test a change to the pipeline. The files
