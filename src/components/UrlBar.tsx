@@ -6,7 +6,7 @@ import type { Target } from "../lib/targets";
 
 export type { Target };
 
-/** Sentinel for the "type your own" option — "" was indistinguishable from unset. */
+/** Sentinel for the "type your own" option; "" would be indistinguishable from unset. */
 const CUSTOM = "__custom__";
 
 interface Props {
@@ -35,7 +35,7 @@ interface Props {
    * The targeted platform environment runs a different version than the spec we hold.
    *
    * Said here rather than in the response pane because it explains the request being
-   * built, not the answer that comes back — a body shaped by 1.5.0's schema sent at a
+   * built, not the answer that comes back: a body shaped by 1.5.0's schema sent at a
    * host still running 1.4.0 can fail in ways that look like the client's fault.
    */
   envSkew?: { name: string; live: string; held: string } | null;
@@ -45,7 +45,7 @@ interface Props {
  * The address bar: method, base URL, and the operation's path, at the top of the
  * workspace where a developer expects to find it.
  *
- * The base URL is free text with the spec's servers as suggestions — pointing at
+ * The base URL is free text with the spec's servers as suggestions: pointing at
  * localhost or a host the spec never mentions is the common case, and a spec with
  * no `servers:` block must still be usable. The path is the operation's and isn't
  * editable; that's what makes this a spec-native client rather than a URL box.
@@ -99,10 +99,8 @@ export function UrlBar({
           className="target-select"
           value={isKnown ? resolvedTarget!.url : CUSTOM}
           onChange={(event) => {
-            // Picking "Custom" clears the field and puts the cursor in it. Before,
-            // its value was "" and the handler ignored falsy values, so the option
-            // was unselectable — the only way to reach custom was to delete the URL
-            // by hand, which then selected it as a side effect.
+            // Picking "Custom" clears the field and puts the cursor in it. It has
+            // its own sentinel value so the choice isn't mistaken for "unset".
             if (event.target.value === CUSTOM) {
               onChange("");
               requestAnimationFrame(() => urlInput.current?.focus());
@@ -148,13 +146,13 @@ export function UrlBar({
           <button
             className="tag unverified"
             onClick={onOpenConnection}
-            title="Certificate verification is off for this host — click to review"
+            title="Certificate verification is off for this host. Click to review."
           >
             <ShieldAlert size={10} /> unverified
           </button>
         )}
         {resolvedTarget?.kind === "env" && <span className="tag env">{resolvedTarget.label}</span>}
-        {/* A URL you typed is a perfectly good target — this just makes keeping it
+        {/* A URL you typed is a perfectly good target. This just makes keeping it
             a single click, so ad-hoc testing doesn't require setting anything up. */}
         {!isKnown && !malformed && value.trim() !== "" && (
           <button

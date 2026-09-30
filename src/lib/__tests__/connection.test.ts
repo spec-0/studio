@@ -73,7 +73,7 @@ describe("isUnverified", () => {
     expect(isUnverified(insecure, "https://a.example.com")).toBe(true);
   });
 
-  it("is false when a CA bundle was supplied — that is still verification", () => {
+  it("is false when a CA bundle was supplied, since that is still verification", () => {
     // Warning on the safe option is how you train someone to ignore the warning
     // that matters.
     const withCa = withTrust(base(), { host: "a.example.com", caBundlePem: "PEM" });
@@ -95,7 +95,7 @@ describe("transportFor", () => {
   });
 
   it("sends no TLS options for a host with no decision", () => {
-    // Absent, not `{insecure:false}` — the Rust side should take its own default
+    // Absent, not `{insecure:false}`: the Rust side should take its own default
     // rather than be told to do what it already does.
     expect(transportFor(base(), "https://a.example.com").tls).toBeUndefined();
   });

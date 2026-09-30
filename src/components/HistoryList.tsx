@@ -7,7 +7,7 @@ interface Props {
   entries: HistoryEntry[];
   selectedId: string | null;
   onOpen: (entry: HistoryEntry) => void;
-  /** Show which API each row came from — for the list that covers all of them. */
+  /** Show which API each row came from, for the list that covers all of them. */
   showApi?: boolean;
 }
 

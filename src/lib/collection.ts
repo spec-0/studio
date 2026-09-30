@@ -179,7 +179,7 @@ export function newCollection(name: string): Collection {
   };
 }
 
-// ── step keys ─────────────────────────────────────────────────────────────────
+// Step keys
 
 const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
 
@@ -209,7 +209,7 @@ export function uniqueStepKey(base: string, taken: Iterable<string>): string {
   for (let n = 2; ; n += 1) if (!used.has(`${clean}${n}`)) return `${clean}${n}`;
 }
 
-// ── paths, for collections saved next to their specs ──────────────────────────
+// Paths, for collections saved next to their specs
 
 function separatorOf(path: string): "/" | "\\" {
   return path.includes("\\") && !path.includes("/") ? "\\" : "/";
@@ -265,7 +265,7 @@ export function resolvePath(fromDir: string, ref: string): string {
   return parts.join(sep);
 }
 
-// ── secrets ───────────────────────────────────────────────────────────────────
+// Secrets
 
 const REFERENCE = /\{\{\s*[\w.-]+\s*\}\}/;
 
@@ -314,7 +314,7 @@ export function redactStep(step: CollectionStep): { step: CollectionStep; droppe
   };
 }
 
-// ── the file format ───────────────────────────────────────────────────────────
+// The file format
 
 /**
  * What a collection file looks like. Written by {@link serializeCollection}.
@@ -573,7 +573,7 @@ export function parseCollection(text: string, options: ParseOptions = {}): Colle
   }
   const file = raw as Partial<FileShape> & Record<string, unknown>;
   if (typeof file.version !== "number") {
-    throw new CollectionFormatError("No `version` — is this a spec0 Studio collection?");
+    throw new CollectionFormatError("No `version`. Is this a spec0 Studio collection?");
   }
   if (file.version > COLLECTION_FORMAT_VERSION) {
     throw new CollectionFormatError(
@@ -703,7 +703,7 @@ export function suggestedCollectionFileName(name: string): string {
   return `${slug || "collection"}${COLLECTION_SUFFIX}`;
 }
 
-// ── editing ───────────────────────────────────────────────────────────────────
+// Editing
 
 /** Move a step from one position to another, the way drag and Alt+arrow both do. */
 export function moveStep(collection: Collection, from: number, to: number): Collection {

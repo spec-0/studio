@@ -66,7 +66,7 @@ export function useDrafts({
     current.current = { key, seed, values: null };
   }
 
-  // ── on disk ──────────────────────────────────────────────────────────────────
+  // On disk
 
   const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flush = useCallback(() => {
@@ -112,7 +112,7 @@ export function useDrafts({
     [scheduleWrite],
   );
 
-  // ── the editor ───────────────────────────────────────────────────────────────
+  // The editor
 
   /** Remounts the editor for another operation, or after Discard. */
   const editorKey = `${key ?? ""}:${revision}`;
@@ -167,7 +167,7 @@ export function useDrafts({
     return Boolean(fingerprint && values && editorFingerprint(values) !== fingerprint);
   }, []);
 
-  // ── markers ──────────────────────────────────────────────────────────────────
+  // Markers
 
   const unsentOperations = useMemo(
     () => (apiId ? unsentIn(file.current, apiId) : new Set<string>()),
@@ -180,7 +180,7 @@ export function useDrafts({
     [version],
   );
 
-  // ── auth, per API ────────────────────────────────────────────────────────────
+  // Auth, per API
 
   /** The auth an API was left with: this session's, else a reference from the file. */
   const authFor = useCallback((id: string): AuthState | null | undefined => {

@@ -1,7 +1,7 @@
 /**
  * Stub for `@scalar/agent-chat`, aliased in at build time.
  *
- * Scalar's Ask-AI agent calls `api.scalar.com` from module scope — the request
+ * Scalar's Ask-AI agent calls `api.scalar.com` from module scope; the request
  * goes out when the chunk loads, before anything is rendered and regardless of
  * `mcp: { disabled: true }`. Studio is a client for **internal, private** APIs,
  * so a spec opening on someone's laptop must not produce a request to a third

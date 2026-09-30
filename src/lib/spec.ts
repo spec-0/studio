@@ -72,7 +72,7 @@ export interface SecuritySchemeSpec {
    * Declared `oauth2` flows.
    *
    * Parsed so a client can pre-fill token and authorization URLs and offer the
-   * scopes the API actually defines — asking someone to retype a URL the
+   * scopes the API actually defines. Asking someone to retype a URL the
    * document already states is exactly what a spec-native client shouldn't do.
    */
   flows?: OAuthFlowSpec[];
@@ -146,7 +146,7 @@ export function readDocument(text: string, documentUrl?: string): ReadDocument {
     throw new Error("The OpenAPI document's root must be an object.");
   }
   if (!doc.openapi && !doc.swagger) {
-    throw new Error("No `openapi` or `swagger` version field — is this an OpenAPI document?");
+    throw new Error("No `openapi` or `swagger` version field. Is this an OpenAPI document?");
   }
   if (!isSwagger2(doc)) return { doc };
   try {
@@ -216,7 +216,7 @@ export function deref(doc: Json, schema: Json | undefined, seen = new Set<string
   return schema;
 }
 
-/** The display name of a schema node — `Order`, `Order[]`, `string (email)`, … */
+/** The display name of a schema node: `Order`, `Order[]`, `string (email)`, … */
 export function typeLabel(doc: Json, schema: Json | undefined): string {
   if (!schema) return "any";
   if (typeof schema.$ref === "string") return schema.$ref.split("/").pop() ?? "ref";
@@ -232,7 +232,7 @@ export function typeLabel(doc: Json, schema: Json | undefined): string {
 function pickContent(content: Json | undefined): { contentType: string; schema?: Json; media?: Json } | undefined {
   if (!content) return undefined;
   // JSON first where it's offered, since that's what the generated example
-  // targets — but an endpoint that only takes multipart must report multipart,
+  // targets. But an endpoint that only takes multipart must report multipart,
   // or the editor offers a JSON box for a file upload.
   const preferred = Object.keys(content).find((k) => k.includes("json")) ?? Object.keys(content)[0];
   if (!preferred) return undefined;

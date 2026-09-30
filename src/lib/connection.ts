@@ -3,25 +3,24 @@ import { readStore, writeStore, STORE } from "./store";
 /**
  * How Studio reaches a host: certificate trust, proxy, timeout, redirects.
  *
- * This exists because Studio's market is **internal** APIs, and that is exactly
- * where staging sits behind a corporate proxy on a certificate no public CA
- * signed. A client that can't be told about either doesn't work at work.
+ * Studio is built for **internal** APIs, which often sit behind a corporate
+ * proxy on a certificate no public CA signed. A client that can't be told about
+ * either can't reach them.
  *
  * **Certificate trust is per-host and deliberate.** There is no global "ignore
- * TLS errors" switch, because that is how a tool teaches someone to stop reading
- * warnings — one bad afternoon and verification is off everywhere, forever,
- * including against the public internet. Naming the host keeps the decision
- * scoped to the thing it was made for, and lets the UI say so at send time.
+ * TLS errors" switch: it teaches people to stop reading warnings, and tends to
+ * get left on, including against the public internet. Naming the host keeps the
+ * decision scoped to what it was made for, and lets the UI say so at send time.
  */
 
 export interface HostTrust {
-  /** Hostname only — no scheme, no port. Matching is exact and case-insensitive. */
+  /** Hostname only, no scheme or port. Matching is exact and case-insensitive. */
   host: string;
   /**
    * Skip certificate verification for this host.
    *
    * The blunt instrument. Offered because sometimes there is genuinely no bundle
-   * to hand — but it is per-host, and the address bar says so whenever a request
+   * to hand. It is per-host, and the address bar says so whenever a request
    * is going somewhere it applies.
    */
   insecure?: boolean;
@@ -29,7 +28,7 @@ export interface HostTrust {
    * A private CA in PEM form, trusted *in addition to* the system roots.
    *
    * The safe path, and preferred: verification still happens, against a root the
-   * user supplied. Stored as content rather than a path — the file dialog is the
+   * user supplied. Stored as content rather than a path: the file dialog is the
    * consent step, and re-reading a path later would need a permission story that
    * buys nothing.
    */
@@ -112,8 +111,8 @@ export function withTrust(settings: ConnectionSettings, trust: HostTrust): Conne
   const host = trust.host.trim().toLowerCase();
   if (!host) return settings;
   const others = settings.trusted.filter((entry) => entry.host.toLowerCase() !== host);
-  // An entry that neither skips verification nor supplies a CA is not a decision
-  // — dropping it keeps the list a record of things the user actually chose.
+  // An entry that neither skips verification nor supplies a CA is not a decision;
+  // dropping it keeps the list a record of things the user actually chose.
   const meaningful = trust.insecure || trust.caBundlePem;
   return { ...settings, trusted: meaningful ? [...others, { ...trust, host }] : others };
 }

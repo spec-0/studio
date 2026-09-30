@@ -16,11 +16,11 @@ export interface SyncImpact {
   /** Operation ids (`METHOD /path`) that existed before and don't now. */
   operationsRemoved: string[];
   operationsAdded: string[];
-  /** History entries whose operation is gone — they can be read but not opened as an operation. */
+  /** History entries whose operation is gone; they can be read but not opened as an operation. */
   historyOrphaned: number;
   /**
    * The base URL in use, when it was one of the spec's declared servers before
-   * and isn't any more. Requests still work — it just became a custom URL.
+   * and isn't any more. Requests still work; it just became a custom URL.
    */
   serverNoLongerDeclared: string | null;
   /** The mock now serves an older contract than the spec. */
@@ -76,17 +76,17 @@ export function describeImpact(impact: SyncImpact): string[] {
   }
   if (impact.historyOrphaned) {
     lines.push(
-      `${impact.historyOrphaned} history entr${impact.historyOrphaned > 1 ? "ies" : "y"} can no longer open as their operation, which is gone — they can still be read`,
+      `${impact.historyOrphaned} history entr${impact.historyOrphaned > 1 ? "ies" : "y"} can no longer open as their operation, which is gone. They can still be read`,
     );
   }
   if (impact.serverNoLongerDeclared) {
     lines.push(
-      `${impact.serverNoLongerDeclared} is no longer a declared server — it still works, as a custom URL`,
+      `${impact.serverNoLongerDeclared} is no longer a declared server. It still works, as a custom URL`,
     );
   }
   if (impact.mockNowStale) {
     lines.push(
-      "The hosted mock still serves the previous version — responses from it may not match this spec",
+      "The hosted mock still serves the previous version. Responses from it may not match this spec",
     );
   }
   if (impact.operationsAdded.length) {
@@ -102,7 +102,7 @@ export function describeImpact(impact: SyncImpact): string[] {
  *
  * Prefers the version the platform reports, because that is a fact. Falls back to
  * "the spec was synced after the mock was attached", which is a heuristic and says
- * only that something changed — it will claim staleness for a sync that changed
+ * only that something changed, so it will claim staleness for a sync that changed
  * nothing relevant. When neither is available the answer is no: asserting skew we
  * can't substantiate would undermine the drift verdict it exists to protect.
  */
@@ -123,7 +123,7 @@ export function mockIsBehind(entry: {
  * Does the targeted environment run a different version than the spec we hold?
  *
  * Only a mismatch counts. An environment with nothing published to it reports no
- * version, and "unknown" is not "different" — claiming skew we can't substantiate
+ * version, and "unknown" is not "different": claiming skew we can't substantiate
  * would train people to ignore the warning that matters.
  */
 export function environmentSkew(
@@ -165,13 +165,13 @@ export function describeMockRefresh(result: RefreshedMock): string[] {
   const dropped = result.customVariantsDropped ?? [];
   return [
     result.refreshed
-      ? `Rebuilt against ${result.specVersion ?? "the current spec"} — same URL and key`
+      ? `Rebuilt against ${result.specVersion ?? "the current spec"}. Same URL and key`
       : "Already serving the current spec",
     ...(result.customVariantsCarriedOver
       ? [`${result.customVariantsCarriedOver} custom response variant(s) carried over`]
       : []),
     ...(dropped.length
-      ? [`${dropped.length} custom variant(s) dropped — their operation is gone: ${dropped.slice(0, 3).join(", ")}`]
+      ? [`${dropped.length} custom variant(s) dropped (their operation is gone): ${dropped.slice(0, 3).join(", ")}`]
       : []),
   ];
 }

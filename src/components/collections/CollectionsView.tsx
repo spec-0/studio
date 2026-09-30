@@ -372,7 +372,7 @@ function CollectionDetail({
     [collection.apis, entries],
   );
 
-  // ── the chain: what each step offers, and every link checked ──────────────
+  // The chain: what each step offers, and every link checked
 
   const outputs = useMemo(() => {
     const map = new Map<string, StepOutput>();
@@ -475,7 +475,7 @@ function CollectionDetail({
     setLinkDraft({ targetIndex: v.targetIndex, target: v.target, source: v.source, editing: v });
   const removeView = (v: LinkView) => applyChain((c) => removeLink(c, v, replacementFor(v)));
 
-  // ── moving and removing steps, with a warning when it breaks links ─────────
+  // Moving and removing steps, with a warning when it breaks links
 
   const describeLinks = (links: ChainLink[]) => (
     <ul className="confirm-list">
@@ -577,7 +577,7 @@ function CollectionDetail({
     ];
   };
 
-  // ── the step editor's view of its links ───────────────────────────────────
+  // The step editor's view of its links
 
   const chain: StepChain = {
     collection,

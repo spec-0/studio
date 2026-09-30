@@ -13,6 +13,9 @@
   "bugs": {
     "url": "https://github.com/spec-0/studio/issues"
   },
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -28,15 +31,15 @@
     "@cfworker/json-schema": "^4.1.1",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
-    "@scalar/api-reference-react": "^0.9.74",
+    "@scalar/api-reference-react": "^0.9.76",
     "@spec0/schema-graph": "^0.1.2",
     "@tauri-apps/api": "^2.12.0",
     "@tauri-apps/plugin-dialog": "^2.8.0",
     "@tauri-apps/plugin-fs": "^2.6.0",
-    "@tauri-apps/plugin-opener": "^2.6.0",
+    "@tauri-apps/plugin-opener": "^2.7.0",
     "@xyflow/react": "^12.12.0",
     "js-yaml": "^4.3.2",
-    "lucide-react": "^1.48.0",
+    "lucide-react": "^1.49.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

@@ -58,8 +58,8 @@ const SOURCES: ReadonlyArray<{ id: Source; label: string }> = [
 /**
  * Add an API: from the org's Spec0 catalog, a URL, or a local file.
  *
- * spec0 is one source among three, never a gate — nothing here is required to use
- * the client, which is the free-tier rule the whole product rests on.
+ * spec0 is one source among three, never a gate: nothing here is required to use
+ * the client without an account.
  */
 export function OpenDialog({
   session,
@@ -85,7 +85,7 @@ export function OpenDialog({
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
   /**
    * Mock keys captured this session. The API returns a mock's key **only** at
-   * creation — the list endpoint never carries it — so a key we saw once is worth
+   * creation (the list endpoint never carries it), so a key we saw once is worth
    * holding on to until the import that consumes it.
    */
   const [keys, setKeys] = useState<Record<string, string>>({});
@@ -265,7 +265,7 @@ export function OpenDialog({
 
           {source === "file" && (
             <>
-              <p className="meta">Open an OpenAPI 3.0 or 3.1 document — YAML or JSON.</p>
+              <p className="meta">Open an OpenAPI 3.0 or 3.1 document, in YAML or JSON.</p>
               <button
                 className="btn primary"
                 style={{ marginTop: 10 }}
@@ -334,7 +334,7 @@ export function OpenDialog({
           {source === "spec0" && !session && (
             <>
               {/* State the capability split explicitly. Someone on this tab is asking
-                  exactly this question, so answering it here isn't a nag — and the
+                  exactly this question, so answering it here isn't a nag, and the
                   status chip must never answer it anywhere else. */}
               <ConnectModes />
 
@@ -467,7 +467,7 @@ export function OpenDialog({
                       <span style={{ minWidth: 0, display: "grid", flex: 1 }}>
                         <span className="path">{entry.apiName}</span>
                         <span className="summary">
-                          {entry.teamName ?? "—"}
+                          {entry.teamName ?? "–"}
                           {entry.description ? ` · ${entry.description}` : ""}
                         </span>
                       </span>
@@ -506,14 +506,14 @@ export function OpenDialog({
                   ))}
                 {catalog.length === 0 && !busy && (
                   <p className="meta">
-                    No APIs in this org yet — <code>spec0 push</code> puts one here.
+                    No APIs in this org yet. <code>spec0 push</code> puts one here.
                   </p>
                 )}
               </div>
 
               <p className="meta" style={{ marginTop: 14 }}>
                 Every API opens by its id, so private ones work the same as published ones. An API
-                with a mock imports with it attached — switch between the real servers and the mock
+                with a mock imports with it attached: switch between the real servers and the mock
                 from the address bar.
               </p>
             </>

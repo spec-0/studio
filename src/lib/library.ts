@@ -5,11 +5,8 @@ import type { OAuthConfig } from "./oauth";
 import { readStore, writeStore, STORE } from "./store";
 
 /**
- * The library — the APIs you work with.
- *
- * This is what makes Studio a tool rather than a one-shot viewer. Opening a spec
- * used to replace the whole application; now it adds to a library you can come
- * back to, switch within, and leave.
+ * The library: the APIs you work with. Opening a spec adds it here, so you can
+ * come back to it, switch between specs, and leave.
  *
  * A library is a list of specs, each one still the organising primitive for
  * everything inside it. Studio's collections (`collection.ts`) sit on top of
@@ -17,7 +14,7 @@ import { readStore, writeStore, STORE } from "./store";
  * requests of their own.
  *
  * The document text is stored, not just a path: a dragged-in file has no stable
- * path, a file can move, and the free-tier promise is that a spec you've opened
+ * path, a file can move, and Studio's promise is that a spec you've opened
  * keeps working with no network. Text lives in its own `spec_<id>.json` so the
  * index stays small and cheap to read on launch.
  */
@@ -37,7 +34,7 @@ export interface ApiState {
   lastOperationId?: string | null;
   tab?: "operations" | "schemas" | "history";
   authScheme?: string | null;
-  /** Which face of the document you were reading — raw text or the reference. */
+  /** Which face of the document you were reading: raw text or the reference. */
   docTab?: "raw" | "reference";
 }
 
@@ -54,7 +51,7 @@ export interface LibraryEntry {
   syncedAt?: string;
   /**
    * Hosted mock for this API, captured at import. Kept on the entry rather than
-   * looked up live so the mock stays selectable offline and after signing out —
+   * looked up live so the mock stays selectable offline and after signing out,
    * and so "which target am I hitting" never depends on a network call.
    */
   mockUrl?: string;
@@ -80,12 +77,12 @@ export interface LibraryEntry {
   /**
    * Fallback staleness signal: the spec was synced after the mock was attached.
    *
-   * A heuristic — it says "something changed since", not "the mock is behind".
+   * A heuristic: it says "something changed since", not "the mock is behind".
    * Only consulted when {@link mockSpecVersion} is unavailable.
    */
   mockMayBeStale?: boolean;
   /**
-   * Where the platform says this API runs — cached so they survive going offline.
+   * Where the platform says this API runs, cached so they survive going offline.
    *
    * Destinations only: a name and a URL. Stored on the entry rather than
    * fetched on demand so a signed-out or offline session still offers the targets it
@@ -98,7 +95,7 @@ export interface LibraryEntry {
    * How to obtain a token for this API.
    *
    * Configuration, not a credential: client id, URLs and scopes are properties
-   * of the API. The client secret is *not* here — it's a `{{reference}}` into
+   * of the API. The client secret is *not* here; it's a `{{reference}}` into
    * the environment's secret store, so the app's "no per-API secret store" rule
    * holds rather than gaining an exception.
    */
@@ -118,7 +115,7 @@ export interface AvailableUpdate {
 const INDEX: LibraryEntry[] = [];
 
 function specFile(id: string): string {
-  // store_write only accepts flat names — no separators, no traversal.
+  // store_write only accepts flat names: no separators, no traversal.
   return `spec_${id}.json`;
 }
 
@@ -150,7 +147,7 @@ async function writeSpecText(id: string, text: string): Promise<void> {
   await writeStore(specFile(id), { text });
 }
 
-/** A cached platform environment. Mirrors the public payload exactly — no extra fields. */
+/** A cached platform environment. Mirrors the public payload exactly, with no extra fields. */
 export interface EnvTargetEntry {
   name: string;
   url: string;
@@ -282,7 +279,7 @@ export async function setEnvironments(
   return next;
 }
 
-/** Store this API's OAuth configuration. Never the secret — see {@link LibraryEntry.oauth}. */
+/** Store this API's OAuth configuration. Never the secret; see {@link LibraryEntry.oauth}. */
 export async function setOAuth(id: string, oauth: OAuthConfig | null): Promise<LibraryEntry[]> {
   const entries = await loadLibrary();
   const next = entries.map((entry) =>
@@ -339,7 +336,7 @@ export async function linkSpec0Api(id: string, apiId: string): Promise<LibraryEn
   return next;
 }
 
-/** Store a mock key on every entry that uses that mock — after a regenerate, all of them. */
+/** Store a mock key on every entry that uses that mock (after a regenerate, all of them). */
 export async function setMockKeyFor(mockServerId: string, apiKey: string): Promise<LibraryEntry[]> {
   const entries = await loadLibrary();
   const next = entries.map((entry) =>
@@ -365,7 +362,7 @@ export async function removeEntry(id: string): Promise<LibraryEntry[]> {
   return next;
 }
 
-/** Re-read a file-backed spec from disk — only possible when we still have a path. */
+/** Re-read a file-backed spec from disk. Only possible when we still have a path. */
 export async function rereadFile(entry: LibraryEntry): Promise<string | null> {
   if (entry.source.kind !== "file" || !inTauri) return null;
   try {

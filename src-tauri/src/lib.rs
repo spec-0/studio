@@ -10,9 +10,9 @@ mod secrets;
 mod storage;
 mod updates;
 
-/// spec0 Studio — Tauri shell.
+/// spec0 Studio: the Tauri shell.
 ///
-/// The shell is Rust for two structural reasons, not for the binary size:
+/// These parts are in Rust because the web view can't do them:
 ///
 ///  - **HTTP** goes out through `reqwest` in `http`, with exactly the headers the
 ///    caller asked for and **no `Origin`**. A desktop client isn't a browser and

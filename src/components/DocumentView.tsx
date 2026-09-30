@@ -1,8 +1,7 @@
 /**
- * The document — the spec itself, as text and as a reference.
+ * The document: the spec itself, as text and as a reference.
  *
- * Studio could always tell you what an API *contains*; it could never show you
- * the document. Two tabs, because the two readings answer different questions:
+ * Two tabs, because the two readings answer different questions:
  * `Raw` is the bytes you imported, which is what you need when you are about to
  * edit the file or work out why a parser disagrees with you; `Reference` is the
  * same document rendered the way `app.spec0.io` renders it, which is what you
@@ -45,7 +44,7 @@ interface Props {
   consumers: ApiConsumers | null;
   onOpenConsumers: () => void;
   /**
-   * Null when this document can't be published — the reason, so the absence of
+   * Null when this document can't be published: the reason, so the absence of
    * the button is explained where someone would look for it rather than being
    * a silence they have to interpret.
    */
@@ -86,7 +85,7 @@ export function DocumentView({
         </div>
 
         <div className="doc-actions">
-          {/* Availability never depends on drift — the git chip supplies
+          {/* Availability never depends on drift. The git chip supplies
               emphasis, this supplies the action. */}
           {publishBlockedReason === null ? (
             <button className="btn tight" onClick={onPublish}>
@@ -137,7 +136,7 @@ export function DocumentView({
 }
 
 /**
- * Where the file came from — never where the API runs.
+ * Where the file came from, never where the API runs.
  *
  * The title spells that out, and the dirty marker exists so a commit id is
  * never presented as describing bytes that have since been edited.

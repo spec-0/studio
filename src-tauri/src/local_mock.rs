@@ -64,7 +64,7 @@ const RESERVED_HEADERS: &[&str] = &[
     "access-control-allow-private-network",
 ];
 
-// ── responses ────────────────────────────────────────────────────────────────
+// Responses
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct MockResponse {
@@ -156,7 +156,7 @@ fn reason(status: u16) -> &'static str {
     }
 }
 
-// ── the checks ───────────────────────────────────────────────────────────────
+// The checks
 
 /// Split `host[:port]`, keeping an IPv6 literal's brackets.
 fn host_name(authority: &str) -> &str {
@@ -317,7 +317,7 @@ pub fn handle(request: &HttpRequest, mock: &str, answerer: &dyn Answerer) -> Moc
     }
 }
 
-// ── the servers ──────────────────────────────────────────────────────────────
+// The servers
 
 struct Running {
     port: u16,

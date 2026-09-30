@@ -3,17 +3,13 @@
 //! Why this exists rather than `tauri-plugin-http`: that plugin forwards the
 //! webview's origin (`tauri://localhost`) as an `Origin` header on every request.
 //! Any server with CORS configured then treats the call as a cross-origin browser
-//! request and rejects it — Spring answers `403 Invalid CORS request`, which is
-//! exactly what spec0's API did.
+//! request and rejects it (Spring answers `403 Invalid CORS request`).
 //!
-//! That quietly defeated the whole reason the shell is Rust. A desktop client is
-//! not a browser and has no origin; it should send no `Origin` header at all,
-//! which is precisely why the spec0 CLI (Node/`got`) never had this problem.
-//!
-//! So requests are built here with exactly the headers the caller asked for and
-//! nothing else. This is also where per-request timeout, redirect policy, proxy
-//! and certificate trust live — the things that decide whether Studio works on a
-//! corporate network at all.
+//! A desktop client is not a browser and has no origin, so it sends no `Origin`
+//! header at all. Requests are built here with exactly the headers the caller
+//! asked for and nothing else. This is also where per-request timeout, redirect
+//! policy, proxy and certificate trust live: the things that decide whether
+//! Studio works on a corporate network at all.
 
 use crate::cookies::Jar;
 use serde::{Deserialize, Serialize};
@@ -31,7 +27,7 @@ pub struct TlsConfig {
     #[serde(default)]
     ca_bundle_pem: Option<String>,
     /// Skip verification entirely. Not a default, and the UI is responsible for
-    /// saying so at send time — a client that quietly stops checking
+    /// saying so at send time. A client that quietly stops checking
     /// certificates is worse than one that fails loudly.
     #[serde(default)]
     insecure: bool,
@@ -41,7 +37,7 @@ pub struct TlsConfig {
 #[serde(rename_all = "camelCase")]
 pub struct ProxyConfig {
     /// Explicit proxy URL. When absent, the process environment
-    /// (`HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY`) is honoured — the same thing every
+    /// (`HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY`) is honoured, the same thing every
     /// other CLI on the machine does, which is what a developer expects.
     #[serde(default)]
     url: Option<String>,
@@ -64,7 +60,7 @@ pub struct MultipartPart {
     value: Option<String>,
     /// A file on disk, read here rather than shipped over IPC.
     ///
-    /// The alternative — base64 through the JSON bridge — inflates every upload
+    /// The alternative (base64 through the JSON bridge) inflates every upload
     /// by a third and holds the whole file in the webview's heap. A path plus a
     /// streaming read keeps a 200MB upload the same cost as a 200KB one, and the
     /// file dialog was already the consent step for reading it.
@@ -83,7 +79,7 @@ pub struct MultipartPart {
 #[derive(Deserialize, Clone)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum RequestBody {
-    /// Sent verbatim. JSON, XML, plain text — anything already serialised.
+    /// Sent verbatim. JSON, XML, plain text: anything already serialised.
     Text { text: String },
     /// `application/x-www-form-urlencoded`, encoded here so repeated keys work.
     Form { fields: Vec<(String, String)> },
@@ -119,8 +115,8 @@ pub struct HttpResponse {
     status: u16,
     status_text: String,
     headers: HashMap<String, String>,
-    /// The body decoded as text. Empty when the response wasn't text — see
-    /// `body_path`, so a PDF isn't mangled into replacement characters.
+    /// The body decoded as text. Empty when the response wasn't text (see
+    /// `body_path`), so a PDF isn't mangled into replacement characters.
     body: String,
     /// True when the payload isn't text and `body` is therefore not the content.
     binary: bool,
@@ -159,7 +155,7 @@ pub struct CookieRow {
 /// Cookie jars, one per API.
 ///
 /// A single shared jar would hand a session from one API's host to another's on
-/// any redirect that crossed between them — a quiet credential leak between two
+/// any redirect that crossed between them: a quiet credential leak between two
 /// things the user thinks of as unrelated. Keyed by the library entry's id.
 fn jars() -> &'static Mutex<HashMap<String, Arc<Jar>>> {
     static JARS: OnceLock<Mutex<HashMap<String, Arc<Jar>>>> = OnceLock::new();
@@ -178,7 +174,7 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
     let method = reqwest::Method::from_bytes(request.method.to_uppercase().as_bytes())
         .map_err(|_| format!("unsupported HTTP method: {}", request.method))?;
 
-    // No default headers — notably no Origin, and no compression negotiation the
+    // No default headers: notably no Origin, and no compression negotiation the
     // caller didn't ask for.
     let mut client = reqwest::Client::builder()
         .timeout(Duration::from_millis(request.timeout_ms.unwrap_or(30_000)));
@@ -207,7 +203,7 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
         // Additive: the system roots still apply, so trusting a private CA
         // doesn't quietly stop the rest of the internet from being verified.
         for certificate in reqwest::Certificate::from_pem_bundle(pem.as_bytes())
-            .map_err(|error| format!("that CA bundle isn't valid PEM — {error}"))?
+            .map_err(|error| format!("that CA bundle isn't valid PEM: {error}"))?
         {
             client = client.add_root_certificate(certificate);
         }
@@ -221,7 +217,7 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
         client = client.no_proxy();
     } else if let Some(url) = proxy.url.as_deref().filter(|u| !u.trim().is_empty()) {
         let mut configured = reqwest::Proxy::all(url)
-            .map_err(|error| format!("that proxy URL isn't usable — {error}"))?;
+            .map_err(|error| format!("that proxy URL isn't usable: {error}"))?;
         if let Some(list) = proxy.no_proxy.as_deref().filter(|l| !l.trim().is_empty()) {
             if let Some(bypass) = reqwest::NoProxy::from_string(list) {
                 configured = configured.no_proxy(Some(bypass));
@@ -254,7 +250,7 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
         let mut message = error.to_string();
         let mut source = std::error::Error::source(&error);
         while let Some(inner) = source {
-            message.push_str(&format!(" — {inner}"));
+            message.push_str(&format!(": {inner}"));
             source = inner.source();
         }
         if is_certificate_failure(&message) {
@@ -298,7 +294,7 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
 }
 
 /// Inline preview cap. Above this an image is offered as a file rather than
-/// base64'd across the bridge — a 30MB PNG would cost 40MB of string to show.
+/// base64'd across the bridge; a 30MB PNG would cost 40MB of string to show.
 const PREVIEW_LIMIT: usize = 2 * 1024 * 1024;
 
 struct DecodedBody {
@@ -313,7 +309,7 @@ struct DecodedBody {
 /// Content-type is the first signal but not the last: servers mislabel, and
 /// `application/octet-stream` is routinely used for JSON. So a payload that
 /// decodes cleanly as UTF-8 and doesn't contain NULs is treated as text
-/// regardless of what the header claimed — being wrong here means showing
+/// regardless of what the header claimed. Being wrong here means showing
 /// someone replacement characters instead of their response.
 fn decode_body(bytes: &[u8], content_type: &str) -> Result<DecodedBody, String> {
     let declared_text = is_textual_type(content_type);
@@ -339,7 +335,7 @@ fn decode_body(bytes: &[u8], content_type: &str) -> Result<DecodedBody, String> 
             .unwrap_or(0)
     ));
     std::fs::write(&path, bytes)
-        .map_err(|error| format!("couldn't hold the response body — {error}"))?;
+        .map_err(|error| format!("couldn't hold the response body: {error}"))?;
 
     let preview = (bytes.len() <= PREVIEW_LIMIT).then(|| {
         use base64::Engine as _;
@@ -372,7 +368,7 @@ fn apply_body(
 ) -> Result<reqwest::RequestBuilder, String> {
     match body {
         RequestBody::Text { text } => Ok(builder.body(text)),
-        // `form` sets the content type and encodes repeated keys correctly —
+        // `form` sets the content type and encodes repeated keys correctly;
         // hand-encoding this is where round-tripping a list of values goes wrong.
         RequestBody::Form { fields } => Ok(builder.form(&fields)),
         RequestBody::Multipart { parts } => {
@@ -380,7 +376,7 @@ fn apply_body(
             for part in parts {
                 if let Some(path) = part.path.as_deref().filter(|p| !p.is_empty()) {
                     let contents = std::fs::read(path)
-                        .map_err(|error| format!("couldn't read {path} — {error}"))?;
+                        .map_err(|error| format!("couldn't read {path}: {error}"))?;
                     let name = part
                         .file_name
                         .clone()
@@ -394,7 +390,7 @@ fn apply_body(
                     if let Some(mime) = part.content_type.as_deref().filter(|m| !m.is_empty()) {
                         file_part = file_part
                             .mime_str(mime)
-                            .map_err(|error| format!("{mime} isn't a usable content type — {error}"))?;
+                            .map_err(|error| format!("{mime} isn't a usable content type: {error}"))?;
                     }
                     form = form.part(part.name, file_part);
                 } else {
@@ -403,7 +399,7 @@ fn apply_body(
                     if let Some(mime) = part.content_type.as_deref().filter(|m| !m.is_empty()) {
                         text_part = text_part
                             .mime_str(mime)
-                            .map_err(|error| format!("{mime} isn't a usable content type — {error}"))?;
+                            .map_err(|error| format!("{mime} isn't a usable content type: {error}"))?;
                     }
                     form = form.part(part.name, text_part);
                 }
@@ -420,7 +416,7 @@ fn apply_body(
 pub fn save_response(from: String, to: String) -> Result<(), String> {
     std::fs::copy(&from, &to)
         .map(|_| ())
-        .map_err(|error| format!("couldn't save to {to} — {error}"))
+        .map_err(|error| format!("couldn't save to {to}: {error}"))
 }
 
 /// What an API's jar is holding, so a session isn't an invisible variable.
@@ -553,9 +549,9 @@ mod tests {
 
     #[test]
     fn text_that_declares_itself_text_is_never_treated_as_binary() {
-        let decoded = decode_body("héllo — em dash".as_bytes(), "text/plain; charset=utf-8").unwrap();
+        let decoded = decode_body("héllo → arrow".as_bytes(), "text/plain; charset=utf-8").unwrap();
         assert!(!decoded.binary);
-        assert_eq!(decoded.text, "héllo — em dash");
+        assert_eq!(decoded.text, "héllo → arrow");
     }
 
     #[test]
@@ -644,12 +640,12 @@ mod tests {
         tauri::async_runtime::block_on(http_send(request)).unwrap();
         let raw = String::from_utf8_lossy(&rx.recv_timeout(Duration::from_secs(5)).unwrap()).to_string();
 
-        // The boundary is written by reqwest — a Content-Type we set would be wrong.
+        // The boundary is written by reqwest; a Content-Type we set would be wrong.
         assert!(raw.contains("multipart/form-data; boundary="), "boundary must be generated");
         assert!(raw.contains(r#"name="file""#));
         assert!(raw.contains(r#"filename="avatar.txt""#), "the filename must travel");
-        // The file's *contents* — proving the path was read in Rust rather than
-        // needing the bytes shipped across the IPC bridge.
+        // The file's *contents*, which proves the path was read in Rust rather than
+        // the bytes being sent across the IPC bridge.
         assert!(raw.contains("hello from a file"));
         assert!(raw.contains(r#"name="caption""#) && raw.contains("hi"));
         std::fs::remove_file(file).ok();
@@ -679,7 +675,7 @@ mod tests {
         let raw = String::from_utf8_lossy(&rx.recv_timeout(Duration::from_secs(5)).unwrap()).to_string();
 
         assert!(raw.contains("application/x-www-form-urlencoded"));
-        // Repeated keys survive, and the encoding is done for us — hand-rolling
+        // Repeated keys survive, and the encoding is done for us; hand-rolling
         // this is exactly where a list of values gets silently flattened.
         assert!(raw.contains("tag=a+b&tag=c%26d"), "got: {raw}");
     }

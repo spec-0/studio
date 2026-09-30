@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   clearScreen: false,
   // Scalar's Ask-AI agent calls api.scalar.com from module scope, so no
-  // configuration flag can stop it — see src/scalar-agent-chat-stub.ts. A spec
+  // configuration flag can stop it (see src/scalar-agent-chat-stub.ts). A spec
   // for a private API must not generate a third-party request just by opening.
   resolve: {
     alias: [

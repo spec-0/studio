@@ -32,7 +32,7 @@ export type JourneyView = StepId | "done" | "blocked";
 export interface JourneyMock {
   mockServerId: string | null;
   url: string;
-  /** Null while unknown — the dialog then offers to fetch it or paste it. */
+  /** Null while unknown; the dialog then offers to fetch it or paste it. */
   apiKey: string | null;
 }
 
@@ -155,7 +155,7 @@ export function limitMessage(allowance: Allowance): string {
 }
 
 /**
- * "This uses 1 of your organisation's N mock servers (M in use)." — or null
+ * "This uses 1 of your organisation's N mock servers (M in use)." Null
  * when there is nothing to say: no numbers from the platform, or no limit.
  */
 export function usageLine(entitlements: Entitlements | null | undefined, key: string): string | null {

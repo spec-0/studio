@@ -23,7 +23,7 @@ import type { GitInfo } from "../lib/git";
 import type { TeamSummary } from "../lib/spec0";
 
 interface Props {
-  /** False when there's no session — a state, not an error. */
+  /** False when there's no session: a state, not an error. */
   signedIn: boolean;
   onSignIn: () => void;
   title: string;
@@ -91,14 +91,14 @@ export function PublishDialog({
 
         <div className="modal-body">
           {!signedIn ? (
-            /* Being signed out is a state with a way forward, not a failure —
-               and saying it here beats dropping someone on a dialog titled
-               "Open a spec" with no explanation of why they arrived. */
+            /* Being signed out is a state with a way forward, not a failure,
+               so it is explained here rather than by sending someone to the
+               sign-in dialog with no context. */
             <>
               <p>
                 Publishing sends this document to your organisation on spec0, so it needs an
-                account. Everything else in Studio — this spec, its operations, your environments
-                and history — keeps working without one.
+                account. Everything else in Studio (this spec, its operations, your environments
+                and history) keeps working without one.
               </p>
               <button className="btn primary" style={{ marginTop: 14 }} onClick={onSignIn}>
                 Sign in to spec0
@@ -165,7 +165,7 @@ export function PublishDialog({
                   spellCheck={false}
                 />
                 <span className="meta">
-                  From <code>info.version</code> in this document. Any tag works — semver, a date, a
+                  From <code>info.version</code> in this document. Any tag works: semver, a date, a
                   build id.
                 </span>
               </label>

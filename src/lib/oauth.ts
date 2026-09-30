@@ -5,20 +5,18 @@ import { readStore, writeStore, STORE } from "./store";
 /**
  * OAuth 2.0 token acquisition.
  *
- * Auth in Studio was a static value: whatever you typed, or `{{token}}` from an
- * environment. Most internal APIs sit behind OAuth, so the real workflow was
- * leave Studio → get a token elsewhere → paste it → repeat hourly. That is
- * enough friction to send someone back to the tool that does it for them.
+ * Most internal APIs sit behind OAuth. Getting the token inside Studio saves
+ * fetching one elsewhere and pasting it in every time it expires.
  *
  * ## Where things live, and why
  *
  * **The config lives with the API. The secret does not.** Client id, token and
- * authorization URLs and scopes are properties of the API — not secrets — and
+ * authorization URLs and scopes are properties of the API (not secrets) and
  * belong on the library entry. The **client secret is a secret**, so it goes
  * where every other secret already goes: an environment variable marked secret,
  * referenced here as `{{clientSecret}}`. Studio's standing rule is that there is
  * no per-API secret store, and OAuth is not a reason to carve an
- * exception into it — it's the case the rule was written for.
+ * exception into it: it's the case the rule was written for.
  *
  * A useful consequence: staging and production credentials are just two
  * environments, and switching environments switches which credentials are used.
@@ -40,7 +38,7 @@ export interface OAuthConfig {
   authorizationUrl?: string;
   clientId: string;
   /**
-   * How to find the client secret — a `{{variable}}` reference, not a literal.
+   * How to find the client secret: a `{{variable}}` reference, not a literal.
    *
    * Stored as a reference so the secret itself stays in the environment's secret
    * store. A literal here would be a per-API secret store by the back door.
@@ -147,7 +145,7 @@ function describeTokenFailure(status: number, body: string): OAuthError {
   try {
     parsed = JSON.parse(body);
   } catch {
-    // A token endpoint that doesn't answer JSON is usually the wrong URL —
+    // A token endpoint that doesn't answer JSON is usually the wrong URL:
     // an HTML login page or a 404 from the API's own host.
     const looksLikeHtml = /^\s*<(!doctype|html)/i.test(body);
     return new OAuthError(
@@ -182,7 +180,7 @@ function describeTokenFailure(status: number, body: string): OAuthError {
       );
     case "invalid_grant":
       return new OAuthError(
-        "The grant was rejected — an authorization code that was already used or has expired, or a refresh token the server no longer accepts.",
+        "The grant was rejected: an authorization code that was already used or has expired, or a refresh token the server no longer accepts.",
         code,
         detail,
       );
@@ -207,7 +205,7 @@ function toCachedToken(payload: TokenResponse, previous?: CachedToken | null): C
   return {
     accessToken: payload.access_token ?? "",
     // Servers may omit the refresh token on renewal and expect the old one to
-    // keep working — dropping it there would turn every refresh into the last.
+    // keep working; dropping it there would turn every refresh into the last.
     refreshToken: payload.refresh_token ?? previous?.refreshToken,
     expiresAt:
       typeof payload.expires_in === "number"
@@ -339,7 +337,7 @@ export async function refreshAccessToken(
   return toCachedToken(payload, token);
 }
 
-// ── PKCE ─────────────────────────────────────────────────────────────────────
+// PKCE
 
 const VERIFIER_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
 
@@ -355,7 +353,7 @@ export function base64UrlEncode(bytes: ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/** S256 challenge. Plain is not offered — it exists only for clients that can't hash. */
+/** S256 challenge. Plain is not offered; it exists only for clients that can't hash. */
 export async function createChallenge(verifier: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
   return base64UrlEncode(digest);

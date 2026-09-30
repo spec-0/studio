@@ -5,7 +5,7 @@ import { deref, type Json } from "./spec";
  *
  * A reference names a step by its key, then `status`, `headers` or `body`, then
  * a path into it: `.name` for a field, `[0]` (or `.0`) for an array item. No
- * expressions and no scripting — a reference points at one value, and picking
+ * expressions and no scripting: a reference points at one value, and picking
  * it by clicking is the main way to write one.
  *
  * Resolved before environment variables, so `{{token}}` next to a step
@@ -213,7 +213,7 @@ export function resolveStepRefs(
   return { text: filled, errors: [...new Set(errors)], links };
 }
 
-// ── what can be picked ────────────────────────────────────────────────────────
+// What can be picked
 
 export interface PickableField {
   path: PathSegment[];

@@ -42,7 +42,7 @@ import type { OperationSpec, ParsedSpec, SecuritySchemeSpec } from "./spec";
  * Pure: no React, no IO.
  */
 
-// ── Postman's shapes, as loosely as they are written ──────────────────────────
+// Postman's shapes, as loosely as they are written
 
 interface PmKeyValue {
   key?: string;
@@ -101,7 +101,7 @@ interface PmItem {
   auth?: PmAuth | null;
 }
 
-// ── the result ────────────────────────────────────────────────────────────────
+// The result
 
 /** The library an import is matched against: entries, and their specs as read. */
 export interface ImportLibrary {
@@ -141,7 +141,7 @@ export interface PostmanImport {
   summary: ImportSummary;
 }
 
-// ── small helpers ─────────────────────────────────────────────────────────────
+// Small helpers
 
 const str = (value: unknown): string => (value === undefined || value === null ? "" : String(value));
 const keyOf = (kv: PmKeyValue) => str(kv.key ?? kv.id);
@@ -208,7 +208,7 @@ function scriptsOf(events: PmEvent[] | undefined): { prerequest: string; test: s
   return { prerequest: pick("prerequest"), test: pick("test") };
 }
 
-// ── what a test script says ───────────────────────────────────────────────────
+// What a test script says
 
 /** Where a script took a variable's value from, when it's something a reference can say. */
 type ValueSource = { kind: "body"; path: PathSegment[] } | { kind: "header"; name: string };
@@ -319,7 +319,7 @@ export function readTestScript(script: string): ScriptFacts {
   return { ...(status ? { status } : {}), sets };
 }
 
-// ── URLs ──────────────────────────────────────────────────────────────────────
+// URLs
 
 interface RequestUrl {
   /** Scheme, host and path, as written in Postman: `{{baseUrl}}/orders/:orderId`. */
@@ -443,7 +443,7 @@ function locate(base: string, vars: Record<string, string>): Located {
   };
 }
 
-// ── finding the operation ─────────────────────────────────────────────────────
+// Finding the operation
 
 interface Match {
   entry: LibraryEntry;
@@ -569,7 +569,7 @@ function decide(method: string, where: Located, library: ImportLibrary, pathVars
   };
 }
 
-// ── auth and secrets ──────────────────────────────────────────────────────────
+// Auth and secrets
 
 /** Postman auth parameters as a map; v2.1 writes a list, v2.0 an object. */
 function authParams(auth: PmAuth, type: string): Record<string, string> {
@@ -698,7 +698,7 @@ function mapAuth(auth: PmAuth | null | undefined, spec: ParsedSpec | null, secre
   return out;
 }
 
-// ── bodies ────────────────────────────────────────────────────────────────────
+// Bodies
 
 /** `a=1&b={{x}}`, encoding everything but variables, for a request with no operation to encode it. */
 function encodeForm(fields: Array<{ key: string; value: string }>): string {
@@ -789,7 +789,7 @@ function mapBody(body: PmBody | undefined, linked: boolean, secrets: Secrets): B
   }
 }
 
-// ── headers ───────────────────────────────────────────────────────────────────
+// Headers
 
 /** Headers Studio sets itself for a linked step, from the spec. */
 const MANAGED = new Set(["content-type", "accept", "content-length", "host", "user-agent", "accept-encoding", "connection"]);
@@ -808,7 +808,7 @@ function headersOf(header: PmRequest["header"]): Array<{ key: string; value: str
   return enabled(header).map((kv) => ({ key: keyOf(kv), value: str(kv.value) }));
 }
 
-// ── flattening ────────────────────────────────────────────────────────────────
+// Flattening
 
 interface FlatRequest {
   name: string;
@@ -847,7 +847,7 @@ function flatten(
   }
 }
 
-// ── chaining ──────────────────────────────────────────────────────────────────
+// Chaining
 
 /** Every string a step sends, rewritten. */
 function rewriteStep(step: CollectionStep, rewrite: (text: string) => string): CollectionStep {
@@ -880,7 +880,7 @@ function usesVariable(step: CollectionStep, name: string): boolean {
   return used;
 }
 
-// ── the import ────────────────────────────────────────────────────────────────
+// The import
 
 /**
  * Turn a Postman collection into a Studio collection, matched against the

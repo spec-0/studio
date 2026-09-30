@@ -357,7 +357,7 @@ export function ChainView({ collection, views, steps, results, runningIndex, onA
                         {view.check.state === "unchecked" && <div className="field-meta">Not checked yet: {view.check.reason}</div>}
                       </td>
                       <td className="mono" title={value?.full}>
-                        {value?.short ?? <span className="field-meta">{view.check.state === "broken" ? "—" : view.value === undefined ? "no run yet" : ""}</span>}
+                        {value?.short ?? <span className="field-meta">{view.check.state === "broken" ? "–" : view.value === undefined ? "no run yet" : ""}</span>}
                       </td>
                       <td className="chain-table-actions">
                         <button type="button" className="btn ghost" onClick={() => onEdit(view)}>

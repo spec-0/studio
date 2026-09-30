@@ -11,7 +11,7 @@ interface Props {
 
 /**
  * Schema detail: the structure as a readable tree rather than raw JSON, plus the
- * two navigation affordances no generic client has — what this references, and
+ * two navigation affordances no generic client has: what this references, and
  * which operations carry it.
  */
 export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Props) {
@@ -23,7 +23,7 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
     if (!schema) return { fields: [] as [string, Json][], required: [] as string[], references: [] as string[] };
     const resolved = deref(spec.doc, schema);
 
-    // `allOf` contributes its parents' fields — show them merged, as a reader expects.
+    // `allOf` contributes its parents' fields; show them merged, as a reader expects.
     const merged = new Map<string, Json>();
     const req = new Set<string>();
     const collect = (node: Json | undefined, depth = 0) => {
@@ -144,7 +144,7 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
               {fields.length === 0 && (
                 <tr>
                   <td colSpan={3} className="desc">
-                    Not an object schema — {typeLabel(spec.doc, schema)}
+                    Not an object schema: {typeLabel(spec.doc, schema)}
                   </td>
                 </tr>
               )}

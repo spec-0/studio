@@ -8,19 +8,18 @@ import { setKnownSecrets } from "./redact";
  * An environment is a named bag of variables that interpolate into the URL,
  * headers, and body as `{{name}}`. A variable can be marked secret: the
  * environment file then records that the variable exists and is secret, but not
- * its value — so the file is safe to commit. Secret values live in the OS
+ * its value, so the file is safe to commit. Secret values live in the OS
  * credential store (see `secrets.ts`).
  *
  * **An environment supplies values, never destinations.** Where a request goes is
- * a *target*: a server from the spec, a hosted mock, or a URL you typed — those
+ * a *target*: a server from the spec, a hosted mock, or a URL you typed. Those
  * belong to the API, and the platform's own environments are runtime
  * environments describing where a version is deployed. A client environment is a
  * testing scenario: ids, tokens, per-case data.
  *
- * This type used to carry a `baseUrl` alongside its variables and appear in the
- * target list, which fused the two. It didn't survive contact with real cloud
- * environments arriving as targets. A `baseUrl` *variable* is still good practice
- * — it's just a variable, with no privileged field and no privileged UI.
+ * So there is no `baseUrl` field and environments are not targets. A `baseUrl`
+ * *variable* is still good practice: it's just a variable, with no privileged
+ * field and no privileged UI.
  */
 
 export interface Variable {
@@ -105,7 +104,7 @@ export async function saveEnvironments(file: EnvironmentFile): Promise<void> {
 
 export function newEnvironment(name: string): Environment {
   return {
-    // Date.now is fine here — this is a local id, not a reproducibility concern.
+    // Date.now is fine here: this is a local id, not a reproducibility concern.
     id: `env_${Date.now().toString(36)}`,
     name,
     variables: [],

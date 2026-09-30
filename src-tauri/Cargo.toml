@@ -1,9 +1,9 @@
 [package]
 name = "spec0-studio"
 version = "0.3.0"
-description = "spec0 Studio — spec-native API client"
-edition = "2021"
-rust-version = "1.77"
+description = "spec0 Studio: spec-native API client"
+edition = "2024"
+rust-version = "1.90"
 
 [lib]
 name = "spec0_studio_lib"

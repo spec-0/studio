@@ -197,7 +197,7 @@ export function useCollections({
     loaded,
   );
 
-  // ── storage ────────────────────────────────────────────────────────────────
+  // Storage
 
   useEffect(() => {
     void loadCollections().then((stored) => {
@@ -249,7 +249,7 @@ export function useCollections({
 
   const selected = collections.find((c) => c.id === selectedId) ?? null;
 
-  // ── specs ──────────────────────────────────────────────────────────────────
+  // Specs
 
   /** Read and parse the specs a collection needs, keeping those already read. */
   const ensureSpecs = useCallback(
@@ -316,7 +316,7 @@ export function useCollections({
     [session?.apiUrl],
   );
 
-  // ── the linked file ────────────────────────────────────────────────────────
+  // The linked file
 
   const checkDisk = useCallback(
     async (collection: Collection) => {
@@ -406,7 +406,7 @@ export function useCollections({
     [replace, notify],
   );
 
-  /** Save a linked collection to its file — unless the file changed since it was read. */
+  /** Save a linked collection to its file, unless the file changed since it was read. */
   const save = useCallback(
     async (id: string) => {
       const collection = latest.current.find((c) => c.id === id);
@@ -573,7 +573,7 @@ export function useCollections({
     [addFromText, importText],
   );
 
-  // ── editing ────────────────────────────────────────────────────────────────
+  // Editing
 
   const create = useCallback(
     (name: string, steps?: (collection: Collection) => Collection): Collection => {
@@ -813,7 +813,7 @@ export function useCollections({
     [entries, addOperation, create, freshName, update],
   );
 
-  // ── running ────────────────────────────────────────────────────────────────
+  // Running
 
   const tokenFor = useCallback(
     async (entry: LibraryEntry): Promise<string> => {
@@ -1035,7 +1035,7 @@ export function useCollections({
     cancelled.current.add(id);
   }, []);
 
-  // ── adding from elsewhere in the app ───────────────────────────────────────
+  // Adding from elsewhere in the app
 
   const [addMenu, setAddMenu] = useState<AddMenuState | null>(null);
   const [added, setAdded] = useState<AddedNote | null>(null);

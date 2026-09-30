@@ -14,7 +14,7 @@ let replacements = new Map<string, string>();
 
 /**
  * Tell redaction which values are secret. Called whenever environments load or
- * save, with every environment — not only the active one, since a request can
+ * save, with every environment, not only the active one, since a request can
  * carry a value copied from another.
  */
 export function setKnownSecrets(environments: Environment[]): void {

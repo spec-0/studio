@@ -57,7 +57,7 @@ export const STATUS_QUERY = "__status";
 const MAX_WARNINGS_HEADER = 1500;
 const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE"];
 
-// ── matching ─────────────────────────────────────────────────────────────────
+// Matching
 
 function decode(segment: string): string {
   try {
@@ -202,7 +202,7 @@ export function closestOperations(spec: ParsedSpec, path: string, limit = 3): st
     .map((entry) => entry.label);
 }
 
-// ── choosing the response ────────────────────────────────────────────────────
+// Choosing the response
 
 /** A status the caller asked for, from `Prefer: code=`, `X-Mock-Status` or `?__status=`. */
 export function requestedStatus(headers: Record<string, string>, query: URLSearchParams): number | null {
@@ -322,7 +322,7 @@ export function headerSafe(text: string): string {
   return text.replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7e]/g, "?");
 }
 
-// ── checking the request ─────────────────────────────────────────────────────
+// Checking the request
 
 function checkScalar(doc: Json, param: ParamSpec, value: string): string | null {
   const schema = deref(doc, param.schema);
@@ -423,7 +423,7 @@ export function warningsHeader(problems: string[]): string {
   return out;
 }
 
-// ── the answer ───────────────────────────────────────────────────────────────
+// The answer
 
 function json(status: number, body: unknown, headers: Array<[string, string]> = []): MockResponse {
   return {

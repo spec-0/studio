@@ -4,7 +4,7 @@ import { openInBrowser } from "../lib/store";
 import type { Updater } from "../hooks/useUpdater";
 
 /**
- * "Check for Updates…" — the dialog.
+ * The "Check for Updates…" dialog.
  *
  * Renders nothing until a check is asked for (from the menu, or from Settings),
  * or until a check at start (only if the user turned that on) finds a newer
@@ -44,7 +44,7 @@ export function UpdateDialog({ updater }: { updater: Updater }) {
               )}
               {installing && (
                 <p className="field-meta">
-                  Downloading and installing{progress ? ` — ${describeProgress(progress)}` : "…"}{" "}
+                  Downloading and installing{progress ? `: ${describeProgress(progress)}` : "…"}{" "}
                   Studio will restart when it's done.
                 </p>
               )}

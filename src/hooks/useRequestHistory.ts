@@ -12,7 +12,7 @@ export function useRequestHistory() {
     setRequests([]);
   }, []);
 
-  /** Scratch history only — spec-driven calls belong with their API. */
+  /** Scratch history only. Spec-driven calls belong with their API. */
   const scratchHistory = useMemo(
     () => requests.filter((entry) => entry.operationId === SCRATCH_OPERATION_ID),
     [requests],

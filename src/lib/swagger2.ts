@@ -103,7 +103,7 @@ export function convertSwagger2(source: Json, options: { documentUrl?: string } 
     return ref;
   };
 
-  // --- Schemas ---------------------------------------------------------------
+  // Schemas
 
   /**
    * A Swagger 2.0 schema as an OpenAPI 3.0 schema. The two are nearly the same
@@ -138,7 +138,7 @@ export function convertSwagger2(source: Json, options: { documentUrl?: string } 
       out.format = "binary";
     }
     // OpenAPI 3.0 has no `$ref` siblings; Swagger 2.0 didn't either, but specs
-    // add them. Leave them — Studio's own reader follows the `$ref` and the
+    // add them. Leave them: Studio's own reader follows the `$ref` and the
     // extra fields are harmless.
     return out;
   };
@@ -165,7 +165,7 @@ export function convertSwagger2(source: Json, options: { documentUrl?: string } 
   const collectionNote =
     "Some array parameters use a separator OpenAPI 3 can't express (tsv, or a non-comma separator on a header). They are sent comma-separated.";
 
-  // --- Parameters ------------------------------------------------------------
+  // Parameters
 
   /** `collectionFormat` as OpenAPI 3's `style`/`explode`. */
   const styleFor = (param: Json): Json => {
@@ -200,7 +200,7 @@ export function convertSwagger2(source: Json, options: { documentUrl?: string } 
     return sharedParams[refName(param.$ref)];
   };
 
-  // --- Media types -----------------------------------------------------------
+  // Media types
 
   /** The media types a response is offered in. */
   const producesFor = (op: Json): string[] => {
@@ -261,7 +261,7 @@ export function convertSwagger2(source: Json, options: { documentUrl?: string } 
     return { ...(required.length ? { required: true } : {}), content };
   };
 
-  // --- Responses -------------------------------------------------------------
+  // Responses
 
   const header = (node: Json): Json =>
     typeof node.$ref === "string"
@@ -292,7 +292,7 @@ export function convertSwagger2(source: Json, options: { documentUrl?: string } 
     return out;
   };
 
-  // --- Operations ------------------------------------------------------------
+  // Operations
 
   const operation = (op: Json, pathBodies: Json[]): Json => {
     const consumes: string[] = Array.isArray(op.consumes) ? op.consumes : globalConsumes;
@@ -357,7 +357,7 @@ export function convertSwagger2(source: Json, options: { documentUrl?: string } 
     return out;
   };
 
-  // --- Servers ---------------------------------------------------------------
+  // Servers
 
   /** host + basePath + schemes as server URLs. */
   function serversFor(schemes: unknown): Json[] {
@@ -382,7 +382,7 @@ export function convertSwagger2(source: Json, options: { documentUrl?: string } 
     return ordered.map((scheme) => ({ url: `${scheme}://${source.host}${basePath}` }));
   }
 
-  // --- Document --------------------------------------------------------------
+  // Document
 
   const paths: Json = {};
   for (const [path, item] of Object.entries<Json>(isObject(source.paths) ? source.paths : {})) {

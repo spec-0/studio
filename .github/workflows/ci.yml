@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
 
       - run: npm ci
@@ -40,12 +40,9 @@ jobs:
       - name: Build
         run: npm run build
 
-  # The check the unit suite structurally cannot perform.
-  #
   # Vitest runs in Node, which has no content security policy, so a dependency
-  # that needs `eval` passes every test and fails in the shipped app. That is
-  # precisely how validation stayed broken through a release. This runs the
-  # built bundle in a real browser under the real policy.
+  # that needs `eval` passes every unit test and still fails in the app. This
+  # runs the built bundle in a real browser under the real policy.
   csp:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -53,7 +50,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
 
       - uses: browser-actions/setup-chrome@v1
@@ -68,10 +65,8 @@ jobs:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
         run: npm run test:csp
 
-  # The Rust shell has had tests since the first release and none of them had
-  # ever run in CI. Studio now ships for macOS, Linux and Windows, and the
-  # shell has platform-specific code (menus, git discovery, the Windows console
-  # flag), so the tests run on all three rather than on one and hoping.
+  # The shell has platform-specific code (menus, git discovery, the Windows
+  # console flag), so the tests run on all three platforms Studio ships for.
   rust:
     strategy:
       fail-fast: false
@@ -95,9 +90,7 @@ jobs:
             libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
       # Tests only. `cargo fmt --check` and `clippy -D warnings` both fail on the
-      # existing code, and reformatting the shell to satisfy a linter does not
-      # belong in a change about tests — it would bury the thing under review.
-      # Worth adopting on its own, deliberately.
+      # existing code; adopting them is a separate change.
       - name: Test
         working-directory: src-tauri
         run: cargo test

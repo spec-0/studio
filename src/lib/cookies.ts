@@ -4,7 +4,7 @@ import { inTauri } from "./request";
 /**
  * The cookies an API is holding.
  *
- * Jars live in Rust for the lifetime of the process — a session is not written
+ * Jars live in Rust for the lifetime of the process. A session is not written
  * to disk, because persisting one silently across restarts is a credential
  * decision nobody made. This module exists so a session isn't an invisible
  * variable: you can see what's held and throw it away.

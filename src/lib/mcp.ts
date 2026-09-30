@@ -88,7 +88,7 @@ const OPERATION_CHARS = 60_000;
 export const SIGN_IN_MESSAGE =
   "Sign in to Spec0 in Studio to use this: ask the user to sign in there, then try again. Everything else on this server works without an account.";
 
-// ── results ──────────────────────────────────────────────────────────────────
+// Results
 
 function text(value: unknown): ToolResult {
   return {
@@ -112,7 +112,7 @@ function int(args: Json, key: string): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? Math.floor(value) : undefined;
 }
 
-// ── finding things ───────────────────────────────────────────────────────────
+// Finding things
 
 /** An API by id, then exact title, then a title that uniquely contains the text. */
 export function findApi(entries: LibraryEntry[], ref: string | undefined): LibraryEntry {
@@ -227,7 +227,7 @@ export function expandSchema(doc: Json, node: unknown, maxDepth: number, seen: s
   return out;
 }
 
-// ── search ───────────────────────────────────────────────────────────────────
+// Search
 
 function words(value: string | undefined): string {
   return (value ?? "")
@@ -293,7 +293,7 @@ export function scoreOperation(op: OperationSpec, query: string): number {
   return Math.round(score * (matched / terms.length) * 100) / 100;
 }
 
-// ── tools ────────────────────────────────────────────────────────────────────
+// Tools
 
 type Tool = (args: Json, deps: ToolDeps) => Promise<ToolResult>;
 
@@ -505,7 +505,7 @@ const getConnectionStatus: Tool = async (_args, deps) => {
   });
 };
 
-// ── signed-in tools ──────────────────────────────────────────────────────────
+// Signed-in tools
 
 async function requireSession(deps: ToolDeps): Promise<Session> {
   const session = await deps.loadSession();

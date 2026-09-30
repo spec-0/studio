@@ -68,7 +68,7 @@ const EMPTY_TARGET: JourneyTarget = {
 /**
  * The "Create a mock server" journey: its state, and the calls each step makes.
  *
- * The decisions — which step is next, what an error means — are in
+ * The decisions (which step is next, what an error means) are in
  * `lib/mockJourney`. This hook makes the calls, writes what they return into
  * the library, and points the address bar at the new mock.
  */
@@ -103,7 +103,7 @@ export function useMockJourney({
   openEntry: (entry: LibraryEntry) => Promise<void>;
   showOperation: (id: string) => void;
   doSend: () => Promise<void>;
-  /** The org's mock list changed — the Mocks tab reloads. */
+  /** The org's mock list changed, so the Mocks tab reloads. */
   onMocksChanged: () => void;
 }) {
   /** Null when closed; "pick" when opened without an API (from the Mocks tab). */
@@ -134,7 +134,7 @@ export function useMockJourney({
     void adoptCliSession().then((found) => setCliAvailable(Boolean(found)));
   }, [open]);
 
-  // ── opening ──────────────────────────────────────────────────────────────────
+  // Opening
 
   const start = useCallback(
     (entry: LibraryEntry) => {
@@ -207,7 +207,7 @@ export function useMockJourney({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, session, state.signedIn, state.mock?.mockServerId]);
 
-  // ── steps ────────────────────────────────────────────────────────────────────
+  // Steps
 
   const connect = useCallback(
     async (how: "cli" | "browser") => {

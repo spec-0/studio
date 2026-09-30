@@ -1,22 +1,18 @@
 /**
  * Run the app under its real content security policy and fail on any violation.
  *
- * This exists because of a bug the unit suite structurally could not catch.
- * Response validation threw on every request for two weeks: Ajv builds
- * validators with `new Function`, and `script-src 'self'` forbids it. Vitest
- * runs in Node, which has no CSP, so every test passed while the shipped app
- * was broken.
- *
- * The only way to test that property is to run the code in a browser under the
- * actual policy — which is what this does. It reads the policy out of
+ * Unit tests run in Node, which has no CSP, so code the policy blocks (for
+ * example a validator built with `new Function` under `script-src 'self'`)
+ * passes every test and fails in the app. This runs the built code in a
+ * browser under the actual policy. It reads the policy out of
  * `tauri.conf.json` rather than restating it, so relaxing the policy cannot
  * quietly relax the test with it.
  *
  * Two checks:
- *   1. The bundled app loads with no CSP violation. Catches any dependency that
- *      starts needing eval — this is the general guard.
- *   2. Response validation actually produces findings. Catches the specific
- *      regression, where the app loaded fine and only validation was dead.
+ *   1. The bundled app loads with no CSP violation. This is the general guard
+ *      against any dependency that starts needing eval.
+ *   2. Response validation actually produces findings. The app can load fine
+ *      while validation alone is blocked.
  *
  *   node scripts/csp-check.mjs
  */
@@ -51,13 +47,13 @@ const fail = (message) => {
   process.exit(1);
 };
 
-if (!existsSync(DIST)) fail("dist/ not found — run `npm run build` first.");
+if (!existsSync(DIST)) fail("dist/ not found. Run `npm run build` first.");
 if (!existsSync(CHROME)) fail(`Chrome not found at ${CHROME}. Set CHROME_PATH.`);
 
 // The policy under test is the one the app ships with, read from source.
 const conf = JSON.parse(await readFile(join(ROOT, "src-tauri/tauri.conf.json"), "utf8"));
 const csp = conf.app?.security?.csp;
-if (!csp) fail("tauri.conf.json declares no app.security.csp — nothing to test against.");
+if (!csp) fail("tauri.conf.json declares no app.security.csp, so there is nothing to test against.");
 
 // A fixture that drives validation directly. The app cannot send a request
 // without the Rust side, so the check that matters is exercised on its own.
@@ -101,10 +97,8 @@ await new Promise((done) => server.listen(PORT, "127.0.0.1", done));
 
 // GitHub's Linux runners ship Chrome without a correctly-owned SUID sandbox
 // helper, and Chrome aborts rather than run unsandboxed. The sandbox is process
-// isolation and has nothing to do with the policy under test, so dropping it on
-// a throwaway CI container changes what this script measures not at all — but it
-// stays on everywhere else, because a browser loading a local build is not a
-// reason to disable it on a developer's machine.
+// isolation and unrelated to the policy under test, so it is dropped on CI
+// only; it stays on on a developer's machine.
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
@@ -117,11 +111,10 @@ const openPage = async () => {
   const violations = [];
 
   // `securitypolicyviolation` is the reliable signal. Console capture is not:
-  // a violation the page swallows in a try/catch never surfaces there, which is
-  // exactly what happened with the bug this script exists for — validation
-  // caught its own EvalError and reported it as a note, so the console stayed
-  // clean while the feature was dead. Registered through CDP so the listener
-  // itself is not subject to the policy it is watching.
+  // a violation the page swallows in a try/catch (validation catches its own
+  // EvalError and reports it as a note) never surfaces there. Registered
+  // through CDP so the listener itself is not subject to the policy it is
+  // watching.
   await page.evaluateOnNewDocument(() => {
     globalThis.__CSP_VIOLATIONS__ = [];
     document.addEventListener("securitypolicyviolation", (event) => {
@@ -142,7 +135,7 @@ const openPage = async () => {
   return { page, collect };
 };
 
-// ── 1. The app itself loads clean ────────────────────────────────────────────
+// 1. The app itself loads clean
 {
   const { page, collect } = await openPage();
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: "networkidle0" });
@@ -157,7 +150,7 @@ const openPage = async () => {
   await page.close();
 }
 
-// ── 2. Response validation still works under it ──────────────────────────────
+// 2. Response validation still works under it
 {
   const { page, collect } = await openPage();
   await page.goto(`http://127.0.0.1:${PORT}/fixture`, { waitUntil: "networkidle0" });
@@ -171,10 +164,10 @@ const openPage = async () => {
   }
   if (!results) {
     failures += 1;
-    console.error("✗ the fixture produced no result at all — it threw before reporting.");
+    console.error("✗ the fixture produced no result at all. It threw before reporting.");
   } else {
-    // `status: "error"` is the exact shape of the shipped bug: validation ran,
-    // failed to construct a validator, and reported its own failure as a note.
+    // `status: "error"` means validation ran, failed to construct a validator,
+    // and reported its own failure as a note.
     if (results.valid?.status !== "ok") {
       failures += 1;
       console.error(

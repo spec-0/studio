@@ -29,7 +29,7 @@ interface Props {
 /**
  * Run a whole tag and report which responses match the spec.
  *
- * The assertions aren't written here or anywhere — they come from the schema
+ * The assertions aren't written here or anywhere; they come from the schema
  * Studio already validates against. This dialog is the wiring: choose a scope,
  * decide about mutating methods, watch it go, take the report away.
  */
@@ -114,7 +114,7 @@ export function RunDialog({
             )}
 
             <div className="field-meta" style={{ marginTop: 10 }}>
-              {willRun} of {preview.length} will run. Requests go one at a time — a burst at an
+              {willRun} of {preview.length} will run. Requests go one at a time: a burst at an
               internal service is a load test nobody asked for. Responses are checked against the
               schema the spec declares for the status actually returned.
             </div>
@@ -157,7 +157,7 @@ export function RunDialog({
                         </span>
                       </td>
                       <td className="type">
-                        {result.status ? `${result.status} · ${result.ms}ms` : "—"}
+                        {result.status ? `${result.status} · ${result.ms}ms` : "–"}
                       </td>
                       <td className="desc">
                         {result.verdict === "skipped" && result.skip

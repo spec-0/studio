@@ -102,7 +102,7 @@ export function OAuthDialog({
           {oauthSchemes.length > 0 && !config && (
             <div className="verdict none" style={{ marginBottom: 12 }}>
               <span className="glyph">✓</span>
-              <span>Pre-filled from this spec's declared flows — check the client id and scopes.</span>
+              <span>Pre-filled from this spec's declared flows. Check the client id and scopes.</span>
             </div>
           )}
 
@@ -148,7 +148,7 @@ export function OAuthDialog({
               </div>
               <input
                 value={draft.audience ?? ""}
-                placeholder="https://api.example.com — required by some providers"
+                placeholder="https://api.example.com (required by some providers)"
                 onChange={(event) => patch({ audience: event.target.value })}
               />
             </div>
@@ -178,7 +178,7 @@ export function OAuthDialog({
             <div className="field-meta">
               A <strong>reference</strong>, not the secret itself. Put the value in{" "}
               {activeEnvName ? <>the <strong>{activeEnvName}</strong> environment</> : "an environment"}{" "}
-              as a secret variable — that keeps it out of this API's config and lets staging and
+              as a secret variable. That keeps it out of this API's config and lets staging and
               production be two environments rather than two setups.
               {varNames.length > 0 && (
                 <>

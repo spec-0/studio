@@ -24,7 +24,7 @@ interface Props {
   /** One line on whether a usable token is currently held. */
   oauthStatus?: { ok: boolean; label: string } | null;
   /**
-   * Values to start from instead of generated examples — set when a recorded
+   * Values to start from instead of generated examples, set when a recorded
    * request is copied into a new one. Applied once when the operation opens.
    *
    * Path and query values are recovered from the recorded URL; without them the
@@ -63,7 +63,7 @@ export interface RequestValues {
   pathParams: Record<string, string>;
   queryParams: Record<string, string>;
   headerParams: Record<string, string>;
-  /** Whatever the declared content type calls for — raw text, fields, or parts. */
+  /** Whatever the declared content type calls for: raw text, fields, or parts. */
   body: BodyInput;
 }
 
@@ -107,7 +107,7 @@ export function OperationView({
   const [custom, setCustom] = useState<Array<{ key: string; value: string }>>(seeded.custom);
 
   /**
-   * Which editor to show — decided by the document, not by the user.
+   * Which editor to show. The document decides, not the user.
    *
    * The spec already says whether this endpoint takes JSON, a form or a file
    * upload. Making someone pick from a dropdown that the schema could have
@@ -126,9 +126,9 @@ export function OperationView({
     setCustom(seeded.custom);
   }, [seeded]);
 
-  // Keep the frame's send bar in sync — it owns the base URL and the Send button.
+  // Keep the frame's send bar in sync: it owns the base URL and the Send button.
   useEffect(() => {
-    // Spec-declared headers first, then anything typed by hand — so a custom row
+    // Spec-declared headers first, then anything typed by hand, so a custom row
     // can deliberately override a declared one.
     const merged = { ...headerParams };
     for (const row of custom) if (row.key.trim()) merged[row.key.trim()] = row.value;
@@ -176,7 +176,7 @@ export function OperationView({
 
   return (
     <>
-      {/* Method and path live in the address bar above — this header carries the
+      {/* Method and path live in the address bar above. This header carries the
           human layer: what the operation is for, and whether it's on its way out. */}
       <div className="op-head">
         <div className="op-title">
@@ -238,7 +238,7 @@ export function OperationView({
                             setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))
                           }
                         >
-                          <option value="">—</option>
+                          <option value="">–</option>
                           {enumValues.map((value) => (
                             <option key={String(value)} value={String(value)}>
                               {String(value)}
@@ -252,7 +252,7 @@ export function OperationView({
                             setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))
                           }
                         >
-                          <option value="">—</option>
+                          <option value="">–</option>
                           <option value="true">true</option>
                           <option value="false">false</option>
                         </select>
@@ -299,7 +299,7 @@ export function OperationView({
                 />
                 <div className="field-meta" style={{ marginTop: 4 }}>
                   {bodyError ? (
-                    <span style={{ color: "hsl(var(--danger))" }}>Invalid JSON — {bodyError}</span>
+                    <span style={{ color: "hsl(var(--danger))" }}>Invalid JSON: {bodyError}</span>
                   ) : (
                     <>Pre-filled from <code>{typeLabel(spec.doc, op.requestBody.schema)}</code>.</>
                   )}
@@ -324,7 +324,7 @@ export function OperationView({
                       {slot({ in: "form", name: row.key }, row.value, (
                         <input
                           value={row.value}
-                          placeholder="value — {{vars}} work here"
+                          placeholder="value ({{vars}} work here)"
                           onChange={(e) =>
                             setFormFields((prev) =>
                               prev.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)),
@@ -377,7 +377,7 @@ export function OperationView({
                       ) : (
                         <input
                           value={part.value ?? ""}
-                          placeholder="value — {{vars}} work here"
+                          placeholder="value ({{vars}} work here)"
                           onChange={(e) =>
                             setParts((prev) =>
                               prev.map((p, i) => (i === index ? { ...p, value: e.target.value } : p)),
@@ -467,7 +467,7 @@ export function OperationView({
                       paramName: declared.paramName,
                     });
                     // A declared oauth2 scheme carries its own token URL and
-                    // scopes — offer to set it up rather than leaving a text box
+                    // scopes, so offer to set it up rather than leaving a text box
                     // the user is expected to paste a token into.
                     if (declared.type === "oauth2") onConfigureOAuth?.(declared.name);
                   } else if (picked === "__bearer") {
@@ -475,7 +475,7 @@ export function OperationView({
                   } else if (picked === "__basic") {
                     onAuthChange({ schemeName: picked, value: auth?.value ?? "", type: "http", httpScheme: "basic" });
                   } else if (picked === "__oauth2") {
-                    // The value isn't typed here — it's the acquired access
+                    // The value isn't typed here. It's the acquired access
                     // token, filled in at send time from the token cache.
                     onAuthChange({ schemeName: picked, value: "", type: "oauth2" });
                     onConfigureOAuth?.();
@@ -503,7 +503,7 @@ export function OperationView({
                 <option value="__bearer">Bearer token</option>
                 <option value="__basic">Basic (user:password)</option>
                 <option value="__header">API key header</option>
-                <option value="__oauth2">OAuth 2.0 — Studio gets the token</option>
+                <option value="__oauth2">OAuth 2.0 (Studio gets the token)</option>
               </select>
 
               {auth?.schemeName === "__header" && (
@@ -536,7 +536,7 @@ export function OperationView({
                         ? "user:password"
                         : auth.type === "apiKey"
                           ? `value for ${auth.paramName ?? "the key"}`
-                          : "token — or {{token}} from an environment"
+                          : "token, or {{token}} from an environment"
                     }
                     onChange={(e) => onAuthChange({ ...auth, value: e.target.value })}
                   />
@@ -572,7 +572,7 @@ export function OperationView({
                 {slot({ in: "header", name: row.key.trim() }, row.value, (
                   <input
                     value={row.value}
-                    placeholder="Value — {{vars}} work here"
+                    placeholder="Value ({{vars}} work here)"
                     onChange={(e) =>
                       setCustom((prev) =>
                         prev.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)),

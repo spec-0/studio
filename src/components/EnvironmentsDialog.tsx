@@ -197,7 +197,7 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
                 </button>
 
                 <p className="meta" style={{ marginTop: 18, lineHeight: 1.6 }}>
-                  Use them anywhere as <code>{"{{name}}"}</code> — base URL, parameters, headers,
+                  Use them anywhere as <code>{"{{name}}"}</code>: base URL, parameters, headers,
                   auth, body. An environment supplies <strong>values</strong>, not destinations:
                   where a request goes is chosen in the address bar. A <code>baseUrl</code> variable
                   is a good habit, and it&apos;s an ordinary variable like any other.

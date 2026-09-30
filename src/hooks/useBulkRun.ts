@@ -50,7 +50,7 @@ export function useBulkRun({
    *
    * Sequential on purpose: a burst of concurrent requests at an internal service
    * is a load test nobody asked for. Results stream in as they land, so a long
-   * run is watchable and can be stopped with partial results kept — an aborted
+   * run is watchable and can be stopped with partial results kept. An aborted
    * run that discarded what it had learned would be worse than not stopping.
    */
   const runOperations = useCallback(

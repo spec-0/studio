@@ -1,5 +1,5 @@
 /**
- * Smoke test for Studio's spec pipeline — parse, example-generate, validate,
+ * Smoke test for Studio's spec pipeline: parse, example-generate, validate,
  * and answer every operation the way a local mock would.
  *
  * Run against real specs, not fixtures: the point is to find out whether the
@@ -25,7 +25,7 @@ let failures = 0;
 
 for (const file of process.argv.slice(2)) {
   const name = basename(file);
-  console.log(`\n━━━ ${name} ━━━`);
+  console.log(`\n== ${name}`);
   try {
     const text = readFileSync(file, "utf-8");
     console.log(`  size            ${(text.length / 1024 / 1024).toFixed(2)}MB`);
@@ -44,7 +44,7 @@ for (const file of process.argv.slice(2)) {
     console.log(`  servers         ${spec.servers.join(", ") || "(none)"}`);
     console.log(`  security        ${spec.securitySchemes.map((s) => s.name).join(", ") || "(none)"}`);
 
-    // Example generation over every operation that declares a body — the place a
+    // Example generation over every operation that declares a body. This is where a
     // naive generator either stack-overflows on recursion or emits `"string"`.
     const t1 = performance.now();
     let bodies = 0;
@@ -60,7 +60,7 @@ for (const file of process.argv.slice(2)) {
       `  with untyped placeholders  ${placeholders} (${bodies ? Math.round((placeholders / bodies) * 100) : 0}%)`,
     );
 
-    // Example generation over every named schema — the recursion stress test.
+    // Example generation over every named schema: the recursion stress test.
     const t2 = performance.now();
     for (const entry of spec.schemas) exampleFor(spec.doc, entry.schema, entry.name);
     console.log(`  ${spec.schemas.length} schema examples  ${ms(t2)}`);

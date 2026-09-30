@@ -124,7 +124,7 @@ pub async fn update_check(
             .unwrap_or(false);
         if !skip {
             let url = Url::parse(url.trim())
-                .map_err(|error| format!("that proxy URL isn't usable — {error}"))?;
+                .map_err(|error| format!("that proxy URL isn't usable: {error}"))?;
             builder = builder.proxy(url);
         }
     }

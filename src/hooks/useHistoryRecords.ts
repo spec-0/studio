@@ -56,7 +56,7 @@ export function useHistoryRecords({
     [entries],
   );
 
-  /** The spec an entry's API has now — the open one if it's open, otherwise read from the library. */
+  /** The spec an entry's API has now: the open one if it's open, otherwise read from the library. */
   const specFor = useCallback(
     async (entry: HistoryEntry): Promise<ParsedSpec | null> => {
       const api = libraryEntryFor(entry);

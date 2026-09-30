@@ -45,10 +45,10 @@ describe("storedResponseBody", () => {
   it("stores a note instead of a binary body", () => {
     const binary = { contentType: "application/pdf", byteLength: 40, path: "/tmp/x", previewBase64: null };
     expect(storedResponseBody(response({ bodyText: "", binary }))).toBe(
-      "(application/pdf · 40 bytes — not stored)",
+      "(application/pdf · 40 bytes, not stored)",
     );
     expect(storedResponseBody(response({ bodyText: "", binary: { ...binary, contentType: "" } }))).toBe(
-      "(binary · 40 bytes — not stored)",
+      "(binary · 40 bytes, not stored)",
     );
   });
 });

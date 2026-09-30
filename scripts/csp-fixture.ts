@@ -1,7 +1,7 @@
 /**
  * Exercised by `scripts/csp-check.mjs` inside a browser running the app's real
  * content security policy. Kept deliberately small: it must fail for one reason
- * only — that something in the validation path, or in opening a Swagger 2.0
+ * only: that something in the validation path, or in opening a Swagger 2.0
  * spec, needs eval.
  */
 import { validateResponse } from "../src/lib/validate";

@@ -30,8 +30,8 @@ export const DEFAULT_APP_URL = "https://app.spec0.io";
  * Every API in the org is fetched by UUID through
  * `GET /api/v1/public/apis/team/{apiId}/spec`, which the platform spec describes as
  * resolving private APIs "without a public org slug". That matters: the registry
- * route needs `{orgSlug}` and **no endpoint returns one** — not the API list, not
- * the org summary — so anything built on it needs the user to type a slug by hand.
+ * route needs `{orgSlug}` and **no endpoint returns one** (not the API list, not
+ * the org summary), so anything built on it needs the user to type a slug by hand.
  * Resolving by UUID sidesteps that entirely.
  *
  * When checking what the API offers, read the published spec, not a generated
@@ -43,10 +43,10 @@ export interface Session {
   appUrl: string;
   orgId: string;
   orgName: string;
-  /** Registry path segment. Guessed from the org name, correctable — see `slugify`. */
+  /** Registry path segment. Guessed from the org name, correctable. See `slugify`. */
   orgSlug?: string;
   token: string;
-  /** How we got here — shown in settings so the user knows what to revoke. */
+  /** How we got here, shown in settings so the user knows what to revoke. */
   source: "cli" | "browser" | "manual";
   connectedAt: string;
 }
@@ -70,7 +70,7 @@ export interface MockServer {
    * The spec version the mock actually serves.
    *
    * Absent on platforms that predate the field, in which case staleness falls back
-   * to comparing timestamps — a heuristic, and the reason this exists.
+   * to comparing timestamps: a heuristic, and the reason this exists.
    */
   specVersion?: string | null;
 }
@@ -93,7 +93,7 @@ export interface CatalogEntry {
   /** Also published to the public registry. */
   isPublic: boolean;
   mockServerId: string | null;
-  /** Absolute — see `absoluteMockUrl`. */
+  /** Absolute. See `absoluteMockUrl`. */
   mockUrl: string | null;
   /** The spec version the mock serves, when the platform reports it. */
   mockSpecVersion: string | null;
@@ -104,7 +104,7 @@ export const MOCK_KEY_HEADER = "X-Mock-API-Key";
 
 /**
  * `mockBaseUrl` comes back host-relative (`/mock/…`), which is useless as a request
- * target — resolve it against the API base so what lands in the address bar is
+ * target. Resolve it against the API base so what lands in the address bar is
  * something you could paste into curl.
  */
 export function absoluteMockUrl(apiUrl: string, mockBaseUrl: string | undefined): string | null {
@@ -119,7 +119,7 @@ export function absoluteMockUrl(apiUrl: string, mockBaseUrl: string | undefined)
 
 /**
  * The registry route is `/registry/{orgSlug}/{apiName}`, but **no endpoint on the
- * public surface returns the org slug** — not the API list, not the org summary.
+ * public surface returns the org slug**: not the API list, not the org summary.
  * The CLI sidesteps this because the user types `spec0 pull <org>/<name>` and
  * supplies it directly.
  *
@@ -135,7 +135,7 @@ export function slugify(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// ── Session ────────────────────────────────────────────────────────────────────
+// Session
 
 export async function loadSession(): Promise<Session | null> {
   return readStore<Session | null>(STORE.session, null);
@@ -145,7 +145,7 @@ export async function saveSession(session: Session | null): Promise<void> {
   await writeStore(STORE.session, session);
 }
 
-/** Sign out. Nothing local is lost — the client reverts to purely local operation. */
+/** Sign out. Nothing local is lost; the client reverts to purely local operation. */
 export async function signOut(): Promise<void> {
   await writeStore(STORE.session, null);
 }
@@ -177,7 +177,7 @@ export class SignInCancelled extends Error {
 /**
  * A fresh `state` value for one sign-in attempt: 32 random bytes from the
  * platform's cryptographic generator, hex-encoded. `Math.random` is not good
- * enough here — the value is what stops another page from completing a sign-in
+ * enough here: the value is what stops another page from completing a sign-in
  * the user never started.
  */
 export function newSignInState(): string {
@@ -261,7 +261,7 @@ export async function signInViaBrowser(
   };
 }
 
-// ── API ────────────────────────────────────────────────────────────────────────
+// API
 
 function headers(session: Session): Record<string, string> {
   return {
@@ -274,12 +274,9 @@ function headers(session: Session): Record<string, string> {
 /**
  * A failed platform call, with enough detail to act on.
  *
- * The first version of this collapsed everything into "spec0 rejected the token —
- * sign in again", which is unfalsifiable: it looks identical whether the token is
- * bad, the org header is wrong, the base URL points somewhere that doesn't serve
- * this route, or the backend returned a Problem document explaining exactly what
- * was wrong. The CLI gets this right — it reports the URL and the HTTP status —
- * and so should this.
+ * Carries the URL and the HTTP status, as the CLI reports them, so a bad token,
+ * a wrong org header, a base URL that doesn't serve this route and a Problem
+ * document explaining what was wrong don't all read as "sign in again".
  */
 export class Spec0Error extends Error {
   constructor(
@@ -303,7 +300,7 @@ export function describeBody(body: string): string | null {
       parsed.detail ?? parsed.message ?? parsed.title ?? parsed.error ?? parsed.error_description;
     if (typeof message === "string" && message.trim()) return message.trim();
   } catch {
-    /* not JSON — fall through to the raw text */
+    /* not JSON, fall through to the raw text */
   }
   return trimmed.slice(0, 300);
 }
@@ -314,7 +311,7 @@ async function request(
   accept: string,
   /**
    * Writes go through the same function as reads on purpose: every
-   * status this maps — a rejected token, the wrong org, a missing API — means
+   * status this maps (a rejected token, the wrong org, a missing API) means
    * the same thing whichever verb asked, and a second transport would be a
    * second place for those messages to drift.
    */
@@ -335,9 +332,9 @@ async function request(
       ...(init?.body === undefined ? {} : { body: init.body }),
     });
   } catch (error) {
-    // No HTTP status at all — DNS, TLS, offline, or a base URL that isn't a host.
+    // No HTTP status at all: DNS, TLS, offline, or a base URL that isn't a host.
     throw new Spec0Error(
-      `Couldn't reach ${base} — ${error instanceof Error ? error.message : String(error)}`,
+      `Couldn't reach ${base}: ${error instanceof Error ? error.message : String(error)}`,
       0,
       url,
       "",
@@ -352,7 +349,7 @@ async function request(
 
   if (response.status === 401) {
     throw new Spec0Error(
-      `The token was rejected (401). ${detail ?? "It may have been revoked — signing in again on another device or in the CLI rotates it."} [${where}]`,
+      `The token was rejected (401). ${detail ?? "It may have been revoked; signing in again on another device or in the CLI rotates it."} [${where}]`,
       401,
       url,
       body,
@@ -391,7 +388,7 @@ async function get<T>(session: Session, path: string): Promise<T> {
  *
  * A browser redirect only proves the user authorised us; it doesn't prove the
  * token and API base are usable together. Two routes are tried because they fail
- * for different reasons — if the org summary is unavailable but the API list
+ * for different reasons: if the org summary is unavailable but the API list
  * works, the token is fine and the problem is narrower than "sign in again".
  */
 export async function verify(session: Session): Promise<void> {
@@ -400,7 +397,7 @@ export async function verify(session: Session): Promise<void> {
     return;
   } catch (error) {
     if (!(error instanceof Spec0Error) || error.status === 0 || error.status === 401) throw error;
-    // 403/404/5xx on this one route doesn't mean the token is bad — probe a second.
+    // 403/404/5xx on this one route doesn't mean the token is bad; probe a second.
     try {
       await get<unknown>(session, "/api/v1/public/apis/team");
     } catch {
@@ -425,7 +422,7 @@ export async function listMocks(session: Session): Promise<MockServer[]> {
  * One environment an API is deployed to, as the platform reports it.
  *
  * A **destination**, not a client environment: a name the org chose and the
- * URL it serves at. It carries no variables and no secrets — those are the
+ * URL it serves at. It carries no variables and no secrets; those are the
  * developer's and never leave this machine.
  */
 export interface EnvTarget {
@@ -439,13 +436,13 @@ export interface EnvTarget {
 /**
  * Where an API actually runs, in the org's own order.
  *
- * The array's order is the promotion order the platform holds — there is no field
- * to sort by, deliberately — so it is preserved as received.
+ * The array's order is the promotion order the platform holds (there is no field
+ * to sort by, deliberately), so it is preserved as received.
  *
  * A 404 comes back as "no environments" rather than an error, on purpose. It
  * can mean the API has been removed or isn't visible to this org, or a platform
  * that doesn't serve this route. In every case there are no targets to offer,
- * and this only enriches an API that already opened fine — failing the open
+ * and this only enriches an API that already opened fine; failing the open
  * over it would trade a working client for a missing convenience. (Unlike
  * `refreshMock`, there is no action here the user could be told to take.)
  */
@@ -475,7 +472,7 @@ export async function listApiEnvironments(
 /**
  * How many consumers depend on an API.
  *
- * A consumer is a team or service holding a grant on the API — the blast-radius
+ * A consumer is a team or service holding a grant on the API: the blast-radius
  * answer to "if I change this, who is affected". Studio shows the count and
  * hands the detail off to the dashboard rather than restating it: who consumes
  * what is an org-governance question with its own screen, approval flow and
@@ -492,7 +489,7 @@ export interface ApiConsumers {
 }
 
 /**
- * Null rather than an error whenever the answer isn't available — a platform
+ * Null rather than an error whenever the answer isn't available: a platform
  * that predates this endpoint, an API the caller can't see, or a token that no
  * longer works. This decorates an API that already opened; nothing about it is
  * worth failing an open over.
@@ -516,7 +513,7 @@ export async function getApiConsumers(
   }
 }
 
-/** A team in the calling org — the destination choice when publishing. */
+/** A team in the calling org: the destination choice when publishing. */
 export interface TeamSummary {
   id: string;
   name: string;
@@ -526,7 +523,7 @@ export interface TeamSummary {
  * Teams the token's org has.
  *
  * Empty rather than an error when the platform won't say: publishing without a
- * team is legal — the API lands in the org's "Unassigned APIs" team — so a
+ * team is legal (the API lands in the org's "Unassigned APIs" team), so a
  * failure to list them narrows the choice rather than blocking the publish.
  */
 export async function listTeams(session: Session): Promise<TeamSummary[]> {
@@ -542,11 +539,11 @@ export async function listTeams(session: Session): Promise<TeamSummary[]> {
 }
 
 /**
- * Publish a spec to a team-scoped API — the endpoint `spec0 push` targets.
+ * Publish a spec to a team-scoped API, the endpoint `spec0 push` targets.
  *
  * Errors are deliberately not swallowed the way the read paths swallow theirs.
  * A missing consumer count is a decoration that failed; a failed publish is
- * work that didn't happen, and the caller has to be able to say why — including
+ * work that didn't happen, and the caller has to be able to say why, including
  * when the platform's own lint gate is the reason.
  */
 export async function publishTeamApi<T>(session: Session, body: unknown): Promise<T> {
@@ -558,7 +555,7 @@ export async function publishTeamApi<T>(session: Session, body: unknown): Promis
 }
 
 /**
- * Deep link to an API on the dashboard — where a publish lands.
+ * Deep link to an API on the dashboard, where a publish lands.
  */
 export function apiUrl(appUrl: string, apiId: string): string {
   return `${appUrl.replace(/\/+$/, "")}/apis/${encodeURIComponent(apiId)}`;
@@ -576,7 +573,7 @@ export function consumersUrl(appUrl: string, apiId: string): string {
   return `${base}/apis/${encodeURIComponent(apiId)}?tab=operations&sub=subscribers`;
 }
 
-/** APIs the org has published to the registry — these can actually be opened. */
+/** APIs the org has published to the registry. These can actually be opened. */
 export async function listRegistryApis(session: Session): Promise<RegistryEntry[]> {
   const rows = await get<Array<Record<string, unknown>>>(session, "/api/v1/public/apis");
   return rows
@@ -594,7 +591,7 @@ export async function listRegistryApis(session: Session): Promise<RegistryEntry[
  * The latest published spec for any API in the org, by UUID.
  *
  * The route declares `application/json` with a `string` schema, so the body is a
- * JSON-encoded string rather than the document itself — unwrap it, but fall back to
+ * JSON-encoded string rather than the document itself. Unwrap it, but fall back to
  * the raw text in case a future version returns YAML directly.
  */
 export async function fetchTeamApiSpec(session: Session, apiId: string): Promise<string> {
@@ -655,7 +652,7 @@ export async function fetchRegistrySpec(
   const orgSlug = session.orgSlug?.trim();
   if (!orgSlug) {
     throw new Spec0Error(
-      "No org slug set. The registry route needs it and the public API doesn't return it — set it in the spec0 tab.",
+      "No org slug set. The registry route needs it and the public API doesn't return it. Set it in the spec0 tab.",
       0,
       "",
       "",
@@ -720,7 +717,7 @@ export interface CreatedMock {
   created?: boolean;
   /**
    * Returned on first creation. The list endpoint never carries it, and creating
-   * again on an existing mock returns null — then `getMockApiKey` fetches it.
+   * again on an existing mock returns null; then `getMockApiKey` fetches it.
    */
   apiKey?: string | null;
 }
@@ -737,7 +734,7 @@ export async function createMock(session: Session, apiId: string): Promise<Creat
   });
   } catch (error) {
     throw new Spec0Error(
-      `Couldn't reach ${base} — ${error instanceof Error ? error.message : String(error)}`,
+      `Couldn't reach ${base}: ${error instanceof Error ? error.message : String(error)}`,
       0,
       `${base}/api/v1/public/mocks`,
       "",
@@ -770,7 +767,7 @@ export async function createMock(session: Session, apiId: string): Promise<Creat
   };
 }
 
-// ── Update detection ───────────────────────────────────────────────────────────
+// Update detection
 
 /** The API id inside a `spec0:<apiId>` library source ref, or null. */
 export function apiIdFromRef(ref: string): string | null {
@@ -815,7 +812,7 @@ export async function upstreamVersions(session: Session): Promise<Map<string, Up
  * Is what upstream holds different from what we stored?
  *
  * Compares the version tag first and falls back to `updatedAt`, because an API
- * can be republished under the same `info.version` — treating the tag as the only
+ * can be republished under the same `info.version`; treating the tag as the only
  * signal would miss exactly the republish a developer most wants to know about.
  * Both absent means we can't tell, and claiming an update we can't substantiate
  * is worse than staying quiet.
@@ -845,8 +842,8 @@ export interface RefreshedMock {
 /**
  * Rebuild a mock against its API's current spec.
  *
- * The mock keeps its id, URL and API key — the platform swaps the engine mock
- * behind a stable handle — so nothing a consumer holds has to change. Request
+ * The mock keeps its id, URL and API key (the platform swaps the engine mock
+ * behind a stable handle), so nothing a consumer holds has to change. Request
  * logs, environment variables and per-operation settings move with it.
  */
 export async function refreshMock(session: Session, mockServerId: string): Promise<RefreshedMock> {
@@ -860,7 +857,7 @@ export async function refreshMock(session: Session, mockServerId: string): Promi
       // gone (deleted, or not visible to this org). The mock id cached on the
       // library entry is what went stale; re-pulling the API replaces it.
       throw new Spec0Error(
-        "That mock server no longer exists — it may have been deleted. Re-pull the API from spec0 to pick up its current mock.",
+        "That mock server no longer exists. It may have been deleted. Re-pull the API from spec0 to pick up its current mock.",
         404,
         url,
         body,
@@ -876,7 +873,7 @@ export async function refreshMock(session: Session, mockServerId: string): Promi
   return (await response.json()) as RefreshedMock;
 }
 
-// ── Mock keys ──────────────────────────────────────────────────────────────────
+// Mock keys
 
 export interface MockKey {
   mockServerId: string;
@@ -917,7 +914,7 @@ export async function getMockApiKey(session: Session, mockServerId: string): Pro
 
 /**
  * The key for a mock Studio knows by id, or only by its API's id (older
- * library entries). Null — never an error — when Spec0 won't give it, so the
+ * library entries). Null, never an error, when Spec0 won't give it, so the
  * caller can fall back to asking the user to paste it.
  */
 export async function resolveMockKey(
@@ -948,7 +945,7 @@ export async function regenerateMockApiKey(session: Session, mockServerId: strin
   return key;
 }
 
-// ── Entitlements ───────────────────────────────────────────────────────────────
+// Entitlements
 
 /** One counted allowance, as the platform reports it. `limit: -1` means no limit. */
 export interface Allowance {
@@ -965,7 +962,7 @@ export interface Entitlements {
 /**
  * What the organisation may still create, if the platform says.
  *
- * Null when it doesn't — a 404 from a platform without this route, or a
+ * Null when it doesn't: a 404 from a platform without this route, or a
  * refusal. Callers treat null as "unknown" and simply don't show usage; the
  * create call itself still reports a limit if one is hit.
  */

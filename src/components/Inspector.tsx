@@ -14,10 +14,9 @@ interface Props {
    * The request went to a mock that was provisioned before the spec was last
    * synced. A mismatch is then very likely version skew rather than real drift,
    * and calling it drift would poison the verdict this feature exists for.
-   * Resolved properly when the platform can re-provision a mock.
    */
   mockStale?: boolean;
-  /** Present when the mock can be rebuilt from here — connected, and we know its id. */
+  /** Present when the mock can be rebuilt from here: connected, and we know its id. */
   onRefreshMock?: () => void;
   /** Write the held binary body somewhere the user chooses. */
   onSaveBody?: (contentType: string, byteLength: number) => void;
@@ -121,7 +120,7 @@ export function Inspector({
             <span className="glyph">↳</span>
             <span>
               Followed {result.redirects.length}{" "}
-              {result.redirects.length === 1 ? "redirect" : "redirects"} — this answer came from{" "}
+              {result.redirects.length === 1 ? "redirect" : "redirects"}. This answer came from{" "}
               <span className="mono">{result.redirects[result.redirects.length - 1]}</span>, not the
               URL you sent to.
             </span>
@@ -135,7 +134,7 @@ export function Inspector({
           <div className="verdict none">
             <span className="glyph">–</span>
             <span>
-              Not checked — no spec describes this response. Import or publish the API and every
+              Not checked: no spec describes this response. Import or publish the API and every
               response gets validated against it.
             </span>
           </div>
@@ -194,7 +193,7 @@ export function Inspector({
                 <div className="verdict none">
                   <span className="glyph">◈</span>
                   <span>
-                    {binary.contentType || "Binary"} · {formatBytes(binary.byteLength)} — not text,
+                    {binary.contentType || "Binary"} · {formatBytes(binary.byteLength)}. Not text,
                     so there's nothing useful to show here.
                   </span>
                 </div>
@@ -269,7 +268,7 @@ function Verdict({
           <span>
             This mock serves an older version of the spec, so these differences are version skew
             rather than drift.
-            {onRefreshMock ? " Rebuild it to compare like for like — same URL and key." : ""}
+            {onRefreshMock ? " Rebuild it to compare like for like (same URL and key)." : ""}
           </span>
           {onRefreshMock && (
             <button className="btn" style={{ marginLeft: "auto" }} onClick={onRefreshMock}>
@@ -295,7 +294,7 @@ function Verdict({
       <div className="verdict warn">
         <span className="glyph">⚠</span>
         <span>
-          Response diverges from the spec —{" "}
+          Response diverges from the spec:{" "}
           {[
             extra ? `${extra} undeclared field${extra > 1 ? "s" : ""}` : null,
             broken ? `${broken} schema violation${broken > 1 ? "s" : ""}` : null,

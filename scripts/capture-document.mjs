@@ -99,7 +99,7 @@ await browser.close();
 console.log("scalar mounted:      ", rendered.scalarMounted);
 console.log("reference nodes:     ", rendered.nodes);
 console.log("reference text head: ", JSON.stringify(rendered.text.replace(/\s+/g, " ").slice(0, 220)));
-console.log("raw lines rendered:  ", raw.lines, "(windowed — not the whole document)");
+console.log("raw lines rendered:  ", raw.lines, "(windowed, not the whole document)");
 console.log("raw gutter starts at:", raw.gutterFirst);
 console.log("raw bar:             ", raw.bar);
 console.log("token kinds present: ", raw.kinds.join(", "));

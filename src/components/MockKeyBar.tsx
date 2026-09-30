@@ -19,7 +19,7 @@ export function MockKeyBar({ apiName, onSave }: Props) {
     <div className="mock-key-bar">
       <TriangleAlert size={13} />
       <span>
-        This mock needs its own key — <code>X-Mock-API-Key</code>. Studio couldn&apos;t get it from
+        This mock needs its own key, <code>X-Mock-API-Key</code>. Studio couldn&apos;t get it from
         Spec0, so copy it from the mock&apos;s page there and paste it here.
       </span>
       <span className="spacer" />

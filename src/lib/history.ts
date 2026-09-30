@@ -6,7 +6,7 @@ import type { ParsedSpec } from "./spec";
 import { validateResponse, type Finding, type ValidationResult } from "./validate";
 
 /**
- * Request history — local only, never synced. A log of what was sent and what
+ * Request history: local only, never synced. A log of what was sent and what
  * came back, read in its own view. An entry is never loaded back into the
  * request editors as if it were live; running it again means copying it into a
  * new request, on purpose. This stays on the machine, always.
@@ -25,7 +25,7 @@ export interface HistoryEntry {
   /** `METHOD /path`, so the entry can be matched back to an operation. */
   operationId: string;
   /**
-   * The library entry this request belonged to. Newer entries only — older ones
+   * The library entry this request belonged to. Newer entries only; older ones
    * are matched to their API by `specTitle`.
    */
   apiId?: string;
@@ -36,7 +36,7 @@ export interface HistoryEntry {
    * A readable rendering of what was sent.
    *
    * For a text body that's the body itself. For a form or multipart request it's
-   * a summary — file *contents* are not recorded, so copying it into a new
+   * a summary. File *contents* are not recorded, so copying it into a new
    * request restores the shape and asks for the file again rather than
    * pretending it still has it.
    */
@@ -47,7 +47,7 @@ export interface HistoryEntry {
   validation?: "ok" | "mismatch" | "no_schema" | "error";
   /**
    * What the check found at the time it ran, capped. Stored rather than
-   * recomputed so the log says what happened then — re-checking against a spec
+   * recomputed so the log says what happened then; re-checking against a spec
    * that has since changed answers a different question. Older entries have
    * only the verdict.
    */
@@ -63,7 +63,7 @@ export interface HistoryEntry {
   /**
    * The conformance run this request belonged to.
    *
-   * Recorded so a run's requests are findable afterwards — a bulk run that left
+   * Recorded so a run's requests are findable afterwards: a bulk run that left
    * 40 indistinguishable rows in history would make the log worse, not better.
    */
   runId?: string;
@@ -102,7 +102,7 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
 
 /**
  * Replace secret values with their `{{name}}` references, everywhere a request
- * or its response could carry one — the URL (an API key in the query), headers
+ * or its response could carry one: the URL (an API key in the query), headers
  * (a bearer token, a Basic credential), and both bodies (a server that echoes
  * what it was sent).
  */
@@ -133,8 +133,8 @@ export function redactEntry<T extends Omit<HistoryEntry, "id" | "at">>(entry: T)
 /**
  * Remove secret values from history written before redaction existed.
  *
- * Older versions recorded the headers as sent, bearer token and all. Runs at
- * start-up once the secrets are known, and rewrites the file only if something
+ * Entries from older versions hold the headers as sent, bearer token included.
+ * Runs at start-up once the secrets are known, and rewrites the file only if something
  * changed.
  */
 export async function scrubHistory(): Promise<void> {
@@ -201,16 +201,15 @@ export function relativeTime(iso: string): string {
 /**
  * Recover the parameter values a recorded request was sent with.
  *
- * History stores the URL that went out, not the values that built it, so
- * copying an entry into a request used to restore headers and body but leave
- * every path and query field empty — `GET /accounts/{accountId}` came back with a blank
- * `accountId` sitting next to the 200 it returned, which reads as a bug in the
- * app rather than a gap in what was recorded.
+ * History stores the URL that went out, not the values that built it. Without
+ * this, a copied `GET /accounts/{accountId}` would show a blank `accountId` next
+ * to the 200 it returned, which reads as a bug in the app rather than a gap in
+ * what was recorded.
  *
  * The operation's path template is matched against the end of the recorded
  * path, so a server with its own base path (`https://api.example.com/v1`) lines
  * up correctly. If the literal segments don't agree the template isn't the one
- * that produced this URL, and path values are left empty rather than guessed —
+ * that produced this URL, and path values are left empty rather than guessed:
  * a wrong value silently placed in a field is worse than an empty one. Query
  * parameters are unambiguous, so they are returned either way.
  */
@@ -253,7 +252,7 @@ export function paramsFromEntry(
   return { pathParams, queryParams };
 }
 
-// ── what was recorded, and reading it back ─────────────────────────────────────
+// What was recorded, and reading it back
 
 /** Findings stored per entry. The validator already caps at 40; this is the file's own bound. */
 export const MAX_STORED_FINDINGS = 40;
@@ -286,7 +285,7 @@ export function checkFields(
 /**
  * A short, stable hash of a spec's text (cyrb53).
  *
- * Only used to answer "is this the same document the check ran against?" — not
+ * Only used to answer "is this the same document the check ran against?" It is not
  * a security boundary, so a fast non-cryptographic hash is the right tool. It
  * runs once per loaded spec, not per request.
  */
@@ -306,7 +305,7 @@ export function fingerprint(text: string): string {
 /**
  * The check result as recorded, or null if the entry has none.
  *
- * `findings` is undefined for entries recorded before findings were stored —
+ * `findings` is undefined for entries recorded before findings were stored:
  * the verdict is known, the detail isn't, and the view says so rather than
  * showing an empty list that would read as "nothing found".
  */
@@ -320,7 +319,7 @@ export function recordedCheck(
 /**
  * Has the spec changed since this entry's check ran?
  *
- * "unknown" when the entry predates fingerprints — guessing either way would
+ * "unknown" when the entry predates fingerprints; guessing either way would
  * misstate how much the recorded result can be trusted.
  */
 export function specChange(
@@ -350,7 +349,7 @@ function parsedBody(text: string | undefined): unknown {
 }
 
 /**
- * Check a recorded response against a spec — normally the current one.
+ * Check a recorded response against a spec, normally the current one.
  *
  * Null when it can't be checked at all: a scratch request, an operation the
  * spec no longer has, or an entry recorded before responses were stored. Uses
@@ -368,9 +367,9 @@ export function isScratch(entry: Pick<HistoryEntry, "operationId">): boolean {
   return entry.operationId === SCRATCH_OPERATION_ID;
 }
 
-// ── the list: which API, and filters ───────────────────────────────────────────
+// The list: which API, and filters
 
-/** Key identifying the API an entry belongs to — its library id, or its title for older entries. */
+/** Key identifying the API an entry belongs to: its library id, or its title for older entries. */
 export function apiKey(entry: Pick<HistoryEntry, "apiId" | "specTitle" | "operationId">): string {
   if (isScratch(entry)) return SCRATCH_OPERATION_ID;
   return entry.apiId ? `id:${entry.apiId}` : `title:${entry.specTitle}`;
@@ -380,7 +379,7 @@ export function apiKey(entry: Pick<HistoryEntry, "apiId" | "specTitle" | "operat
  * Does this entry belong to the given API?
  *
  * Newer entries carry the library id. Older ones only have the spec title, so
- * those match on title — the best that was recorded.
+ * those match on title, the best that was recorded.
  */
 export function belongsTo(
   entry: Pick<HistoryEntry, "apiId" | "specTitle" | "operationId">,
@@ -395,7 +394,7 @@ export function belongsTo(
  *
  * Entries written before the id was recorded carry only a spec title. Where
  * exactly one API in the library has that title the match is unambiguous, so
- * the entry is treated as belonging to it — otherwise one API would show up
+ * the entry is treated as belonging to it; otherwise one API would show up
  * twice in the filter. Ambiguous or unmatched titles are left alone; guessing
  * would file a request under the wrong API.
  */
@@ -416,7 +415,7 @@ export function attachApiIds(
   return changed ? out : entries;
 }
 
-/** Each API that appears in history, for the filter — newest first, scratch last. */
+/** Each API that appears in history, for the filter: newest first, scratch last. */
 export function apiChoices(
   entries: HistoryEntry[],
 ): Array<{ key: string; label: string; count: number }> {
@@ -464,13 +463,13 @@ export function filterHistory(entries: HistoryEntry[], filter: HistoryFilter): H
   return search(narrowed, filter.query ?? "");
 }
 
-// ── copying into a new request ─────────────────────────────────────────────────
+// Copying into a new request
 
 /**
  * Where "Copy to a new request" can put an entry.
  *
  * An operation still in the spec gets the normal editor, pre-filled. A scratch
- * request — or one whose operation is gone — can only go to the scratch pad,
+ * request, or one whose operation is gone, can only go to the scratch pad,
  * which takes any URL; the reason is returned so the view can say it.
  */
 export function copyDestination(
@@ -523,7 +522,7 @@ export function draftFromEntry(
   return { server, headers: entry.headers, body: entry.body, pathParams, queryParams };
 }
 
-/** "27 Sep 2026, 14:03" in the user's locale — the when, not just how long ago. */
+/** "27 Sep 2026, 14:03" in the user's locale: the when, not just how long ago. */
 export function absoluteTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;

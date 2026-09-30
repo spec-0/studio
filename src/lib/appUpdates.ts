@@ -5,8 +5,8 @@ import { inTauri } from "./request";
 import { readStore, writeStore, STORE } from "./store";
 
 /**
- * Updates to Studio itself — not to be confused with a spec having a newer
- * version upstream, which lives in `spec0.ts`.
+ * Updates to Studio itself, not to be confused with a spec having a newer
+ * version upstream (that lives in `spec0.ts`).
  *
  * Studio makes no request you didn't ask for. A check runs only when someone
  * picks "Check for Updates…" from the menu, or has turned on
@@ -28,7 +28,7 @@ export const DEFAULT_UPDATE_PREFS: UpdatePrefs = { checkOnStart: false };
 
 export async function loadUpdatePrefs(): Promise<UpdatePrefs> {
   const stored = await readStore<Partial<UpdatePrefs>>(STORE.updates, {});
-  // Only an explicit `true` turns it on — a missing or damaged file means off.
+  // Only an explicit `true` turns it on; a missing or damaged file means off.
   return { checkOnStart: stored.checkOnStart === true };
 }
 

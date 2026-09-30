@@ -1,8 +1,8 @@
 /**
  * A very small YAML/JSON tokenizer for the Raw tab.
  *
- * Deliberately not shiki/prism. The Raw tab shows one kind of document —
- * an OpenAPI spec, in one of two syntaxes — and a general-purpose highlighter
+ * Deliberately not shiki/prism. The Raw tab shows one kind of document
+ * (an OpenAPI spec, in one of two syntaxes), and a general-purpose highlighter
  * brings a grammar engine and a theme system to a job that needs neither.
  * Studio already carries one large rendering dependency for the Reference tab;
  * a second one to colour keys and strings would be the larger cost of the two.
@@ -10,7 +10,7 @@
  * The contract that keeps this honest is {@link tokenize} being lossless:
  * concatenating every token's text reproduces the input exactly. Highlighting
  * that silently eats a character is worse than no highlighting, because the
- * document on screen would no longer be the document on disk — and the whole
+ * document on screen would no longer be the document on disk, and the whole
  * point of Raw is that it is.
  */
 
@@ -112,7 +112,7 @@ export function tokenizeLine(line: string, syntax: Syntax, inBlock = false): Tok
  * Split `text` into highlight tokens.
  *
  * Whole-document convenience over {@link tokenizeLine}; the view uses the
- * per-line form. Lossless — see the module note.
+ * per-line form. Lossless; see the module note.
  */
 export function tokenize(text: string, syntax: Syntax = detectSyntax(text)): Token[] {
   const lines = text.split("\n");
