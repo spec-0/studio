@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StepOutput } from "../chain";
 import type { CollectionStep } from "../collection";
-import { historyRows, planStep, runSteps, summariseRun, describeRun, verdictFor, type StepResult } from "../collectionRun";
+import { historyRows, mockWarnings, planStep, runSteps, summariseRun, describeRun, verdictFor, type StepResult } from "../collectionRun";
 import type { HistoryEntry } from "../history";
 import { SAMPLE_SPEC } from "../sample";
 import { parseSpec } from "../spec";
@@ -190,5 +190,15 @@ describe("a run in history", () => {
     expect(run.name).toBe("Checkout");
     expect(run.entries.map((e) => e.id)).toEqual(["r1", "r2", "r3"]);
     expect([run.passed, run.failed]).toEqual([2, 1]);
+  });
+});
+
+describe("a local mock's warnings", () => {
+  it("reads what the mock said was wrong with the request", () => {
+    expect(mockWarnings({ "x-spec0-mock-warnings": "body: missing orderId; header Idempotency-Key is required" })).toEqual([
+      "body: missing orderId",
+      "header Idempotency-Key is required",
+    ]);
+    expect(mockWarnings({ "content-type": "application/json" })).toEqual([]);
   });
 });

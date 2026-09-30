@@ -10,6 +10,7 @@ import { exampleBody, exampleParam } from "./example";
 import { paramsFromEntry } from "./history";
 import { spec0ApiIdOf, type LibraryEntry } from "./library";
 import type { BodyInput } from "./request";
+import { localMockLabel, localMockUrl } from "./localMockServer";
 import { bodyModeFor, deref, type OperationSpec, type ParsedSpec } from "./spec";
 
 /**
@@ -298,7 +299,7 @@ export function stepForOperation(
     values.body ??
     (op.requestBody
       ? bodyModeFor(op.requestBody.contentType) === "text"
-        ? exampleBody(spec.doc, op.requestBody.schema)
+        ? exampleBody(spec.doc, op.requestBody.schema, op.requestBody.media)
         : undefined
       : undefined);
   return {
@@ -391,17 +392,31 @@ export interface TargetOption {
 }
 
 /**
- * What a step's target picker offers: the spec's servers, then the API's hosted
- * mock when it has one. A mock running on this machine will join the list when
- * Studio can start one; a typed URL is always available.
+ * What a step's target picker offers: the spec's servers, the API's hosted mock
+ * when it has one, and its local mock while one runs on this computer. A typed
+ * URL is always available.
+ *
+ * A local mock is stored as `{ kind: "local-mock" }`, never as its address: the
+ * port belongs to this computer and can change, and the step's API already
+ * says whose mock it is.
  */
-export function targetOptions(spec: ParsedSpec | null, mockUrl: string | null): TargetOption[] {
+export function targetOptions(
+  spec: ParsedSpec | null,
+  mockUrl: string | null,
+  localMockPort: number | null = null,
+): TargetOption[] {
   const options: TargetOption[] = (spec?.servers ?? []).map((url) => ({
     target: { kind: "server", url },
     label: url,
   }));
   if (mockUrl) options.push({ target: { kind: "mock" }, label: "Hosted mock" });
+  if (localMockPort) options.push({ target: { kind: "local-mock" }, label: localMockLabel(localMockPort) });
   return options;
+}
+
+/** The address of a running local mock, for {@link resolveTarget}. */
+export function localMockAddress(port: number | null | undefined): string | null {
+  return port ? localMockUrl(port) : null;
 }
 
 /** The target a new step gets from the address bar it was added from. */
@@ -455,7 +470,7 @@ export function resolveTarget(
     case "local-mock":
       return context.localMockUrl
         ? { url: context.localMockUrl, mock: true }
-        : { error: "No local mock is running for this API. Pick another target." };
+        : { error: "This step goes to the API's local mock, which isn't running. Start it, or pick another target." };
   }
 }
 

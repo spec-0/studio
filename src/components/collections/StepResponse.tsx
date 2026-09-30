@@ -44,6 +44,20 @@ export function StepResponse({ stepKey, result, running, onPick }: Props) {
           {result.reason ? ` · ${result.reason}` : result.verdict === "pass" ? " · the response matches the spec." : ""}
         </span>
       </div>
+      {result.mockWarnings && result.mockWarnings.length > 0 && (
+        <div className="section">
+          <h3>What the local mock said about the request</h3>
+          {result.mockWarnings.map((warning, index) => (
+            <div className="finding extra_field" key={index}>
+              <span className="glyph">●</span>
+              <span>{warning}</span>
+            </div>
+          ))}
+          <div className="field-meta">
+            The mock answered anyway. The request doesn't match the spec, so a real server may refuse it.
+          </div>
+        </div>
+      )}
       {result.validation && result.validation.findings.length > 0 && (
         <div className="section">
           <h3>Differences from the spec</h3>

@@ -26,6 +26,8 @@ interface Props {
   link: StepLink;
   /** The hosted mock for the step's API, when it has one. */
   mockUrl: string | null;
+  /** The API's local mock: its port while it runs, and starting it. Null where there are no local mocks. */
+  localMock: { port: number | null; onStart: () => void } | null;
   earlier: EarlierStep[];
   result: StepResult | undefined;
   running: boolean;
@@ -61,6 +63,7 @@ export function StepEditor({
   total,
   link,
   mockUrl,
+  localMock,
   earlier,
   result,
   running,
@@ -85,7 +88,11 @@ export function StepEditor({
 
   const linked = link.kind === "ok" || link.kind === "stale" ? link : null;
   const spec = linked?.spec ?? (link.kind === "unresolved" ? (link.spec ?? null) : null);
-  const options = useMemo(() => targetOptions(spec, mockUrl), [spec, mockUrl]);
+  const options = useMemo(
+    () => targetOptions(spec, mockUrl, localMock?.port ?? null),
+    [spec, mockUrl, localMock?.port],
+  );
+  const localMockDown = step.target?.kind === "local-mock" && !localMock?.port;
 
   // ── putting a reference into a field ───────────────────────────────────────
   const area = useRef<HTMLDivElement>(null);
@@ -230,7 +237,12 @@ export function StepEditor({
                   <option value={targetValue(step.target)}>{step.target.url} (no longer declared)</option>
                 )}
                 {step.target?.kind === "mock" && !mockUrl && <option value="mock">Hosted mock (none for this API)</option>}
-                {step.target?.kind === "local-mock" && <option value="local-mock">Local mock</option>}
+                {localMock && !localMock.port && (
+                  <option value="local-mock">Local mock (not running)</option>
+                )}
+                {!localMock && step.target?.kind === "local-mock" && (
+                  <option value="local-mock">Local mock (desktop app only)</option>
+                )}
                 <option value="custom">Custom URL…</option>
               </select>
             </label>
@@ -254,6 +266,23 @@ export function StepEditor({
         {keyError && <div className="field-meta danger-ink">{keyError}</div>}
       </header>
 
+      {localMockDown && (
+        <div className="verdict warn step-banner" role="note">
+          <AlertTriangle size={14} aria-hidden className="glyph" />
+          <span>
+            This step goes to {linked?.entry.title ?? "its API"}'s local mock, which isn't running
+            {localMock ? "." : ". Local mocks run in the desktop app."}
+          </span>
+          {localMock && (
+            <>
+              <span className="spacer" />
+              <button type="button" className="btn" onClick={localMock.onStart}>
+                Start local mock
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {link.kind === "stale" && (
         <div className="verdict warn step-banner" role="note">
           <AlertTriangle size={14} aria-hidden className="glyph" />

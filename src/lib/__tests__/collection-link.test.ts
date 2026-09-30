@@ -4,6 +4,7 @@ import {
   addOperationStep,
   findLibraryEntry,
   inputsFromEditor,
+  localMockAddress,
   linkStep,
   relinkStep,
   removeStep,
@@ -276,5 +277,20 @@ describe("keeping what the editor holds", () => {
       ),
     ).toBe(true);
     expect(sameInputs({ pathParams: {}, queryParams: {}, headers: {} }, { pathParams: {}, queryParams: {}, headers: {}, body: "x" })).toBe(false);
+  });
+});
+
+describe("a local mock as a target", () => {
+  it("is offered while it runs, and stored without its address", () => {
+    const options = targetOptions(sample, null, 4012);
+    expect(options[options.length - 1]).toEqual({ target: { kind: "local-mock" }, label: "Local mock · 127.0.0.1:4012" });
+    expect(targetOptions(sample, null, null).some((o) => o.target.kind === "local-mock")).toBe(false);
+    expect(resolveTarget({ kind: "local-mock" }, { servers: [], mockUrl: null, localMockUrl: localMockAddress(4012) })).toEqual({
+      url: "http://127.0.0.1:4012",
+      mock: true,
+    });
+    expect(resolveTarget({ kind: "local-mock" }, { servers: [], mockUrl: null, localMockUrl: localMockAddress(null) })).toEqual({
+      error: expect.stringMatching(/isn't running/),
+    });
   });
 });

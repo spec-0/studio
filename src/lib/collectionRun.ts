@@ -33,6 +33,17 @@ export interface StepResult {
   request?: RequestPlan;
   /** Sent to a mock rather than a real server. */
   mock?: boolean;
+  /** What a local mock said didn't match the spec in the request it was sent. */
+  mockWarnings?: string[];
+}
+
+/**
+ * The problems a local mock found in a request, from its
+ * `X-Spec0-Mock-Warnings` header (`; `-separated). Empty when there were none.
+ */
+export function mockWarnings(headers: Record<string, string>): string[] {
+  const value = Object.entries(headers).find(([name]) => name.toLowerCase() === "x-spec0-mock-warnings")?.[1];
+  return value ? value.split(/;\s+/).map((part) => part.trim()).filter(Boolean) : [];
 }
 
 // ── building a step's request ─────────────────────────────────────────────────

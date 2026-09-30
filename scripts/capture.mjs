@@ -644,7 +644,7 @@ await wait(300);
 await page.screenshot({ path: `${outDir}/26j-mocks-regenerate-confirm-dark.png` });
 console.log("26j-mocks-regenerate-confirm-dark");
 await clickByText(".mock-key-confirm .btn", "Keep");
-await clickByText(".library-head .btn", "Create a mock server");
+await clickByText(".mocks-section-head .btn", "Create a mock server");
 await page.waitForSelector(".modal.journey", { timeout: 5000 });
 await wait(300);
 await shootBoth("26k-journey-pick", "dark");

@@ -426,6 +426,14 @@ function CollectionDetail({
               total={collection.steps.length}
               link={link}
               mockUrl={link.kind === "ok" || link.kind === "stale" ? api.mockUrlFor(link.entry) : null}
+              localMock={
+                (link.kind === "ok" || link.kind === "stale") && api.localMocks.available
+                  ? {
+                      port: api.localMocks.running[link.entry.id] ?? null,
+                      onStart: () => void api.localMocks.start(link.entry),
+                    }
+                  : null
+              }
               earlier={earlier}
               result={results.find((r) => r.key === step.key)}
               running={running && runningIndex === index}

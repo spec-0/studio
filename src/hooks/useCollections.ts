@@ -32,6 +32,7 @@ import {
   addOperationStep,
   findLibraryEntry,
   inputsFromEditor,
+  localMockAddress,
   targetFromAddress,
   linkStep,
   relinkStep as relinkIn,
@@ -41,7 +42,7 @@ import {
   type StepLink,
   type StepValues,
 } from "../lib/collectionLink";
-import { planStep, runSteps, verdictFor, type StepResult } from "../lib/collectionRun";
+import { mockWarnings, planStep, runSteps, verdictFor, type StepResult } from "../lib/collectionRun";
 import { transportFor, type ConnectionSettings } from "../lib/connection";
 import * as history from "../lib/history";
 import type { HistoryEntry } from "../lib/history";
@@ -113,6 +114,7 @@ export function useCollections({
   connection,
   setRequests,
   showCollections,
+  localMocks,
 }: {
   entries: LibraryEntry[];
   setEntries: Dispatch<SetStateAction<LibraryEntry[]>>;
@@ -123,6 +125,12 @@ export function useCollections({
   setRequests: Dispatch<SetStateAction<HistoryEntry[]>>;
   /** Go to the Collections tab. */
   showCollections: () => void;
+  /** Local mocks: which run (library id → port), and starting one. */
+  localMocks: {
+    running: Record<string, number>;
+    available: boolean;
+    start: (entry: LibraryEntry) => Promise<void>;
+  };
 }) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -681,10 +689,15 @@ export function useCollections({
         let toMock = false;
         if (linked) {
           const mockUrl = mockUrlFor(linked.entry);
-          const target = resolveTarget(step.target, { servers: linked.spec.servers, mockUrl });
+          const target = resolveTarget(step.target, {
+            servers: linked.spec.servers,
+            mockUrl,
+            localMockUrl: localMockAddress(localMocks.running[linked.entry.id]),
+          });
           if ("error" in target) return { key: step.key, verdict: "fail", reason: target.error };
           baseUrl = target.url;
           toMock = target.mock;
+          // The hosted mock's key only goes to the hosted mock (buildPlan checks the address).
           mock = mockCredentials(mockUrl, linked.entry.mockApiKey, session);
         }
         let auth = authOf(step);
@@ -713,7 +726,15 @@ export function useCollections({
           const declared = declaredResponse(linked.op.responses, response.status);
           validation = validateResponse(linked.spec.doc, declared?.schema, response.json);
         }
-        const { verdict, reason } = verdictFor(response.status, validation);
+        const warned = mockWarnings(response.headers);
+        const checked = verdictFor(response.status, validation);
+        const { verdict } = checked;
+        // The mock answered, so the step passes on its response, but a request
+        // the spec wouldn't accept is worth saying next to that pass.
+        const reason =
+          warned.length && verdict === "pass"
+            ? `${checked.reason ? `${checked.reason} ` : ""}The local mock says the request doesn't match the spec.`
+            : checked.reason;
         const output: StepOutput = {
           status: response.status,
           headers: response.headers,
@@ -757,6 +778,7 @@ export function useCollections({
           output,
           request: plan,
           mock: toMock,
+          ...(warned.length ? { mockWarnings: warned } : {}),
         };
       };
 
@@ -769,7 +791,7 @@ export function useCollections({
       setRuns((prev) => ({ ...prev, [id]: { runId, at, running: false, results } }));
       setRequests(await history.loadHistory());
     },
-    [runs, ensureSpecs, entries, mockUrlFor, session, tokenFor, vars, connection, activeEnv?.name, setRequests],
+    [runs, ensureSpecs, entries, mockUrlFor, session, tokenFor, vars, connection, activeEnv?.name, setRequests, localMocks.running],
   );
 
   const stop = useCallback((id: string) => {
@@ -919,6 +941,7 @@ export function useCollections({
     openFromFile,
     addFromText,
     mockUrlFor,
+    localMocks,
     addMenu,
     closeAddMenu: useCallback(() => setAddMenu(null), []),
     openOperationMenu,

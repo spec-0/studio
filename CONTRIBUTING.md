@@ -87,7 +87,9 @@ the plugin back.
 - **File access uses narrow commands, not the `fs` plugin.** "Read the file the
   user just picked" and "read `~/.spec0/config.json`" are different kinds of
   access and shouldn't share one permission. For the first, the file picker is
-  the user's consent.
+  the user's consent. Writing works the same way: `write_collection` writes a
+  collection file where the user chose to save it, and refuses any file whose
+  name doesn't end in `.spec0-collection.yaml`.
 - **`src/lib/` holds the logic, `src/components/` holds the interface.** Spec
   parsing, example generation, validation, environments, history and the spec0
   client don't depend on React and can be tested without it.
@@ -143,9 +145,36 @@ distrust the drift check it supports.
 
 **Keep the scratch pad small.** There is one scratch request. It has no name and
 isn't saved as an item, only its contents are kept, like a text buffer. No second
-pad, no names, no folders, no collection import. A scratch request has no schema,
-so none of Studio's checks apply to it. It exists as an escape hatch. Requests
-worth keeping are worth describing in a spec.
+pad, no names, no folders. A scratch request has no schema, so none of Studio's
+checks apply to it. It exists as an escape hatch. Requests worth keeping are
+worth describing in a spec, and a flow worth keeping goes in a collection.
+
+**Collections point at specs; they never replace them.** A collection step names
+an API and an operation in it (by `operationId`, with method and path as the
+fallback) and keeps only its own inputs: parameter values, headers, a body and a
+target. It never copies the operation. That is what lets Studio check each
+step's response against its spec, and tell you when a step no longer matches
+the spec it came from (an operation that moved or disappeared, a parameter that
+became required). A collection that held its own copy of each request would be
+exactly the second, drifting source of truth Studio exists to avoid. So:
+
+- A step that can't find its operation is shown as missing, with a way to link
+  it to another one. It isn't quietly turned into a free-standing request.
+- Unlinked requests exist (for requests brought in from other tools), run like
+  scratch requests, and say that nothing checks them until they're linked.
+- The file (`*.spec0-collection.yaml`, versioned, see `src/lib/collection.ts`)
+  refers to specs by their source, written relative to the collection file when
+  both are in one folder, so a collection and its specs can live in one
+  repository. It never holds secret values: known secrets are written as
+  `{{references}}` and a literal auth value is left out, with a warning.
+- A value from an earlier step is a reference, `{{steps.<key>.body.id}}`, picked
+  by clicking it. There is no scripting. A reference that can't be filled fails
+  the step before anything is sent, with the reason.
+- A linked file is re-read when the collection opens and when the window gets
+  focus. It is reloaded if nothing in Studio is unsaved; otherwise the user
+  chooses. Saving never overwrites a file that changed since Studio read it.
+- A local mock is stored as a target kind, never as an address: its port
+  belongs to this computer and can change.
 
 **OAuth settings live with the API; the client secret doesn't.** Client id,
 token and authorization URLs and scopes belong to the API and are saved with it

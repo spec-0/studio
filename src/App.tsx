@@ -244,6 +244,7 @@ export default function App() {
     connection,
     setRequests,
     showCollections: useCallback(() => setRoute("collections"), [setRoute]),
+    localMocks,
   });
 
   const {
