@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sectionForKey } from "../navigation";
-import { sendTargetFor, tabShortcutFor, type KeyPress } from "../shortcuts";
+import { consoleShortcutLabel, isConsoleShortcut, sendTargetFor, tabShortcutFor, type KeyPress } from "../shortcuts";
 
 describe("sendTargetFor", () => {
   it("sends the scratch request on the scratch screen", () => {
@@ -75,5 +75,36 @@ describe("tabShortcutFor", () => {
       expect(tabShortcutFor(press(key, { ctrlKey: true }), other)).toBeNull();
     }
     expect(tabShortcutFor(press("Tab", { ctrlKey: true, altKey: true }), other)).toBeNull();
+  });
+});
+
+describe("isConsoleShortcut", () => {
+  const press = (mods: Partial<KeyPress>, code = "KeyY", key = "Y"): KeyPress => ({
+    key,
+    code,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    altKey: false,
+    ...mods,
+  });
+
+  it("is ⇧⌘Y on macOS and Ctrl+Shift+Y elsewhere, on the physical key", () => {
+    expect(isConsoleShortcut(press({ metaKey: true, shiftKey: true }), { mac: true })).toBe(true);
+    expect(isConsoleShortcut(press({ ctrlKey: true, shiftKey: true }), { mac: false })).toBe(true);
+    // A layout where the key makes another character still matches.
+    expect(isConsoleShortcut(press({ metaKey: true, shiftKey: true }, "KeyY", "Z"), { mac: true })).toBe(true);
+  });
+
+  it("doesn't take other combinations", () => {
+    expect(isConsoleShortcut(press({ metaKey: true }), { mac: true })).toBe(false);
+    expect(isConsoleShortcut(press({ ctrlKey: true, shiftKey: true }), { mac: true })).toBe(false);
+    expect(isConsoleShortcut(press({ metaKey: true, shiftKey: true, altKey: true }), { mac: true })).toBe(false);
+    expect(isConsoleShortcut(press({ ctrlKey: true, shiftKey: true }, "KeyD", "D"), { mac: false })).toBe(false);
+  });
+
+  it("is labelled for each platform", () => {
+    expect(consoleShortcutLabel(true)).toBe("⇧⌘Y");
+    expect(consoleShortcutLabel(false)).toBe("Ctrl+Shift+Y");
   });
 });

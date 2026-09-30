@@ -60,6 +60,7 @@ pub fn run() {
             storage::store_location,
             storage::cli_config,
             storage::write_collection,
+            storage::write_run_log,
             updates::update_current_version,
             updates::update_check,
             updates::update_install,

@@ -1,8 +1,9 @@
-import { resolveStepRefs, type StepOutput } from "./chain";
+import { resolveStepRefs, type ResolvedLink, type StepOutput } from "./chain";
 import { describeExpected, expectedStatusOf, statusMatches, type CollectionStep } from "./collection";
 import { unresolved } from "./env";
 import type { HistoryEntry } from "./history";
 import { buildPlan, type AuthState, type BodyInput, type RequestPlan } from "./request";
+import { redactDeep } from "./redact";
 import { buildScratchPlan } from "./scratch";
 import type { OperationSpec } from "./spec";
 import type { ValidationResult } from "./validate";
@@ -61,10 +62,6 @@ export interface PlanContext {
   mock?: { url: string; key?: string; bearer?: string } | null;
 }
 
-function mapValues(values: Record<string, string>, fill: (text: string) => string): Record<string, string> {
-  return Object.fromEntries(Object.entries(values).map(([k, v]) => [k, fill(v)]));
-}
-
 function fillBody(body: BodyInput | undefined, fill: (text: string) => string): BodyInput {
   if (body === undefined) return "";
   if (typeof body === "string") return fill(body);
@@ -97,21 +94,29 @@ function planText(plan: RequestPlan): string {
  * Anything still unfilled stops the step before it is sent: a request with
  * `{{orderId}}` in its path would only produce a 404 that looks like a finding.
  */
-export function planStep(step: CollectionStep, context: PlanContext): { plan: RequestPlan } | { error: string } {
+export function planStep(
+  step: CollectionStep,
+  context: PlanContext,
+): { plan: RequestPlan; links?: ResolvedLink[] } | { error: string; links?: ResolvedLink[] } {
   const errors: string[] = [];
-  const fill = (text: string) => {
-    const result = resolveStepRefs(text, context);
+  const links: ResolvedLink[] = [];
+  const fill = (text: string, target = "") => {
+    const result = resolveStepRefs(text, context, target);
     errors.push(...result.errors);
+    links.push(...result.links);
     return result.text;
   };
-  const pathParams = mapValues(step.pathParams, fill);
-  const queryParams = mapValues(step.queryParams, fill);
-  const headers = mapValues(step.headers, fill);
-  const body = fillBody(step.body, fill);
-  const auth = context.auth ? { ...context.auth, value: fill(context.auth.value) } : null;
-  const baseUrl = fill(context.baseUrl);
-  const url = step.request ? fill(step.request.url) : "";
-  if (errors.length) return { error: [...new Set(errors)].join("; ") };
+  const labelled = (values: Record<string, string>, where: string) =>
+    Object.fromEntries(Object.entries(values).map(([k, v]) => [k, fill(v, `${where} ${k}`)]));
+  const pathParams = labelled(step.pathParams, "path");
+  const queryParams = labelled(step.queryParams, "query");
+  const headers = labelled(step.headers, "header");
+  const body = fillBody(step.body, (text) => fill(text, "body"));
+  const auth = context.auth ? { ...context.auth, value: fill(context.auth.value, "auth") } : null;
+  const baseUrl = fill(context.baseUrl, "target");
+  const url = step.request ? fill(step.request.url, "url") : "";
+  const withLinks = links.length ? { links } : {};
+  if (errors.length) return { error: [...new Set(errors)].join("; "), ...withLinks };
 
   let plan: RequestPlan;
   try {
@@ -128,10 +133,10 @@ export function planStep(step: CollectionStep, context: PlanContext): { plan: Re
         context.vars,
       );
     } else {
-      return { error: "This step has no operation and no URL." };
+      return { error: "This step has no operation and no URL.", ...withLinks };
     }
   } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
+    return { error: error instanceof Error ? error.message : String(error), ...withLinks };
   }
 
   const missing = unresolved(planText(plan), context.vars);
@@ -139,9 +144,14 @@ export function planStep(step: CollectionStep, context: PlanContext): { plan: Re
     const names = missing.map((name) => `{{${name}}}`).join(", ");
     return {
       error: `No value for ${names}. Set ${missing.length > 1 ? "them" : "it"} in the active environment.`,
+      // Listed with the step references, so the log shows every value that was missing.
+      links: [
+        ...links,
+        ...missing.map((name) => ({ target: "", source: `env.${name}`, error: "no value in the active environment" })),
+      ],
     };
   }
-  return { plan };
+  return { plan, ...withLinks };
 }
 
 // ── pass or fail ──────────────────────────────────────────────────────────────
@@ -182,12 +192,113 @@ export function verdictFor(
 
 // ── running in order ──────────────────────────────────────────────────────────
 
+// ── what happened, as events ─────────────────────────────────────────────────
+
+/** Where a step's request went. `url` is an unlinked request's own address. */
+export type TargetKind = "server" | "mock" | "local-mock" | "custom" | "url";
+
+/** Why a step failed, for the log: each has its own wording and colour there. */
+export type FailureCause = "reference" | "network" | "status" | "schema" | "setup" | "error";
+
+/** Why a step didn't run. */
+export type SkipCause = "stopped" | "earlier_failure";
+
+/**
+ * What a step reports while it runs, in order. The step's index and key are
+ * added by `runSteps`, and every value is redacted before it leaves it.
+ */
+export type StepDetail =
+  | { type: "references_resolved"; links: ResolvedLink[] }
+  | { type: "request_sent"; method: string; url: string; headers: Record<string, string>; targetKind?: TargetKind }
+  | { type: "request_failed"; error: string }
+  | { type: "response_received"; status: number; statusText?: string; ms: number; bytes: number; warnings?: string[] }
+  | { type: "schema_check"; result: "ok" | "mismatch" | "not_checked" | "error"; findings: number; note?: string }
+  | { type: "status_check"; expected: string; actual: number; ok: boolean };
+
+/** A run's events, without their times. */
+export type RunEventBody =
+  | {
+      type: "run_started";
+      collection: { id: string; name: string };
+      environment: string | null;
+      steps: number;
+      /** Where the steps go, one line each, in step order and without repeats. */
+      targets: string[];
+      stopOnFailure: boolean;
+    }
+  | {
+      type: "step_started";
+      index: number;
+      key: string;
+      name: string;
+      method?: string;
+      /** The base URL (or the whole URL of an unlinked request), when known before it's built. */
+      url?: string;
+      target?: string;
+      targetKind?: TargetKind;
+    }
+  | (StepDetail & { index: number; key: string })
+  | {
+      type: "step_result";
+      index: number;
+      key: string;
+      name: string;
+      verdict: "pass" | "fail" | "skipped";
+      reason?: string;
+      cause?: FailureCause | SkipCause;
+      status?: number;
+      ms?: number;
+    }
+  | {
+      type: "run_finished";
+      total: number;
+      passed: number;
+      failed: number;
+      skipped: number;
+      ms: number;
+      stoppedEarly: boolean;
+      /** Why the run stopped early: the user, or the first failure. */
+      stopReason?: SkipCause;
+    };
+
+/** One event: when it happened (ISO) and how long into the run (ms). */
+export type RunEvent = RunEventBody & { at: string; t: number };
+
+/** What a step looks like before it runs: its name, method and where it goes. */
+export interface StepDescription {
+  name: string;
+  method?: string;
+  url?: string;
+  target?: string;
+  targetKind?: TargetKind;
+}
+
 export interface RunOptions {
   stopOnFailure: boolean;
   /** Checked before each step; true stops the run with the rest marked as not run. */
   cancelled?: () => boolean;
   /** Called after each step, so results show as they land. */
   onResult?: (results: StepResult[]) => void;
+  /** Every event of the run, in order, already redacted. */
+  onEvent?: (event: RunEvent) => void;
+  /** What the run is, for its first event. Without it there is no `run_started`. */
+  run?: { collection: { id: string; name: string }; environment: string | null; targets: string[] };
+  /** Describes a step for its `step_started` event. The key is used as the name without it. */
+  describe?: (step: CollectionStep, index: number) => StepDescription;
+  /** The clock, for tests. */
+  now?: () => number;
+}
+
+/** Longest value kept in an event; a reference can resolve to a whole body. */
+const MAX_EVENT_TEXT = 2000;
+
+function clip(value: unknown): unknown {
+  if (typeof value === "string") return value.length > MAX_EVENT_TEXT ? `${value.slice(0, MAX_EVENT_TEXT - 1)}…` : value;
+  if (Array.isArray(value)) return value.map(clip);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, clip(v)]));
+  }
+  return value;
 }
 
 /**
@@ -197,39 +308,120 @@ export interface RunOptions {
  * With `stopOnFailure`, the first failure ends the run and every later step is
  * reported as not run, with the reason, rather than left out: a run that only
  * lists what it did reads as though that was everything.
+ *
+ * With `onEvent`, the run is also told as events: started, each step started,
+ * what the step reported through its `emit`, each step's result (with why it
+ * failed or was skipped), finished. Every value is redacted with the known
+ * secrets before it is handed over.
  */
 export async function runSteps(
   steps: readonly CollectionStep[],
-  execute: (step: CollectionStep, outputs: ReadonlyMap<string, StepOutput>, index: number) => Promise<StepResult>,
+  execute: (
+    step: CollectionStep,
+    outputs: ReadonlyMap<string, StepOutput>,
+    index: number,
+    emit: (detail: StepDetail) => void,
+  ) => Promise<StepResult>,
   options: RunOptions,
 ): Promise<StepResult[]> {
   const results: StepResult[] = [];
   const outputs = new Map<string, StepOutput>();
   let stopped: string | null = null;
+  let stopCause: SkipCause | undefined;
+  const now = options.now ?? (() => Date.now());
+  const start = now();
+  const send = (body: RunEventBody, at = now()) => {
+    if (!options.onEvent) return;
+    options.onEvent(redactDeep(clip({ ...body, at: new Date(at).toISOString(), t: at - start })) as RunEvent);
+  };
+  if (options.run) {
+    send({ type: "run_started", ...options.run, steps: steps.length, stopOnFailure: options.stopOnFailure }, start);
+  }
 
   for (let index = 0; index < steps.length; index += 1) {
     const step = steps[index];
-    if (!stopped && options.cancelled?.()) stopped = "The run was stopped.";
+    const described = options.describe?.(step, index) ?? { name: step.name || step.key };
+    if (!stopped && options.cancelled?.()) {
+      stopped = "The run was stopped.";
+      stopCause = "stopped";
+    }
     if (stopped) {
       results.push({ key: step.key, verdict: "not_run", reason: stopped });
+      send({
+        type: "step_result",
+        index,
+        key: step.key,
+        name: described.name,
+        verdict: "skipped",
+        reason: stopped,
+        cause: stopCause,
+      });
       continue;
     }
+    send({ type: "step_started", index, key: step.key, ...described });
+    const seen = { reference: false, network: false, status: false, schema: false };
+    const emit = (detail: StepDetail) => {
+      if (detail.type === "references_resolved" && detail.links.some((link) => link.error)) seen.reference = true;
+      if (detail.type === "request_failed") seen.network = true;
+      if (detail.type === "status_check" && !detail.ok) seen.status = true;
+      if (detail.type === "schema_check" && (detail.result === "mismatch" || detail.result === "error")) seen.schema = true;
+      send({ ...detail, index, key: step.key });
+    };
     let result: StepResult;
+    let threw = false;
     try {
-      result = await execute(step, outputs, index);
+      result = await execute(step, outputs, index, emit);
     } catch (error) {
+      threw = true;
       result = { key: step.key, verdict: "fail", reason: error instanceof Error ? error.message : String(error) };
     }
     results.push(result);
+    const cause: FailureCause | undefined =
+      result.verdict !== "fail"
+        ? undefined
+        : threw
+          ? "error"
+          : seen.reference
+            ? "reference"
+            : seen.network
+              ? "network"
+              : seen.status
+                ? "status"
+                : seen.schema
+                  ? "schema"
+                  : "setup";
+    send({
+      type: "step_result",
+      index,
+      key: step.key,
+      name: described.name,
+      verdict: result.verdict === "fail" ? "fail" : "pass",
+      ...(result.reason ? { reason: result.reason } : {}),
+      ...(cause ? { cause } : {}),
+      ...(result.status !== undefined ? { status: result.status } : {}),
+      ...(result.ms !== undefined ? { ms: result.ms } : {}),
+    });
     // A failed step that still got a response offers it to later steps; one
     // that never sent has nothing to offer.
     if (result.output) outputs.set(step.key, result.output);
     if (result.verdict === "fail" && options.stopOnFailure) {
       stopped = `Not run: step ${index + 1} (${step.key}) failed and the run stops at the first failure.`;
+      stopCause = "earlier_failure";
     }
     options.onResult?.([...results]);
   }
   if (stopped) options.onResult?.([...results]);
+  const summary = summariseRun(results);
+  send({
+    type: "run_finished",
+    total: summary.total,
+    passed: summary.passed,
+    failed: summary.failed,
+    skipped: summary.notRun,
+    ms: now() - start,
+    stoppedEarly: summary.notRun > 0,
+    ...(stopCause && summary.notRun > 0 ? { stopReason: stopCause } : {}),
+  });
   return results;
 }
 

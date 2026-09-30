@@ -21,6 +21,7 @@ import type { CollectionsApi } from "../../hooks/useCollections";
 import { ContextMenu, type MenuItem } from "../ContextMenu";
 import { ImportSummaryDialog } from "./ImportSummaryDialog";
 import { LinkOperationDialog } from "./LinkOperationDialog";
+import { RunLogView } from "./RunLogView";
 import { StepEditor, type StepTab } from "./StepEditor";
 import { StepList, stepTitle } from "./StepList";
 import type { EarlierStep } from "./ValuePicker";
@@ -212,6 +213,8 @@ function CollectionDetail({
   const [nameDraft, setNameDraft] = useState(collection.name);
   const [copied, setCopied] = useState<string | null>(null);
   useEffect(() => setNameDraft(collection.name), [collection.name]);
+  const pane = api.runLogs.pane(collection.id);
+  const pastRuns = api.runLogs.runsFor(collection.id);
 
   // After a run, show the first failing step's response, since that's the question.
   const wasRunning = useRef(running);
@@ -354,6 +357,26 @@ function CollectionDetail({
           )}
         </div>
         <div className="collection-meta">
+          <span className="segmented collection-panes" role="tablist" aria-label="Show">
+            <button
+              type="button"
+              role="tab"
+              className="segment"
+              aria-selected={pane === "steps"}
+              onClick={() => api.runLogs.setPane(collection.id, "steps")}
+            >
+              Steps
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className="segment"
+              aria-selected={pane === "runs"}
+              onClick={() => api.runLogs.setPane(collection.id, "runs")}
+            >
+              Runs{pastRuns.length ? ` · ${pastRuns.length}` : ""}
+            </button>
+          </span>
           <span className="meta">
             {collection.steps.length} step{collection.steps.length === 1 ? "" : "s"} ·{" "}
             {Object.keys(collection.apis).length} API{Object.keys(collection.apis).length === 1 ? "" : "s"}
@@ -440,7 +463,17 @@ function CollectionDetail({
         </div>
       )}
 
-      {collection.steps.length ? (
+      {pane === "runs" ? (
+        <div className="collection-body">
+          <RunLogView
+            runs={pastRuns}
+            selectedId={api.runLogs.selectedRun(collection.id)}
+            onSelect={(runId) => api.runLogs.selectRun(collection.id, runId)}
+            onClear={() => api.runLogs.clear(collection.id)}
+            onExport={api.runLogs.exportRun}
+          />
+        </div>
+      ) : collection.steps.length ? (
         <div className="collection-body">
           <div className="collection-steps">
             <StepList

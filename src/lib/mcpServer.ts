@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { logMcpCall } from "./appConsole";
 import { currentVersion } from "./appUpdates";
 import * as library from "./library";
 import { runTool, type ToolDeps } from "./mcp";
@@ -150,6 +151,7 @@ interface CallPayload {
 }
 
 let bridge: Promise<UnlistenFn> | null = null;
+let activity: Promise<UnlistenFn> | null = null;
 
 /**
  * Answer `studio://mcp-call` events from the Rust server. Registered once per
@@ -157,9 +159,17 @@ let bridge: Promise<UnlistenFn> | null = null;
  */
 export function ensureBridge(): Promise<UnlistenFn> {
   if (!inTauri) return Promise.resolve(() => {});
+  // Calls Rust answers itself (list_environments) are only reported, for the console.
+  activity ??= listen<{ name: string; ok: boolean }>("studio://mcp-activity", (event) =>
+    logMcpCall(event.payload.name, event.payload.ok),
+  );
   bridge ??= listen<CallPayload>("studio://mcp-call", (event) => {
     const { id, name, arguments: args } = event.payload;
-    void runTool(name, args, deps).then((result) => invoke("mcp_respond", { id, result }));
+    void runTool(name, args, deps).then((result) => {
+      // The console gets the tool's name and outcome, never its arguments.
+      logMcpCall(name, !result.isError);
+      return invoke("mcp_respond", { id, result });
+    });
   });
   return bridge;
 }

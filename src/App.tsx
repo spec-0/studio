@@ -32,6 +32,8 @@ import { UpdateSettings } from "./components/settings/UpdateSettings";
 import { SettingsView } from "./components/SettingsView";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
+import { ConsolePanel } from "./components/ConsolePanel";
+import { toggleConsole } from "./lib/appConsole";
 import { TitleBar } from "./components/TitleBar";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { McpHost } from "./components/mcp/McpHost";
@@ -450,6 +452,7 @@ export default function App() {
     openSettings: () => nav.openSettings(),
     toggleTheme: () => patchSettings({ dark: !settings.dark }),
     closeDialogs: closeOnEscape,
+    toggleConsole,
     requestTab: (action) => {
       // Only where the tabs are on screen, and never from behind a dialog.
       if (route !== "api" || showOpen || showEnvs || showRun || showOAuth || showSwitcher || showPublish) return;
@@ -1172,6 +1175,13 @@ export default function App() {
       <UpdateDialog updater={updater} />
       <DeepLinkDialog links={deepLinks} />
       <McpHost />
+      <ConsolePanel
+        onOpenRun={(collectionId, runId) => {
+          collections.select(collectionId);
+          collections.runLogs.show(collectionId, runId);
+          setRoute("collections");
+        }}
+      />
     </div>
   );
 }

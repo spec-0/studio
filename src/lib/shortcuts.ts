@@ -52,3 +52,18 @@ export function tabShortcutFor(
   if (command && !press.shiftKey && press.key.toLowerCase() === "w" && !menuClosesTabs) return "close";
   return null;
 }
+
+/**
+ * ⌘⇧Y on macOS, Ctrl+Shift+Y elsewhere, opens and closes the app console, as
+ * the debug console in several editors. Matched on the physical key, so it
+ * works on layouts where Y is elsewhere or Shift changes the character.
+ */
+export function isConsoleShortcut(press: KeyPress, { mac }: { mac: boolean }): boolean {
+  const command = mac ? press.metaKey && !press.ctrlKey : press.ctrlKey && !press.metaKey;
+  return command && press.shiftKey && !press.altKey && press.code === "KeyY";
+}
+
+/** The console shortcut's label: `⇧⌘Y` on macOS, `Ctrl+Shift+Y` elsewhere. */
+export function consoleShortcutLabel(mac: boolean): string {
+  return mac ? "⇧⌘Y" : "Ctrl+Shift+Y";
+}

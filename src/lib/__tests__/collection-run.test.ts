@@ -44,14 +44,18 @@ describe("building a step's request", () => {
       ...base,
       op: op("getOrder"),
     });
-    expect(result).toEqual({ error: expect.stringMatching(/body\.nope: not in the response/) });
+    expect(result).toMatchObject({ error: expect.stringMatching(/body\.nope: not in the response/) });
+    expect(result.links).toEqual([
+      { target: "path orderId", source: "steps.createOrder.body.nope", error: expect.stringMatching(/not in the response/) },
+    ]);
   });
 
   it("fails before sending when an environment variable has no value", () => {
     const result = planStep(step("getOrder", { pathParams: { orderId: "{{orderId}}" } }), { ...base, op: op("getOrder") });
-    expect(result).toEqual({ error: "No value for {{orderId}}. Set it in the active environment." });
+    expect(result).toMatchObject({ error: "No value for {{orderId}}. Set it in the active environment." });
+    expect(result.links).toEqual([{ target: "", source: "env.orderId", error: "no value in the active environment" }]);
     const noToken = planStep(step("listOrders"), { ...base, vars: { baseUrl: base.vars.baseUrl }, op: op("listOrders") });
-    expect(noToken).toEqual({ error: expect.stringMatching(/\{\{token\}\}/) });
+    expect(noToken).toMatchObject({ error: expect.stringMatching(/\{\{token\}\}/) });
   });
 
   it("builds an unlinked request from its URL", () => {
