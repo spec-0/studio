@@ -1,0 +1,225 @@
+import { deref, type Json } from "./spec";
+
+/**
+ * Using a value from an earlier step: `{{steps.createOrder.body.id}}`.
+ *
+ * A reference names a step by its key, then `status`, `headers` or `body`, then
+ * a path into it: `.name` for a field, `[0]` (or `.0`) for an array item. No
+ * expressions and no scripting — a reference points at one value, and picking
+ * it by clicking is the main way to write one.
+ *
+ * Resolved before environment variables, so `{{token}}` next to a step
+ * reference still comes from the active environment.
+ */
+
+/** What a step's response offers to the steps after it. */
+export interface StepOutput {
+  status: number;
+  headers: Record<string, string>;
+  /** The body parsed as JSON, when it was JSON. */
+  json?: unknown;
+  /** The body as text. */
+  text: string;
+}
+
+const REF = /\{\{\s*steps\.([A-Za-z_][A-Za-z0-9_-]*)((?:\.[^\s{}.[\]]+|\[\d+\])*)\s*\}\}/g;
+
+export type PathSegment = string | number;
+
+/** `.body.items[0].id` → `["body", "items", 0, "id"]`. */
+export function parsePath(path: string): PathSegment[] {
+  const out: PathSegment[] = [];
+  for (const match of path.matchAll(/\.([^\s{}.[\]]+)|\[(\d+)\]/g)) {
+    if (match[2] !== undefined) out.push(Number(match[2]));
+    else out.push(match[1]);
+  }
+  return out;
+}
+
+/** A reference for a value, with array items as `[n]`. */
+export function referenceFor(stepKey: string, path: PathSegment[]): string {
+  const tail = path
+    .map((segment) =>
+      typeof segment === "number" ? `[${segment}]` : `.${segment}`,
+    )
+    .join("");
+  return `{{steps.${stepKey}${tail}}}`;
+}
+
+/** The step keys a piece of text refers to. */
+export function referencedSteps(text: string): string[] {
+  return [...new Set([...text.matchAll(REF)].map((match) => match[1]))];
+}
+
+function describePath(path: PathSegment[]): string {
+  return path
+    .map((segment, index) =>
+      typeof segment === "number" ? `[${segment}]` : index === 0 ? segment : `.${segment}`,
+    )
+    .join("");
+}
+
+function asText(value: unknown): string {
+  if (value === null) return "null";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
+type Lookup = { found: true; value: unknown } | { found: false; problem: string };
+
+function walk(value: unknown, path: PathSegment[], label: string): Lookup {
+  let here = value;
+  for (let index = 0; index < path.length; index += 1) {
+    const segment = path[index];
+    const soFar = `${label}${describePath(path.slice(0, index + 1)).replace(/^(?!\[)/, ".")}`;
+    if (Array.isArray(here)) {
+      const at = typeof segment === "number" ? segment : /^\d+$/.test(segment) ? Number(segment) : NaN;
+      if (Number.isNaN(at)) return { found: false, problem: `${soFar}: that's a list, so use an index like [0]` };
+      if (at >= here.length) return { found: false, problem: `${soFar}: the list has ${here.length} item${here.length === 1 ? "" : "s"}` };
+      here = here[at];
+    } else if (here && typeof here === "object") {
+      const key = String(segment);
+      if (!Object.prototype.hasOwnProperty.call(here, key)) {
+        return { found: false, problem: `${soFar}: not in the response` };
+      }
+      here = (here as Record<string, unknown>)[key];
+    } else {
+      return { found: false, problem: `${soFar}: the response has no field here` };
+    }
+  }
+  return { found: true, value: here };
+}
+
+/** Look up one reference's value in a step's output. */
+export function lookup(output: StepOutput, stepKey: string, path: PathSegment[]): Lookup {
+  const [root, ...rest] = path;
+  const label = `steps.${stepKey}.${String(root)}`;
+  if (root === "status") {
+    return rest.length ? { found: false, problem: `${label} is a number and has no fields` } : { found: true, value: output.status };
+  }
+  if (root === "headers") {
+    if (rest.length !== 1) return { found: false, problem: `${label} needs a header name, e.g. .headers.location` };
+    const wanted = String(rest[0]).toLowerCase();
+    const hit = Object.entries(output.headers).find(([name]) => name.toLowerCase() === wanted);
+    return hit ? { found: true, value: hit[1] } : { found: false, problem: `${label}.${rest[0]}: no such header in the response` };
+  }
+  if (root === "body") {
+    if (!rest.length) return { found: true, value: output.json !== undefined ? output.json : output.text };
+    if (output.json === undefined) return { found: false, problem: `${label}: the response body isn't JSON` };
+    return walk(output.json, rest, label);
+  }
+  return {
+    found: false,
+    problem: `steps.${stepKey}${describePath(path).replace(/^(?!\[)/, path.length ? "." : "")}: continue with .status, .headers or .body`,
+  };
+}
+
+export interface ResolveContext {
+  /** Every step key in the collection, to tell a typo from a step that hasn't run. */
+  keys: readonly string[];
+  /** Outputs of the steps that have run so far in this run. */
+  outputs: ReadonlyMap<string, StepOutput>;
+}
+
+/**
+ * Fill in every `{{steps.…}}` reference in `text`.
+ *
+ * Anything that can't be filled is reported, not guessed: a step that fails for
+ * a reference it couldn't resolve says which reference and why, and nothing is
+ * sent with a hole in it.
+ */
+export function resolveStepRefs(text: string, context: ResolveContext): { text: string; errors: string[] } {
+  if (!text.includes("steps.")) return { text, errors: [] };
+  const errors: string[] = [];
+  const filled = text.replace(REF, (whole, key: string, rawPath: string) => {
+    const path = parsePath(rawPath);
+    if (!context.keys.includes(key)) {
+      errors.push(`${whole}: there's no step called "${key}" in this collection`);
+      return whole;
+    }
+    const output = context.outputs.get(key);
+    if (!output) {
+      errors.push(`${whole}: step "${key}" hasn't run yet in this run, so it has no response to use`);
+      return whole;
+    }
+    if (!path.length) {
+      errors.push(`${whole}: say which part to use, e.g. {{steps.${key}.body.id}}`);
+      return whole;
+    }
+    const result = lookup(output, key, path);
+    if (!result.found) {
+      errors.push(result.problem);
+      return whole;
+    }
+    return asText(result.value);
+  });
+  return { text: filled, errors: [...new Set(errors)] };
+}
+
+// ── what can be picked ────────────────────────────────────────────────────────
+
+export interface PickableField {
+  path: PathSegment[];
+  reference: string;
+  /** A short preview of the value, or the schema's type when there's no value yet. */
+  preview: string;
+}
+
+const MAX_FIELDS = 200;
+
+/** Every leaf value in a step's last response, for the picker. */
+export function fieldsFromOutput(stepKey: string, output: StepOutput): PickableField[] {
+  const out: PickableField[] = [{ path: ["status"], reference: referenceFor(stepKey, ["status"]), preview: String(output.status) }];
+  const visit = (value: unknown, path: PathSegment[], depth: number) => {
+    if (out.length >= MAX_FIELDS) return;
+    if (value && typeof value === "object" && depth < 8) {
+      const entries = Array.isArray(value)
+        ? value.slice(0, 20).map((item, index) => [index, item] as const)
+        : Object.entries(value as Record<string, unknown>);
+      for (const [segment, item] of entries) visit(item, [...path, segment], depth + 1);
+      return;
+    }
+    const text = asText(value);
+    out.push({
+      path,
+      reference: referenceFor(stepKey, path),
+      preview: text.length > 60 ? `${text.slice(0, 59)}…` : text,
+    });
+  };
+  if (output.json !== undefined) visit(output.json, ["body"], 0);
+  for (const name of Object.keys(output.headers).slice(0, 20)) {
+    out.push({ path: ["headers", name], reference: referenceFor(stepKey, ["headers", name]), preview: output.headers[name] });
+  }
+  return out;
+}
+
+/**
+ * The fields a step's declared success response has, for picking before the
+ * step has ever run. Arrays offer their first item.
+ */
+export function fieldsFromSchema(stepKey: string, doc: Json, schema: Json | undefined): PickableField[] {
+  const out: PickableField[] = [];
+  const visit = (node: Json | undefined, path: PathSegment[], depth: number, seen: Set<Json>) => {
+    if (out.length >= MAX_FIELDS || !node) return;
+    const resolved = deref(doc, node);
+    if (seen.has(resolved) || depth > 5) return;
+    const next = new Set(seen).add(resolved);
+    if (resolved.type === "array" || resolved.items) {
+      visit(resolved.items, [...path, 0], depth + 1, next);
+      return;
+    }
+    const props = Object.entries<Json>(resolved.properties ?? {});
+    const composed: Json[] = [...(resolved.allOf ?? [])];
+    if (!props.length && !composed.length) {
+      if (path.length > 1) {
+        out.push({ path, reference: referenceFor(stepKey, path), preview: String(resolved.type ?? "value") });
+      }
+      return;
+    }
+    for (const [name, prop] of props) visit(prop, [...path, name], depth + 1, next);
+    for (const part of composed) visit(part, path, depth + 1, next);
+  };
+  visit(schema, ["body"], 0, new Set());
+  return [{ path: ["status"], reference: referenceFor(stepKey, ["status"]), preview: "integer" }, ...out];
+}

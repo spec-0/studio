@@ -29,6 +29,8 @@ interface Props {
   onOpenRecord: (entry: HistoryEntry) => void;
   /** Go to the one list across every API. */
   onOpenAllHistory: () => void;
+  /** Right-click (or Shift+F10) on an operation: its menu, at that position. */
+  onOperationMenu?: (op: OperationSpec, position: { x: number; y: number }) => void;
 }
 
 /** Loose subsequence match — "gtusr" finds "GET /users". */
@@ -59,6 +61,7 @@ export function Sidebar({
   selectedRecord,
   onOpenRecord,
   onOpenAllHistory,
+  onOperationMenu,
 }: Props) {
   const groupedOperations = useMemo(() => {
     const matches = spec.operations.filter((op) =>
@@ -142,6 +145,27 @@ export function Sidebar({
                   className={`row${op.deprecated ? " deprecated" : ""}`}
                   aria-selected={selectedOperation === op.id}
                   onClick={() => onSelectOperation(op)}
+                  onContextMenu={
+                    onOperationMenu
+                      ? (event) => {
+                          event.preventDefault();
+                          onOperationMenu(op, { x: event.clientX, y: event.clientY });
+                        }
+                      : undefined
+                  }
+                  onKeyDown={
+                    onOperationMenu
+                      ? (event) => {
+                          // The keyboard's way to a context menu, where the platform has no menu key.
+                          if ((event.shiftKey && event.key === "F10") || event.key === "ContextMenu") {
+                            event.preventDefault();
+                            const rect = event.currentTarget.getBoundingClientRect();
+                            onOperationMenu(op, { x: rect.left + 24, y: rect.bottom });
+                          }
+                        }
+                      : undefined
+                  }
+                  aria-haspopup={onOperationMenu ? "menu" : undefined}
                   title={op.summary}
                 >
                   <span className={`method ${op.method.toLowerCase()}`}>{op.method}</span>

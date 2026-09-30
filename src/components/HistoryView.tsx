@@ -20,6 +20,8 @@ interface Props {
   specFor: (entry: HistoryEntry) => Promise<ParsedSpec | null>;
   onCopy: (entry: HistoryEntry, destination: "operation" | "scratch") => void;
   onClear: () => void;
+  /** "Add to a collection" on the open entry, with the spec its API has now. */
+  onAddToCollection?: (entry: HistoryEntry, position: { x: number; y: number }, spec: ParsedSpec | null) => void;
 }
 
 /**
@@ -29,7 +31,15 @@ interface Props {
  * questions people actually ask of a log — which API, did it fail, did it
  * drift, was it a mock — plus text search.
  */
-export function HistoryView({ entries, initialId = null, initialApi, specFor, onCopy, onClear }: Props) {
+export function HistoryView({
+  entries,
+  initialId = null,
+  initialApi,
+  specFor,
+  onCopy,
+  onClear,
+  onAddToCollection,
+}: Props) {
   const [filter, setFilter] = useState<HistoryFilter>({ api: initialApi });
   const [selectedId, setSelectedId] = useState<string | null>(initialId);
   const [spec, setSpec] = useState<{ id: string; spec: ParsedSpec | null } | null>(null);
@@ -148,6 +158,11 @@ export function HistoryView({ entries, initialId = null, initialApi, specFor, on
             spec={spec?.id === selected.id ? spec.spec : null}
             specLoading={spec?.id !== selected.id}
             onCopy={onCopy}
+            onAddToCollection={
+              onAddToCollection
+                ? (entry, position) => onAddToCollection(entry, position, spec?.id === entry.id ? spec.spec : null)
+                : undefined
+            }
             onClose={() => setSelectedId(null)}
           />
         ) : (

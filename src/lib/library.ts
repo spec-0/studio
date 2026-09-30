@@ -11,10 +11,10 @@ import { readStore, writeStore, STORE } from "./store";
  * used to replace the whole application; now it adds to a library you can come
  * back to, switch within, and leave.
  *
- * Note this is **not** Postman's collection model, which this product
- * rejects. A collection is a bag of requests that exists *because* there is no
- * spec. A library is a list of specs — each one still the organising primitive
- * for everything inside it.
+ * A library is a list of specs, each one still the organising primitive for
+ * everything inside it. Studio's collections (`collection.ts`) sit on top of
+ * it: their steps point at operations in these specs rather than holding
+ * requests of their own.
  *
  * The document text is stored, not just a path: a dragged-in file has no stable
  * path, a file can move, and the free-tier promise is that a spec you've opened

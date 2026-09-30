@@ -36,6 +36,8 @@ export const STORE = {
   tokens: "tokens.json",
   /** Whether to check for a new version of Studio at start. Off by default. */
   updates: "updates.json",
+  /** Collections kept in Studio, and the file each folder-backed one is linked to. */
+  collections: "collections.json",
 } as const;
 
 /** Fixed files above, plus per-API blobs like `spec_<id>.json`. */

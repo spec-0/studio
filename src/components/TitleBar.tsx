@@ -27,6 +27,7 @@ interface Props {
 
 const TAB_TITLES: Record<TopTab, string> = {
   apis: `Your APIs (${shortcut("L")} for the list)`,
+  collections: "Steps across your specs, run in order",
   history: "Every request, across all APIs",
   mocks: "Mock servers: on this computer and hosted",
   mcp: "A local MCP server for your coding agent",

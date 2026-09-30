@@ -69,20 +69,21 @@ there is a newer version and install it.
 If you use Postman, Insomnia, Bruno or Yaak, the main differences are:
 
 - **It starts from your OpenAPI spec.** Requests are built from the spec, not from
-  a collection you maintain alongside it.
+  a collection you maintain alongside it. Studio's collections point at
+  operations in your specs instead of copying them.
 - **It checks responses against the spec.** Each JSON response is validated
   against the schema the spec declares for that status code, and fields the spec
   doesn't mention are flagged.
 - **It works with no account and sends no telemetry.** History and environments
   stay on your machine, and secrets go in your operating system's credential store.
 - **It's younger and does less.** There is no scripting, no shared team workspace,
-  no collection import, and no gRPC or WebSocket support. Mock servers are
+  no import of collections from other tools yet, and no gRPC or WebSocket support. Mock servers are
   available only through the optional [Spec0 connection](#connecting-to-spec0-optional).
 
 ## Features
 
-The top bar has four tabs: **APIs** (your library and the API you have open),
-**History**, **Mocks** and **MCP**. An open API has its own tabs underneath:
+The top bar has five tabs: **APIs** (your library and the API you have open),
+**Collections**, **History**, **Mocks** and **MCP**. An open API has its own tabs underneath:
 **Operations**, **Schemas**, **Graph** and **Document**. The environment picker,
 whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the right.
 
@@ -159,6 +160,34 @@ These are in Settings, under Network.
   and you can filter it by API, status, drift, or mock and real.
 - **Read-only.** A saved request opens read-only. To run it again, copy it to a
   new request. History is never synced anywhere.
+
+### Collections
+
+A collection runs steps in order, often across several specs: create an order,
+get it, pay for it. Each step points at an operation in one of your specs, so
+its response is checked against that spec.
+
+- **Adding steps.** Right-click an operation (or press Shift+F10) and choose
+  **Add to collection**. The operation on screen is added with what you've filled
+  in. A request in History can be added too, with the values it was sent with.
+- **Each step has its own inputs and target**: parameters, headers, body, and
+  where it goes (any of the API's servers, its hosted or local mock, or a URL
+  you type). Reorder steps by dragging, or with Alt+↑ and Alt+↓.
+- **Using an earlier step's response.** Click a value in a step's response and
+  choose **Use in a later step**, or pick it from the list above a step's
+  fields. It is stored as a reference like `{{steps.createOrder.body.id}}`.
+  Environment variables work as they do everywhere else.
+- **Run** sends the steps one at a time, stops at the first failure (you can turn
+  that off), and shows for each step whether it passed: a success status and a
+  response that matches its spec. The run is one entry in History.
+- **When a spec changes**, a step that no longer matches it is marked with what
+  changed, and a step whose operation is gone can be linked to another one.
+- **Saving.** Collections are kept in Studio. You can also export one to a file,
+  import one, or save it to a folder, for example in a git repository, and keep
+  it linked: Studio re-reads the file when you come back to the window, and asks
+  which version to keep if both changed. Files are YAML
+  (`checkout.spec0-collection.yaml`) and never contain secret values; specs are
+  referred to by path relative to the file, by URL, or by their Spec0 name.
 
 ### Keyboard shortcuts
 
@@ -303,6 +332,9 @@ server runs only while Studio is open.
 ## Known limitations
 
 - **Only JSON response bodies are checked** (see [Checking responses](#checking-responses)).
+- **Collections run in Studio only.** There is no command-line runner yet, and
+  an OAuth step uses the token Studio already holds for that API and
+  environment; get one from the API's Auth section first.
 - **The Windows and Linux builds are new** and have had much less use than the
   Mac build. Please [open an issue](https://github.com/spec-0/studio/issues) if
   something looks or works wrong.

@@ -35,7 +35,61 @@ interface Props {
     body?: string;
     pathParams?: Record<string, string>;
     queryParams?: Record<string, string>;
+    /** Form fields or multipart parts, for an operation that takes them. */
+    form?: Array<{ key: string; value: string }>;
+    parts?: MultipartPart[];
   } | null;
+  /**
+   * "step" is a collection step: prefilled headers the operation doesn't
+   * declare are shown as editable rows (they are part of the step, not sent
+   * unseen), and number fields are plain text so a `{{reference}}` fits.
+   */
+  mode?: "request" | "step";
+}
+
+interface Seed {
+  pathParams: Record<string, string>;
+  queryParams: Record<string, string>;
+  headerParams: Record<string, string>;
+  body: string;
+  formFields: Array<{ key: string; value: string }>;
+  parts: MultipartPart[];
+  custom: Array<{ key: string; value: string }>;
+}
+
+/** What every input starts from: the prefill where there is one, examples otherwise. */
+function seedFor(spec: ParsedSpec, op: OperationSpec, prefill: Props["prefill"], split: boolean): Seed {
+  const seed = (where: string) =>
+    Object.fromEntries(
+      op.parameters
+        .filter((p) => p.in === where)
+        .map((p) => [p.name, p.required ? exampleParam(spec.doc, p.schema, p.name) : ""]),
+    );
+  let headerParams = prefill?.headers ?? seed("header");
+  let custom: Array<{ key: string; value: string }> = [];
+  if (prefill && split) {
+    const declared = op.parameters.filter((p) => p.in === "header").map((p) => p.name);
+    headerParams = Object.fromEntries(declared.map((name) => [name, ""]));
+    for (const [key, value] of Object.entries(prefill.headers)) {
+      const match = declared.find((name) => name.toLowerCase() === key.toLowerCase());
+      if (match) headerParams[match] = value;
+      else custom.push({ key, value });
+    }
+  }
+  // Form fields and multipart parts start from the names the schema declares,
+  // so an upload endpoint opens with its parts already listed.
+  const declaredFields = bodyFieldNames(spec.doc, op.requestBody?.schema);
+  return {
+    // A copied recording supplies the values that were actually sent; only fall
+    // back to generated examples when there is nothing to start from.
+    pathParams: prefill?.pathParams ?? seed("path"),
+    queryParams: prefill?.queryParams ?? seed("query"),
+    headerParams,
+    body: prefill?.body ?? (op.requestBody ? exampleBody(spec.doc, op.requestBody.schema, op.requestBody.media) : ""),
+    formFields: prefill?.form ?? declaredFields.map((name) => ({ key: name, value: "" })),
+    parts: prefill?.parts ?? declaredFields.map((name) => ({ name, value: "" })),
+    custom,
+  };
 }
 
 export interface RequestValues {
@@ -60,14 +114,23 @@ export function OperationView({
   prefill,
   onConfigureOAuth,
   oauthStatus,
+  mode = "request",
 }: Props) {
-  const [pathParams, setPathParams] = useState<Record<string, string>>({});
-  const [queryParams, setQueryParams] = useState<Record<string, string>>({});
-  const [headerParams, setHeaderParams] = useState<Record<string, string>>({});
-  const [body, setBody] = useState("");
-  const [formFields, setFormFields] = useState<Array<{ key: string; value: string }>>([]);
-  const [parts, setParts] = useState<MultipartPart[]>([]);
-  const [custom, setCustom] = useState<Array<{ key: string; value: string }>>([]);
+  const editableExtraHeaders = mode === "step";
+  // Seeded before the first render, so the values reported on mount are the
+  // real ones rather than a blank form that is filled in a moment later.
+  const seeded = useMemo(
+    () => seedFor(spec, op, prefill, editableExtraHeaders),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [op, spec.doc, prefill, editableExtraHeaders],
+  );
+  const [pathParams, setPathParams] = useState<Record<string, string>>(seeded.pathParams);
+  const [queryParams, setQueryParams] = useState<Record<string, string>>(seeded.queryParams);
+  const [headerParams, setHeaderParams] = useState<Record<string, string>>(seeded.headerParams);
+  const [body, setBody] = useState(seeded.body);
+  const [formFields, setFormFields] = useState<Array<{ key: string; value: string }>>(seeded.formFields);
+  const [parts, setParts] = useState<MultipartPart[]>(seeded.parts);
+  const [custom, setCustom] = useState<Array<{ key: string; value: string }>>(seeded.custom);
 
   /**
    * Which editor to show — decided by the document, not by the user.
@@ -80,25 +143,14 @@ export function OperationView({
 
   // Re-seed every input whenever the selected operation changes.
   useEffect(() => {
-    const seed = (where: string) =>
-      Object.fromEntries(
-        op.parameters
-          .filter((p) => p.in === where)
-          .map((p) => [p.name, p.required ? exampleParam(spec.doc, p.schema, p.name) : ""]),
-      );
-    // A copied recording supplies the values that were actually sent; only fall
-    // back to generated examples when there is nothing to start from.
-    setPathParams(prefill?.pathParams ?? seed("path"));
-    setQueryParams(prefill?.queryParams ?? seed("query"));
-    setHeaderParams(prefill?.headers ?? seed("header"));
-    setBody(prefill?.body ?? (op.requestBody ? exampleBody(spec.doc, op.requestBody.schema, op.requestBody.media) : ""));
-    // Seed form fields and multipart parts from the names the schema declares, so
-    // an upload endpoint opens with its parts already listed.
-    const declared = bodyFieldNames(spec.doc, op.requestBody?.schema);
-    setFormFields(declared.map((name) => ({ key: name, value: "" })));
-    setParts(declared.map((name) => ({ name, value: "" })));
-    setCustom([]);
-  }, [op, spec.doc, prefill]);
+    setPathParams(seeded.pathParams);
+    setQueryParams(seeded.queryParams);
+    setHeaderParams(seeded.headerParams);
+    setBody(seeded.body);
+    setFormFields(seeded.formFields);
+    setParts(seeded.parts);
+    setCustom(seeded.custom);
+  }, [seeded]);
 
   // Keep the frame's send bar in sync — it owns the base URL and the Send button.
   useEffect(() => {
@@ -118,12 +170,14 @@ export function OperationView({
   const bodyError = useMemo(() => {
     if (!body.trim()) return null;
     try {
-      JSON.parse(body);
+      // A step's body can hold {{references}} where values go; they're filled in
+      // before sending, so they don't make it invalid here.
+      JSON.parse(mode === "step" ? body.replace(/\{\{[^{}]*\}\}/g, "0") : body);
       return null;
     } catch (error) {
       return error instanceof Error ? error.message : "Invalid JSON";
     }
-  }, [body]);
+  }, [body, mode]);
 
   const missingRequired = useMemo(() => {
     const missing: string[] = [];
@@ -216,7 +270,8 @@ export function OperationView({
                       ) : (
                         <input
                           type={
-                            resolved.type === "integer" || resolved.type === "number"
+                            mode === "request" &&
+                            (resolved.type === "integer" || resolved.type === "number")
                               ? "number"
                               : "text"
                           }

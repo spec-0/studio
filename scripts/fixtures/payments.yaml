@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: Payments API
+  version: 1.0.0
+  description: |
+    A small, made-up payments API used by scripts/capture.mjs to build a
+    collection across two specs. Nothing here is real.
+servers:
+  - url: https://payments.invalid/v1
+tags:
+  - name: Payments
+paths:
+  /payments:
+    post:
+      operationId: createPayment
+      tags: [Payments]
+      summary: Pay for an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewPayment' }
+      responses:
+        '201':
+          description: The payment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+  /payments/{paymentId}:
+    get:
+      operationId: getPayment
+      tags: [Payments]
+      summary: Get one payment
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The payment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+components:
+  schemas:
+    NewPayment:
+      type: object
+      required: [orderId, amount]
+      properties:
+        orderId: { type: string }
+        amount: { $ref: '#/components/schemas/Money' }
+    Payment:
+      type: object
+      required: [id, orderId, status, amount]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        status: { type: string, enum: [authorized, captured, failed] }
+        amount: { $ref: '#/components/schemas/Money' }
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: integer, description: Minor units. }
+        currency: { type: string, enum: [USD, EUR, GBP] }
