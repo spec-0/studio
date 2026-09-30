@@ -24,6 +24,7 @@ import {
   scratchPath,
   type ScratchPad,
 } from "../lib/scratch";
+import type { SendSnapshot } from "../lib/drafts";
 import type { Route } from "../lib/navigation";
 import { EMPTY_PANE, paneOwner, paneReducer, visiblePane } from "../lib/responsePane";
 import type { OperationSpec, ParsedSpec } from "../lib/spec";
@@ -56,6 +57,10 @@ interface Options {
   setRequests: Dispatch<SetStateAction<HistoryEntry[]>>;
   /** Sending makes a copied request no longer "not sent yet". */
   setCopiedFrom: (at: string | null) => void;
+  /** The operation editor as the request goes out, to label its answer and update its draft. */
+  snapshot?: () => SendSnapshot | null;
+  /** An answer came back for a request sent from the operation editor. */
+  onSent?: (snapshot: SendSnapshot) => void;
 }
 
 /**
@@ -66,8 +71,9 @@ interface Options {
  * never do — they are read in their own view.
  *
  * The pane belongs to one request. Picking another operation, another API or
- * the scratch pad empties it, and a send still in flight when that happens
- * lands in History only (see `src/lib/responsePane.ts`).
+ * the scratch pad takes its answer off screen (it comes back, labelled, when
+ * that request is shown again this session), and a send still in flight when
+ * that happens lands in History only (see `src/lib/responsePane.ts`).
  */
 export function useRequestSender({
   route,
@@ -87,11 +93,14 @@ export function useRequestSender({
   patchSettings,
   setRequests,
   setCopiedFrom,
+  snapshot,
+  onSent,
 }: Options) {
   const [pane, dispatch] = useReducer(paneReducer, EMPTY_PANE);
   const owner = paneOwner(route, currentId, operation?.id);
   useEffect(() => dispatch({ type: "show", owner }), [owner]);
-  const { sending, result, validation, error: requestError, curl } = visiblePane(pane, owner);
+  const shown = visiblePane(pane, owner);
+  const { sending, result, validation, error: requestError, curl } = shown;
 
   const nextSendId = useRef(0);
 
@@ -100,15 +109,22 @@ export function useRequestSender({
     values.current = next;
   }, []);
 
-  /** Empty the response pane. The curl line stays unless `curl` is set. */
-  const clearResponse = useCallback(({ curl = false }: { curl?: boolean } = {}) => {
-    dispatch({ type: "clear", curl });
-  }, []);
+  /**
+   * Empty the response pane. The curl line stays unless `curl` is set. With
+   * `owner` (see `paneOwner`), only that request's answer is dropped.
+   */
+  const clearResponse = useCallback(
+    ({ curl = false, owner }: { curl?: boolean; owner?: string | null } = {}) => {
+      dispatch({ type: "clear", curl, owner });
+    },
+    [],
+  );
 
   const doSend = useCallback(async () => {
     if (!spec || !operation || !server.trim()) return;
     const sendId = ++nextSendId.current;
-    dispatch({ type: "start", sendId });
+    const mark = snapshot?.() ?? null;
+    dispatch({ type: "start", sendId, sentAt: new Date().toISOString(), fingerprint: mark?.fingerprint ?? null });
     setCopiedFrom(null);
     try {
       const { pathParams, queryParams, headerParams, body } = values.current;
@@ -138,6 +154,7 @@ export function useRequestSender({
       const verdict = validateResponse(spec.doc, declared?.schema, response.json);
       dispatch({ type: "response", sendId, result: response, validation: verdict });
       patchSettings({ inspectorOpen: true });
+      if (mark) onSent?.(mark);
 
       setRequests(
         await history.record({
@@ -167,7 +184,7 @@ export function useRequestSender({
       dispatch({ type: "done", sendId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, operation, server, auth, vars, mockUrl, mock, connection, currentId, usableToken, environmentName, specFingerprint]);
+  }, [spec, operation, server, auth, vars, mockUrl, mock, connection, currentId, usableToken, environmentName, specFingerprint, snapshot, onSent]);
 
   /**
    * Write the held response body wherever the user asks.
@@ -198,7 +215,7 @@ export function useRequestSender({
    */
   const doScratchSend = useCallback(async () => {
     const sendId = ++nextSendId.current;
-    dispatch({ type: "start", sendId });
+    dispatch({ type: "start", sendId, sentAt: new Date().toISOString() });
     setCopiedFrom(null);
     try {
       const plan = buildScratchPlan(pad, vars);
@@ -247,6 +264,8 @@ export function useRequestSender({
     validation,
     requestError,
     curl,
+    /** When the answer on screen was brought back from earlier this session: when it was sent, and from what. */
+    restored: shown.restored && shown.sentAt ? { sentAt: shown.sentAt, fingerprint: shown.fingerprint } : null,
     onValuesChange,
     clearResponse,
     doSend,

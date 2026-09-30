@@ -31,6 +31,8 @@ interface Props {
   onOpenAllHistory: () => void;
   /** Right-click (or Shift+F10) on an operation: its menu, at that position. */
   onOperationMenu?: (op: OperationSpec, position: { x: number; y: number }) => void;
+  /** Operations with unsent changes, by id: they get a dot. */
+  unsent?: ReadonlySet<string>;
 }
 
 /** Loose subsequence match — "gtusr" finds "GET /users". */
@@ -62,6 +64,7 @@ export function Sidebar({
   onOpenRecord,
   onOpenAllHistory,
   onOperationMenu,
+  unsent,
 }: Props) {
   const groupedOperations = useMemo(() => {
     const matches = spec.operations.filter((op) =>
@@ -166,13 +169,14 @@ export function Sidebar({
                       : undefined
                   }
                   aria-haspopup={onOperationMenu ? "menu" : undefined}
-                  title={op.summary}
+                  title={unsent?.has(op.id) ? `${op.summary ?? op.path} · unsent changes` : op.summary}
                 >
                   <span className={`method ${op.method.toLowerCase()}`}>{op.method}</span>
                   <span style={{ minWidth: 0, display: "grid" }}>
                     <span className="path">{op.path}</span>
                     {op.summary && <span className="summary">{op.summary}</span>}
                   </span>
+                  {unsent?.has(op.id) && <span className="dirty-dot" role="img" aria-label="Unsent changes" />}
                 </button>
               ))}
             </div>

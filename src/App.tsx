@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiBar, API_PANEL_ID } from "./components/ApiBar";
 import { ApiSwitcher } from "./components/ApiSwitcher";
 import { AddedToast, AddToCollectionMenu } from "./components/collections/AddToCollection";
@@ -21,6 +21,7 @@ import { OperationView } from "./components/OperationView";
 import { PublishDialog } from "./components/PublishDialog";
 import { RunDialog } from "./components/RunDialog";
 import { SchemaView } from "./components/SchemaView";
+import { RequestTabs } from "./components/RequestTabs";
 import { ScratchView } from "./components/ScratchView";
 import { AccountSettings } from "./components/settings/AccountSettings";
 import { AppearanceSettings } from "./components/settings/AppearanceSettings";
@@ -40,6 +41,7 @@ import { useBulkRun } from "./hooks/useBulkRun";
 import { useCollections } from "./hooks/useCollections";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
 import { useDeepLinks } from "./hooks/useDeepLinks";
+import { useDrafts } from "./hooks/useDrafts";
 import { useDialogs } from "./hooks/useDialogs";
 import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useEnvironments } from "./hooks/useEnvironments";
@@ -55,6 +57,7 @@ import { useOAuth } from "./hooks/useOAuth";
 import { usePublish } from "./hooks/usePublish";
 import { useRequestHistory } from "./hooks/useRequestHistory";
 import { useRequestSender } from "./hooks/useRequestSender";
+import { useRequestTabs } from "./hooks/useRequestTabs";
 import { useScratchPad } from "./hooks/useScratchPad";
 import { useSession } from "./hooks/useSession";
 import { useSettings } from "./hooks/useSettings";
@@ -63,6 +66,7 @@ import { useTargeting } from "./hooks/useTargeting";
 import { useUpdater } from "./hooks/useUpdater";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { hostOf } from "./lib/connection";
+import { authFits } from "./lib/drafts";
 import { interpolate } from "./lib/env";
 import { attachApiIds, belongsTo } from "./lib/history";
 import * as library from "./lib/library";
@@ -73,7 +77,7 @@ import { canPublish, whyNotPublishable } from "./lib/publish";
 import { toMarkdown } from "./lib/runner";
 import { sendTargetFor } from "./lib/shortcuts";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
-import { openapiText, type ParsedSpec } from "./lib/spec";
+import { openapiText, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import { apiIdFromRef, apiUrl, consumersUrl, DEFAULT_API_URL, DEFAULT_APP_URL } from "./lib/spec0";
 import { openInBrowser } from "./lib/store";
 
@@ -125,6 +129,7 @@ export default function App() {
     closeApi,
   } = useWorkspace(envFile.activeId, setEnvFile);
   const { requests, setRequests, clearHistory, scratchHistory } = useRequestHistory();
+  const drafts = useDrafts({ apiId: current?.id, spec, operation, prefilled: Boolean(prefill) });
   const { session, setSession, updateSession } = useSession();
 
   const {
@@ -176,6 +181,7 @@ export default function App() {
     validation,
     requestError,
     curl,
+    restored,
     onValuesChange,
     clearResponse,
     doSend,
@@ -199,18 +205,29 @@ export default function App() {
     patchSettings,
     setRequests,
     setCopiedFrom,
+    snapshot: drafts.snapshot,
+    onSent: drafts.onSent,
   });
 
   const { git, consumers, resetDocumentFacts } = useDocumentFacts(route, current, session);
 
-  /** Show a parsed spec, with a clean response pane and no facts from the last document. */
+  /**
+   * Show a parsed spec, with no facts from the last document, and the auth it
+   * was left with. Opening another API puts the response pane's answer aside
+   * with its request; reopening the same one empties the pane.
+   */
+  const { authFor } = drafts;
   const applySpec = useCallback(
-    (parsed: ParsedSpec, entry: LibraryEntry, text: string) => {
-      showSpec(parsed, entry, text);
+    (parsed: ParsedSpec, entry: LibraryEntry, text: string, focus?: { operationId: string }) => {
+      if (entry.id === current?.id) clearResponse();
+      showSpec(parsed, entry, text, focus);
+      const remembered = authFor(entry.id);
+      if (remembered !== undefined && authFits(remembered, parsed.securitySchemes.map((s) => s.name))) {
+        setAuth(remembered);
+      }
       resetDocumentFacts();
-      clearResponse();
     },
-    [showSpec, resetDocumentFacts, clearResponse],
+    [showSpec, resetDocumentFacts, clearResponse, current?.id, authFor, setAuth],
   );
 
   const {
@@ -234,6 +251,12 @@ export default function App() {
     saveMockKey,
   } = useLibrary({ session, requests, current, setCurrent, applySpec, closeApi });
   useLocalMocksFollowLibrary(entries, localMocks);
+
+  // Auth is per API: remember what each was left with (typed values for this session only).
+  const { rememberAuth } = drafts;
+  useEffect(() => {
+    if (current) rememberAuth(current.id, auth);
+  }, [current, auth, rememberAuth]);
 
   const collections = useCollections({
     entries,
@@ -341,8 +364,35 @@ export default function App() {
     setRoute("scratch");
     setRecord(null);
     setCopiedFrom(null);
-    clearResponse({ curl: true });
+    clearResponse({ curl: true, owner: "scratch" });
   }, [setRoute, setRecord, setCopiedFrom, clearResponse]);
+
+  /** Show an operation of the open API in the editor, as a tab does. */
+  const selectOperation = useCallback(
+    (op: OperationSpec) => {
+      setOperation(op);
+      setPrefill(null);
+      setCopiedFrom(null);
+      setRecord(null);
+      setTab("operations");
+      setView("operation");
+      setRoute("api");
+    },
+    [setOperation, setPrefill, setCopiedFrom, setRecord, setTab, setView, setRoute],
+  );
+
+  const requestTabs = useRequestTabs({
+    route,
+    current,
+    spec,
+    operation,
+    entries,
+    hasUnsent: drafts.hasUnsent,
+    openEntry,
+    selectOperation,
+    goLibrary,
+    clearResponse,
+  });
 
   /** The open API's four views, as the tabs under the top bar show them. */
   const section: ApiSection =
@@ -396,6 +446,13 @@ export default function App() {
     openSettings: () => nav.openSettings(),
     toggleTheme: () => patchSettings({ dark: !settings.dark }),
     closeDialogs: closeOnEscape,
+    requestTab: (action) => {
+      // Only where the tabs are on screen, and never from behind a dialog.
+      if (route !== "api" || showOpen || showEnvs || showRun || showOAuth || showSwitcher || showPublish) return;
+      if (action === "next") requestTabs.next();
+      else if (action === "previous") requestTabs.previous();
+      else if (requestTabs.activeKey) requestTabs.close(requestTabs.activeKey);
+    },
   });
 
   /** Jump to an operation by id from a schema view. */
@@ -512,6 +569,16 @@ export default function App() {
           onAddApi={() => setShowOpen(true)}
           inspectorOpen={settings.inspectorOpen}
           onToggleInspector={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
+        />
+      )}
+      {onApi && (
+        <RequestTabs
+          tabs={requestTabs.tabs}
+          activeKey={requestTabs.activeKey}
+          entries={entries}
+          hasUnsent={drafts.hasUnsent}
+          onActivate={requestTabs.activate}
+          onClose={requestTabs.close}
         />
       )}
       {onScratch && (
@@ -688,7 +755,12 @@ export default function App() {
         <Library
           entries={entries}
           onOpen={(entry) => void openEntry(entry)}
-          onRemove={(entry) => void removeEntry(entry)}
+          onRemove={(entry) =>
+            void removeEntry(entry).then(() => {
+              drafts.forgetApi(entry.id);
+              requestTabs.forgetApi(entry.id);
+            })
+          }
           onRename={(entry, title) => void library.renameEntry(entry.id, title).then(setEntries)}
           onRefresh={(entry) => void refreshEntry(entry)}
           onAdd={() => setShowOpen(true)}
@@ -746,6 +818,7 @@ export default function App() {
               selectedRecord={record?.id ?? null}
               onOpenRecord={setRecord}
               onOpenAllHistory={openHistory}
+              unsent={drafts.unsentOperations}
               onOperationMenu={(op, position) =>
                 current &&
                 collections.openOperationMenu(position, {
@@ -840,12 +913,26 @@ export default function App() {
                     <div className="split">
                       <section className="pane request">
                         <OperationView
+                          key={drafts.editorKey}
                           spec={spec!}
                           op={operation}
                           auth={auth}
                           onAuthChange={setAuth}
                           onValuesChange={onValuesChange}
                           prefill={prefill}
+                          draft={drafts.draft}
+                          onEditorChange={drafts.onEditorChange}
+                          unsent={
+                            drafts.unsent
+                              ? {
+                                  onDiscard: () => {
+                                    setPrefill(null);
+                                    setCopiedFrom(null);
+                                    drafts.discard();
+                                  },
+                                }
+                              : null
+                          }
                           onConfigureOAuth={(schemeName) => setShowOAuth({ prefill: schemeName })}
                           oauthStatus={
                             current?.oauth
@@ -861,6 +948,11 @@ export default function App() {
                             validation={validation}
                             error={requestError}
                             curl={curl}
+                            restored={
+                              restored
+                                ? { sentAt: restored.sentAt, editedSince: drafts.editedSince(restored.fingerprint) }
+                                : null
+                            }
                             onSaveBody={(type) => void saveResponseBody(type)}
                             mockStale={mockBehind && targetingMock}
                             onRefreshMock={

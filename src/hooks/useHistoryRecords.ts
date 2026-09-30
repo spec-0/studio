@@ -3,6 +3,7 @@ import type { SidebarTab } from "../components/Sidebar";
 import { copyDestination, draftFromEntry, isScratch, type HistoryEntry } from "../lib/history";
 import * as library from "../lib/library";
 import type { LibraryEntry } from "../lib/library";
+import { paneOwner } from "../lib/responsePane";
 import { padFromHistory, type ScratchPad } from "../lib/scratch";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "../lib/spec";
 import type { MainView, PrefillValues, Route } from "./useWorkspace";
@@ -44,7 +45,7 @@ export function useHistoryRecords({
   setRecord: (entry: HistoryEntry | null) => void;
   setCopiedFrom: (at: string | null) => void;
   updatePad: (pad: ScratchPad) => void;
-  clearResponse: (options?: { curl?: boolean }) => void;
+  clearResponse: (options?: { curl?: boolean; owner?: string | null }) => void;
 }) {
   /** A copy waiting for its API to finish opening. */
   const [pendingCopy, setPendingCopy] = useState<HistoryEntry | null>(null);
@@ -87,7 +88,8 @@ export function useHistoryRecords({
       setTab("operations");
       setView("operation");
       setRecord(null);
-      clearResponse({ curl: true });
+      // A copy is a new request: no answer from earlier comes back with it.
+      clearResponse({ curl: true, owner: paneOwner("api", entry.apiId, op.id) });
       setCopiedFrom(entry.at);
       setRoute("api");
     },
@@ -106,7 +108,7 @@ export function useHistoryRecords({
       if (destination === "scratch") {
         updatePad(padFromHistory(entry));
         setRecord(null);
-        clearResponse({ curl: true });
+        clearResponse({ curl: true, owner: "scratch" });
         setCopiedFrom(entry.at);
         setRoute("scratch");
         return;

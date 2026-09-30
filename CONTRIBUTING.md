@@ -208,12 +208,32 @@ to a temporary file and only previewed, with a size limit, so *Save as…* copie
 the file instead of downloading it again, and `history.json` doesn't fill up with
 response bodies.
 
-**The response pane only shows the answer to the request on screen.** Picking
-another operation, another API or the scratch pad empties it, and a send still in
-flight when you move goes to History only. There is deliberately no
-per-operation cache: a response next to a request that wasn't sent reads as that
-request's answer. The last response for an operation is in History, with the
-time it ran.
+**The response pane only shows the answer to the request on screen, and never
+an old answer as if it were new.** Picking another operation, another API or the
+scratch pad takes it off screen, and a send still in flight when you move goes to
+History only. Going back to a request later in the same session (from its tab or
+the sidebar) brings its last answer back, but always marked as restored, with the
+time it was sent, and saying so when the request has been edited since: a bare
+response next to a request reads as that request's answer. These answers live in
+memory only (`src/lib/responsePane.ts`); after a restart, an operation's last
+response is in History, with the time it ran.
+
+**Unsent changes belong to the operation, not to the tab.** Drafts
+(`src/lib/drafts.ts`) are kept per API and operation, so closing a tab loses
+nothing and the sidebar still shows the dot. A draft is "changed" against what
+was last sent from it, or against the spec's examples when nothing was; a
+successful send makes the sent values the starting point, and Discard goes back
+to the spec. `drafts.json` is written like the collections file: known secret
+values become `{{references}}`, and an auth value that isn't a reference stays in
+memory for the session and is never written. Tabs (`src/lib/tabs.ts`) are only a
+list of open operations; a collection step is edited in its collection.
+
+**⌘W belongs to the macOS menu.** File → Close Tab (`src-tauri/src/menu.rs`)
+closes the request tab on screen and only closes the window when there is none,
+with ⇧⌘W for the window. The web view is told whether a tab is on screen; it
+doesn't handle ⌘W itself in the macOS app, or one press would close two tabs.
+On Windows and Linux there is no menu item for it and Ctrl+W is handled in the
+web view.
 
 **The content type picks the body editor.** The spec already says whether an
 endpoint takes JSON, a form or a file, so Studio doesn't ask. But don't trust the

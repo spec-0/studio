@@ -2427,3 +2427,105 @@ table.fields .json-value { color: inherit; text-align: left; }
 .link-bar { padding: 8px 14px; border-bottom: 1px solid hsl(var(--border)); }
 .step-banner { align-items: center; }
 .step-banner .spacer { flex: 1; }
+
+/* ─── Request tabs ────────────────────────────────────────────────────────── */
+
+/* The open requests, across APIs, under the API bar. */
+.request-tabs {
+  flex: none;
+  height: 32px;
+  display: flex;
+  min-width: 0;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--surface));
+}
+.request-tabs-strip {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.request-tabs-strip::-webkit-scrollbar { display: none; }
+.request-tab {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  max-width: 280px;
+  border-right: 1px solid hsl(var(--border));
+  color: hsl(var(--ink-2));
+  transition: background-color var(--fast), color var(--fast);
+}
+.request-tab:hover { background: hsl(var(--surface-hover)); color: hsl(var(--ink)); }
+.request-tab.active { background: hsl(var(--bg)); color: hsl(var(--ink)); }
+/* The active tab joins the editor below it. */
+.request-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: hsl(var(--primary));
+}
+.request-tab-open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px 0 10px;
+  font-size: 12px;
+  color: inherit;
+}
+.request-tab-open .method { flex: none; text-align: left; }
+.request-tab-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.request-tab-api {
+  flex: none;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: hsl(var(--ink-3));
+}
+.request-tab-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 5px;
+  border-radius: 4px;
+  color: hsl(var(--ink-3));
+  opacity: 0;
+  transition: opacity var(--fast), background-color var(--fast);
+}
+.request-tab:hover .request-tab-close,
+.request-tab.active .request-tab-close,
+.request-tab-close:focus-visible { opacity: 1; }
+.request-tab-close:hover { background: hsl(var(--border)); color: hsl(var(--ink)); }
+
+/* Unsent changes: next to an operation in the sidebar, and in the editor's header. */
+.row .dirty-dot { align-self: center; margin-left: auto; }
+.unsent-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: hsl(var(--ink-2));
+  white-space: nowrap;
+}
+.unsent-note .btn { padding: 2px 8px; font-size: 11.5px; }
+
+/* A response brought back from earlier in the session says so, above everything else. */
+.restored-note { margin-bottom: 10px; }

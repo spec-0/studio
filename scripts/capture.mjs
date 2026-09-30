@@ -16,6 +16,10 @@
  * and scripts/fixtures/payments.yaml) by right-clicking operations, runs it
  * against a fake server answered here, and shows a step made stale by a new
  * version of the payments spec.
+ *
+ * Then request tabs: operations opened across both APIs, one edited and left
+ * unsent (checked to come back as it was, with its marker), one sent and its
+ * answer brought back labelled, and the strip at the minimum width.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -926,6 +930,148 @@ console.log("48-collections-list-light");
 await toggleTheme();
 await page.screenshot({ path: `${outDir}/48-collections-list-dark.png` });
 console.log("48-collections-list-dark");
+
+// Request tabs and unsent changes: three requests across two APIs, one edited
+// and left unsent, a sent one whose answer comes back labelled when its tab is
+// shown again, and the tab strip at the minimum width.
+{
+  const openApi = async (title) => {
+    await must(clickTab(".nav-tab", "APIs"), "the APIs tab");
+    await wait(300);
+    if (await page.$(".sidebar")) {
+      await clickLabel("Back to all APIs");
+      await wait(400);
+    }
+    await must(
+      page.evaluate((t) => {
+        const el = [...document.querySelectorAll(".api-card:not(.scratch) .api-title")].find((e) => e.textContent?.includes(t));
+        el?.click();
+        return Boolean(el);
+      }, title),
+      `the ${title} card`,
+    );
+    await page.waitForSelector(".sidebar", { timeout: 15000 });
+    await wait(500);
+  };
+  const pickOperation = (method, path) =>
+    must(
+      page.evaluate((m, p) => {
+        const row = [...document.querySelectorAll(".sidebar .row")].find(
+          (r) => r.querySelector(".method")?.textContent?.trim() === m && r.querySelector(".path")?.textContent?.trim() === p,
+        );
+        row?.click();
+        return Boolean(row);
+      }, method, path),
+      `${method} ${path}`,
+    ).then(() => wait(400));
+  const pickTab = (method, path) =>
+    must(
+      page.evaluate((m, p) => {
+        const tab = [...document.querySelectorAll(".request-tab-open")].find(
+          (t) => t.querySelector(".method")?.textContent === m && t.querySelector(".request-tab-path")?.textContent === p,
+        );
+        tab?.click();
+        return Boolean(tab);
+      }, method, path),
+      `the ${method} ${path} tab`,
+    ).then(() => wait(700));
+
+  const edited = '{\n  "customerId": "cus_42",\n  "lineItems": [{ "sku": "abc", "quantity": 2 }]\n}';
+  await openApi("Orders API");
+  await pickOperation("GET", "/orders/{orderId}");
+  await pickOperation("POST", "/orders");
+  await setField(".editor", edited);
+  await wait(300);
+  await pickOperation("GET", "/orders");
+  await openApi("Payments API");
+  await pickOperation("POST", "/payments");
+
+  // Back to the edited request, in the other API, from its tab.
+  await pickTab("POST", "/orders");
+  const restoredBody = await page.$eval(".editor", (el) => el.value);
+  if (restoredBody !== edited) throw new Error(`Unsent changes weren't restored: ${restoredBody}`);
+  const markers = await page.evaluate(() => ({
+    tab: Boolean(document.querySelector('.request-tab.active [aria-label="Unsent changes"]')),
+    sidebar: Boolean(document.querySelector('.sidebar .row[aria-selected="true"] [aria-label="Unsent changes"]')),
+    editor: Boolean(document.querySelector(".unsent-note")),
+  }));
+  if (!markers.tab || !markers.sidebar || !markers.editor) throw new Error(`Missing unsent marker: ${JSON.stringify(markers)}`);
+  console.log("unsent changes restored across APIs, marked on the tab, in the sidebar and in the editor");
+  // The "added to a collection" note from earlier isn't part of these shots.
+  await page.evaluate(() => document.querySelector('.toast [aria-label="Dismiss"]')?.click());
+  for (const theme of ["dark", "light"]) {
+    const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
+    if ((theme === "dark") !== dark) await toggleTheme();
+    await page.screenshot({ path: `${outDir}/49-request-tabs-${theme}.png` });
+    console.log(`49-request-tabs-${theme}`);
+  }
+
+  // Send the order (to the fake server answered below), move away, come back:
+  // its answer returns, saying when it was sent.
+  await setField(".urlbar .url-field input", "https://api.example.com/v1");
+  await page.keyboard.down("Control");
+  await page.keyboard.press("Enter");
+  await page.keyboard.up("Control");
+  await page.waitForFunction(() => document.querySelector(".status-pill"), { timeout: 10000 });
+  await wait(400);
+  if (await page.$(".unsent-note")) throw new Error("A sent request still shows unsent changes");
+  await pickTab("POST", "/payments");
+  if (await page.$(".restored-note")) throw new Error("Another request showed a restored answer");
+  await pickTab("POST", "/orders");
+  await page.waitForSelector(".restored-note", { timeout: 5000 });
+  console.log("a sent request's answer comes back, labelled with when it was sent");
+  await page.screenshot({ path: `${outDir}/50-restored-response-light.png` });
+  console.log("50-restored-response-light");
+  // Editing the request makes the kept answer say it no longer belongs to what's on screen.
+  await setField(".editor", '{ "customerId": "cus_7" }');
+  await wait(300);
+  const note = await page.$eval(".restored-note", (el) => el.textContent ?? "");
+  if (!note.includes("edited since")) throw new Error(`The restored answer didn't say the request changed: ${note}`);
+
+  // Ctrl+Tab moves along the strip.
+  const before = await page.$eval(".request-tab.active .request-tab-path", (el) => el.textContent);
+  await page.keyboard.down("Control");
+  await page.keyboard.press("Tab");
+  await page.keyboard.up("Control");
+  await wait(700);
+  const after = await page.$eval(".request-tab.active .request-tab-path", (el) => el.textContent);
+  if (before === after) throw new Error("Ctrl+Tab didn't move to the next tab");
+
+  // Closing the active tab moves to its neighbour.
+  const count = await page.$$eval(".request-tab", (tabs) => tabs.length);
+  await page.click(".request-tab.active .request-tab-close");
+  await wait(700);
+  const left = await page.$$eval(".request-tab", (tabs) => tabs.length);
+  if (left !== count - 1 || !(await page.$(".request-tab.active"))) throw new Error("Closing a tab didn't move to its neighbour");
+
+  // Tabs and unsent changes survive a restart.
+  await pickTab("POST", "/orders");
+  await setField(".editor", "{}");
+  await wait(800);
+  await page.reload({ waitUntil: "networkidle0" });
+  await wait(500);
+  await openApi("Orders API");
+  await pickTab("POST", "/orders");
+  const afterRestart = await page.evaluate(() => ({
+    tabs: document.querySelectorAll(".request-tab").length,
+    body: document.querySelector(".editor")?.value,
+    marked: Boolean(document.querySelector('.request-tab.active [aria-label="Unsent changes"]')),
+  }));
+  if (afterRestart.tabs !== left || afterRestart.body !== "{}" || !afterRestart.marked) {
+    throw new Error(`Tabs or drafts didn't survive a restart: ${JSON.stringify(afterRestart)}`);
+  }
+  console.log("tabs and unsent changes survive a restart");
+
+  await page.setViewport({ width: 960, height: 600, deviceScaleFactor: 2 });
+  await pickTab("POST", "/orders");
+  await wait(400);
+  await page.screenshot({ path: `${outDir}/51-min-width-tabs-light.png` });
+  console.log("51-min-width-tabs-light");
+  await toggleTheme();
+  await page.screenshot({ path: `${outDir}/51-min-width-tabs-dark.png` });
+  console.log("51-min-width-tabs-dark");
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+}
 
 function answerCollectionServer(request) {
   const url = new globalThis.URL(request.url());

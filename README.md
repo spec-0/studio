@@ -119,6 +119,22 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
   the way. No proxy needed.
 - **Bodies and files.** JSON bodies, form bodies, and file uploads. Binary
   responses such as images or PDFs show inline or can be saved to disk.
+- **Request tabs.** Each operation you open gets a tab under the API bar, across
+  APIs, so you can move between requests in different APIs without losing your
+  place. Close a tab with its ×, a middle-click or ⌘W. Tabs are there again
+  when Studio reopens. Up to 20 are kept; opening more closes the one you used
+  longest ago, but never one with unsent changes.
+- **Unsent changes are kept.** What you type into a request stays with that
+  operation when you move to another one, another API or another tab, and
+  after a restart. A dot on the tab and in the sidebar shows which requests
+  have unsent changes, and **Discard changes** goes back to the values the spec
+  suggests. Once a request is sent, what you sent is what it opens with next
+  time. Auth values you type straight in are kept only until Studio quits;
+  a `{{reference}}` to an environment is kept.
+- **The last response comes back with its request.** Going back to a request
+  you sent earlier in the same session shows its last response, marked with
+  the time it was sent, and says so if you've edited the request since. After a
+  restart, earlier responses are in History.
 
 ### Checking responses
 
@@ -200,7 +216,11 @@ Use Ctrl instead of ⌘ on Windows and Linux.
 | `⌘P` | Switch API | `⌘1` to `⌘4` | Operations, Schemas, Graph, Document |
 | `⌘L` | All APIs | `⌘D` | Theme |
 | `/` | Search | `⌘,` | Settings |
-| `Esc` | Close | | |
+| `Ctrl+Tab` | Next request tab | `Ctrl+Shift+Tab` | Previous request tab |
+| `⌘W` | Close request tab | `Esc` | Close |
+
+On macOS, `⇧⌘]` and `⇧⌘[` also move between request tabs, and `⇧⌘W` closes the
+window. `Ctrl+Tab` is Ctrl on every platform.
 
 ### Performance
 
@@ -226,8 +246,8 @@ servers you point it at.
   can be marked secret. There is one place for secrets, not two.
 - **Secret values are kept in your operating system's credential store**: the
   macOS Keychain, Windows Credential Manager, or the Secret Service on Linux.
-  History, error messages and exported reports show `{{name}}` in place of a
-  secret value.
+  History, error messages, exported reports and saved unsent changes show
+  `{{name}}` in place of a secret value.
 - **Certificate checks are never switched off everywhere at once.** You can turn
   them off for one host at a time, and Studio reminds you when you send a
   request to that host.

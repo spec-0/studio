@@ -87,7 +87,7 @@ export function useWorkspace(
    * pane and the document facts.
    */
   const showSpec = useCallback(
-    (parsed: ParsedSpec, entry: LibraryEntry, text: string) => {
+    (parsed: ParsedSpec, entry: LibraryEntry, text: string, focus?: { operationId: string }) => {
       const state = entry.state ?? {};
       setSpec(parsed);
       setCurrent(entry);
@@ -99,12 +99,18 @@ export function useWorkspace(
       setDocText(text);
       setDocTab(state.docTab ?? "reference");
 
+      const focused = focus ? parsed.operations.find((op) => op.id === focus.operationId) : undefined;
       const restoredOperation =
-        parsed.operations.find((op) => op.id === state.lastOperationId) ?? parsed.operations[0] ?? null;
+        focused ??
+        parsed.operations.find((op) => op.id === state.lastOperationId) ??
+        parsed.operations[0] ??
+        null;
       setOperation(restoredOperation);
       setSchemaName(parsed.schemas[0]?.name ?? null);
-      setTab(state.tab ?? "operations");
-      setView(state.tab === "schemas" ? "schema" : "operation");
+      // A request tab lands on its operation, whichever view the API was left on.
+      const sidebarTab = focused && state.tab === "schemas" ? "operations" : (state.tab ?? "operations");
+      setTab(sidebarTab);
+      setView(sidebarTab === "schemas" ? "schema" : "operation");
       setServer(state.server ?? parsed.servers[0] ?? "");
       if (state.envId !== undefined && state.envId !== activeEnvId) {
         setEnvFile((prev) => ({ ...prev, activeId: state.envId ?? null }));
