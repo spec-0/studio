@@ -17,6 +17,7 @@ import {
 import { mockIsBehind } from "../lib/sync";
 import { relativeTime, sourceLabel, spec0ApiIdOf, type ApiSource, type LibraryEntry } from "../lib/library";
 import { journeyAvailable } from "../lib/mockJourney";
+import { LocalMockControl } from "./LocalMockControl";
 import { Wordmark } from "./Logo";
 import { shortcut } from "../lib/platform";
 import { SWAGGER2_CONVERT_COMMAND } from "../lib/spec";
@@ -67,6 +68,14 @@ interface Props {
   onRefreshMock?: (entry: LibraryEntry) => void;
   /** Create a mock for an entry, or show the one it has (address, key, rebuild). */
   onMock: (entry: LibraryEntry) => void;
+  /** Local mocks: which entries are served on this computer, and the actions. Absent outside the desktop app. */
+  localMock?: {
+    running: Record<string, number>;
+    busy: string | null;
+    error: { id: string; message: string } | null;
+    onStart: (entry: LibraryEntry) => void;
+    onStop: (id: string) => void;
+  };
   checking: boolean;
   /** What the last applied update did to local state, if anything worth saying. */
   syncReport: { title: string; lines: string[] } | null;
@@ -99,6 +108,7 @@ export function Library({
   onApplyUpdate,
   onRefreshMock,
   onMock,
+  localMock,
   checking,
   syncReport,
   onDismissReport,
@@ -298,6 +308,16 @@ export function Library({
                 {entry.syncedAt ? ` · pulled ${relativeTime(entry.syncedAt)}` : ""}
               </span>
               <span className="spacer" />
+              {localMock && (
+                <LocalMockControl
+                  compact
+                  port={localMock.running[entry.id] ?? null}
+                  busy={localMock.busy === entry.id}
+                  error={localMock.error?.id === entry.id ? localMock.error.message : null}
+                  onStart={() => localMock.onStart(entry)}
+                  onStop={() => localMock.onStop(entry.id)}
+                />
+              )}
               {entry.mockUrl ? (
                 <button
                   className="btn ghost card-mock"

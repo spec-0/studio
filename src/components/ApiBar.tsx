@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronLeft, PanelRightClose, PanelRightOpen, Play, Plus, Server } from "lucide-react";
+import { LocalMockControl } from "./LocalMockControl";
 import { TabList } from "./TabList";
 import { API_SECTIONS, type ApiSection } from "../lib/navigation";
 import { shortcut } from "../lib/platform";
@@ -32,6 +33,14 @@ interface ApiProps extends CommonProps {
    * Offered whether or not Studio has noticed drift.
    */
   mock?: { has: boolean; onOpen: () => void } | null;
+  /** This API's local mock: start it, or its address and a stop button while it runs. */
+  localMock?: {
+    port: number | null;
+    busy: boolean;
+    error: string | null;
+    onStart: () => void;
+    onStop: () => void;
+  } | null;
 }
 
 /** The id of the region the API tabs control. */
@@ -123,6 +132,7 @@ export function ApiBar(props: Props) {
 
       <span className="spacer" />
 
+      {props.localMock && <LocalMockControl {...props.localMock} />}
       {props.mock && (
         <button
           className="btn ghost"

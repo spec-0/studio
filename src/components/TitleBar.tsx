@@ -21,12 +21,14 @@ interface Props {
   onOpenAccount: () => void;
   settingsOpen: boolean;
   onOpenSettings: () => void;
+  /** How many local mocks are running, for a dot on the Mocks tab. */
+  localMocks?: number;
 }
 
 const TAB_TITLES: Record<TopTab, string> = {
   apis: `Your APIs (${shortcut("L")} for the list)`,
   history: "Every request, across all APIs",
-  mocks: "Hosted mock servers",
+  mocks: "Mock servers: on this computer and hosted",
   mcp: "A local MCP server for your coding agent",
 };
 
@@ -46,6 +48,7 @@ export function TitleBar({
   onOpenAccount,
   settingsOpen,
   onOpenSettings,
+  localMocks = 0,
 }: Props) {
   return (
     <div className="titlebar" data-tauri-drag-region>
@@ -55,7 +58,21 @@ export function TitleBar({
         className="nav-tabs"
         tabClassName="nav-tab"
         label="Sections"
-        tabs={TOP_TABS.map((tab) => ({ ...tab, title: TAB_TITLES[tab.id] }))}
+        tabs={TOP_TABS.map((tab) =>
+          tab.id === "mocks" && localMocks > 0
+            ? {
+                ...tab,
+                label: (
+                  <>
+                    {tab.label}
+                    <span className="live-dot" aria-hidden />
+                    <span className="sr-only"> ({localMocks} running on this computer)</span>
+                  </>
+                ),
+                title: `${TAB_TITLES.mocks} · ${localMocks} running on this computer`,
+              }
+            : { ...tab, title: TAB_TITLES[tab.id] },
+        )}
         selected={topTab}
         onSelect={onTopTab}
       />

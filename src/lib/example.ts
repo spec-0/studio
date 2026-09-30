@@ -3,9 +3,20 @@ import { deref, type Json } from "./spec";
 /**
  * Build a realistic instance of a schema.
  *
- * The point of a spec-native client: a developer should
- * never see `"string"` in a request body. Declared `example`s win; otherwise the
- * value is inferred from `format`, then from the property name, then from type.
+ * The point of a spec-native client: a developer should never see `"string"` in
+ * a request body. The same rules fill the request editor and answer requests to
+ * a local mock (`localMock.ts`), so both show the same values. In order:
+ *
+ *  1. an example on the media type (`mediaExample`), when there is one;
+ *  2. the schema's own `example` or `examples`;
+ *  3. for objects and arrays, each property or item built by these same rules,
+ *     so property examples are used;
+ *  4. `default`, then `const`, then the first `enum` value;
+ *  5. a value that fits the `format` (date-time, email, uuid…);
+ *  6. a value guessed from the property name, then a placeholder for the type.
+ *
+ * A request leaves out `readOnly` properties (the server sets them); a response
+ * leaves out `writeOnly` ones (a server never sends a password back).
  */
 
 const NOW = "2026-08-01T09:30:00Z";
@@ -58,10 +69,26 @@ function fromName(name: string, type: string | undefined): unknown | undefined {
   return undefined;
 }
 
+/** Which way the value travels: it decides whether `readOnly` or `writeOnly` properties are left out. */
+export type Direction = "request" | "response";
+
 interface Ctx {
   doc: Json;
   seen: Set<string>;
   depth: number;
+  direction: Direction;
+}
+
+/** The first value of a schema's `examples`: an array in JSON Schema, a map of Example objects in some specs. */
+function firstExample(doc: Json, examples: unknown): { found: boolean; value?: unknown } {
+  if (Array.isArray(examples)) return examples.length ? { found: true, value: examples[0] } : { found: false };
+  if (examples && typeof examples === "object") {
+    for (const raw of Object.values(examples as Json)) {
+      const example = raw && typeof raw === "object" ? deref(doc, raw) : undefined;
+      if (example && example.value !== undefined) return { found: true, value: example.value };
+    }
+  }
+  return { found: false };
 }
 
 function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
@@ -73,18 +100,15 @@ function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
   const s = deref(ctx.doc, schema);
   if (s["x-circular"] || s["x-unresolved"]) return null;
 
-  const next: Ctx = { doc: ctx.doc, seen, depth: ctx.depth + 1 };
+  const next: Ctx = { ...ctx, seen, depth: ctx.depth + 1 };
 
   // The spec told us what this looks like — always prefer it.
   if (s.example !== undefined) return s.example;
-  if (s.examples && typeof s.examples === "object") {
-    const first = Object.values<Json>(s.examples)[0];
-    if (first?.value !== undefined) return first.value;
-    if (Array.isArray(s.examples) && s.examples.length) return s.examples[0];
-  }
+  const listed = firstExample(ctx.doc, s.examples);
+  if (listed.found) return listed.value;
   if (s.default !== undefined) return s.default;
-  if (Array.isArray(s.enum) && s.enum.length) return s.enum[0];
   if (s.const !== undefined) return s.const;
+  if (Array.isArray(s.enum) && s.enum.length) return s.enum[0];
 
   if (Array.isArray(s.allOf)) {
     return s.allOf.reduce<Record<string, unknown>>((acc, part) => {
@@ -105,7 +129,8 @@ function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
       if (!s.properties && !s.additionalProperties) return type === "object" ? {} : null;
       const out: Record<string, unknown> = {};
       for (const [key, prop] of Object.entries<Json>(s.properties ?? {})) {
-        if (deref(ctx.doc, prop)?.readOnly) continue;
+        const resolved = deref(ctx.doc, prop);
+        if (ctx.direction === "request" ? resolved?.readOnly : resolved?.writeOnly) continue;
         out[key] = build(prop, key, next);
       }
       return out;
@@ -121,6 +146,7 @@ function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
       const named = fromName(name, type);
       if (typeof named === "number") return named;
       if (typeof s.minimum === "number") return s.minimum;
+      if (typeof s.maximum === "number" && s.maximum < 1) return s.maximum;
       return type === "integer" ? 1 : 1.5;
     }
     case "null":
@@ -140,14 +166,35 @@ function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
   }
 }
 
-export function exampleFor(doc: Json, schema: Json | undefined, name = "value"): unknown {
-  return build(schema, name, { doc, seen: new Set(), depth: 0 });
+export function exampleFor(
+  doc: Json,
+  schema: Json | undefined,
+  name = "value",
+  direction: Direction = "request",
+): unknown {
+  return build(schema, name, { doc, seen: new Set(), depth: 0, direction });
 }
 
-export function exampleBody(doc: Json, schema: Json | undefined): string {
-  if (!schema) return "";
-  const value = exampleFor(doc, schema, "body");
-  return value === null ? "" : JSON.stringify(value, null, 2);
+/**
+ * The value for one media type (`content["application/json"]`): its own
+ * `example`, then the first of its `examples` (following a `$ref` to
+ * `components/examples`), then a value built from its schema. `undefined` when
+ * the media type has neither an example nor a schema.
+ */
+export function mediaExample(doc: Json, media: Json | undefined, direction: Direction = "request"): unknown {
+  if (!media || typeof media !== "object") return undefined;
+  if (media.example !== undefined) return media.example;
+  const listed = firstExample(doc, media.examples);
+  if (listed.found) return listed.value;
+  if (!media.schema) return undefined;
+  return exampleFor(doc, media.schema, "body", direction);
+}
+
+/** The request editor's starting body. `media` is the media type object, for its examples. */
+export function exampleBody(doc: Json, schema: Json | undefined, media?: Json): string {
+  const value = media ? mediaExample(doc, media, "request") : schema ? exampleFor(doc, schema, "body") : undefined;
+  if (value === null || value === undefined) return "";
+  return JSON.stringify(value, null, 2);
 }
 
 /** Seed a parameter input with something plausible rather than an empty box. */

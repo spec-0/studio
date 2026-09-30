@@ -2126,3 +2126,59 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   border-radius: var(--radius);
   box-shadow: 0 8px 24px hsl(0 0% 0% / 0.2);
 }
+
+/* ─── Local mocks ─────────────────────────────────────────────────────────── */
+
+.mocks-section-head { display: flex; align-items: flex-end; gap: 12px; margin: 22px 0 12px; }
+.mocks-section-head h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.mocks-section-head .spacer { flex: 1; }
+.mocks-section-head > div { min-width: 0; max-width: 640px; }
+.local-mocks { padding-bottom: 8px; border-bottom: 1px solid hsl(var(--border)); }
+.local-mocks .mocks-section-head { margin-top: 4px; }
+.local-mocks .mocks-table { margin-bottom: 12px; }
+.mocks-table td.mock-actions.local { width: 72px; white-space: nowrap; }
+.local-mock-start { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; }
+.local-mock-start select { max-width: 320px; }
+.local-mock-rules { border: 0; padding: 0; margin: 10px 0 8px; display: grid; gap: 4px; }
+.local-mock-rules legend { margin-bottom: 4px; }
+.local-mock-rules label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.local-mock-rules input { width: auto; flex: none; margin: 0; padding: 0; }
+.local-mock-row-actions { display: flex; justify-content: flex-end; gap: 4px; }
+.local-mock-name { display: inline-flex; align-items: center; gap: 8px; }
+.local-mock-help { max-width: 640px; margin-bottom: 8px; }
+.local-mocks code, .local-mock-rules code { font-family: var(--font-mono); font-size: 11.5px; }
+
+.live-dot {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: hsl(var(--success));
+  box-shadow: 0 0 0 3px hsl(var(--success) / 0.18);
+  vertical-align: middle;
+}
+.local-mock-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 2px 1px 8px;
+  border: 1px solid hsl(var(--success) / 0.45);
+  border-radius: 999px;
+  color: hsl(var(--success));
+  font-size: 12px;
+  white-space: nowrap;
+}
+.local-mock-live.compact { font-size: 11px; }
+.local-mock-live .local-mock-address { font-family: var(--font-mono); }
+.local-mock-live .icon-btn { color: hsl(var(--ink-2)); }
+.local-mock-error {
+  color: hsl(var(--danger));
+  font-size: 11px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.api-card .local-mock-live { position: relative; z-index: 1; }
+.nav-tab .live-dot { margin-left: 6px; width: 6px; height: 6px; }

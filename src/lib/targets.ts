@@ -9,7 +9,8 @@
 export interface Target {
   label: string;
   url: string;
-  kind: "server" | "mock" | "env";
+  /** `local-mock` is a mock running on this computer (see `localMockServer.ts`). */
+  kind: "server" | "mock" | "env" | "local-mock";
 }
 
 /** A platform environment: a place the API runs, as reported by the platform. */
@@ -58,6 +59,19 @@ export function buildTargets(
     list.push({ label: env.name, url: env.url, kind: "env" });
   }
   return list.filter((t, i, all) => all.findIndex((o) => o.url === t.url) === i);
+}
+
+/**
+ * Add a local mock to the targets, right after the hosted mock (or the spec's
+ * servers). Only present while the mock runs; like every target, it is offered,
+ * never selected for the user.
+ */
+export function withLocalMock(targets: Target[], localMockUrl: string | null, label: string): Target[] {
+  if (!localMockUrl || targets.some((target) => trimSlash(target.url) === trimSlash(localMockUrl))) return targets;
+  const after = targets.reduce((last, target, index) => (target.kind === "env" ? last : index), -1);
+  const next = [...targets];
+  next.splice(after + 1, 0, { label, url: localMockUrl, kind: "local-mock" });
+  return next;
 }
 
 /**

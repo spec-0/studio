@@ -71,6 +71,8 @@ pub struct HttpRequest {
     pub method: String,
     /// The path without its query string.
     pub path: String,
+    /// The query string without its `?`; empty when there is none.
+    pub query: String,
     /// Header names lower-cased.
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
@@ -178,7 +180,10 @@ pub fn read_request(stream: &mut impl Read) -> Result<HttpRequest, HttpResponse>
     let mut parts = request_line.split_whitespace();
     let method = parts.next().unwrap_or("").to_string();
     let target = parts.next().unwrap_or("");
-    let path = target.split('?').next().unwrap_or("").to_string();
+    let (path, query) = match target.split_once('?') {
+        Some((path, query)) => (path.to_string(), query.to_string()),
+        None => (target.to_string(), String::new()),
+    };
     if method.is_empty() || path.is_empty() {
         return Err(HttpResponse::text(400, "Malformed request line."));
     }
@@ -188,7 +193,7 @@ pub fn read_request(stream: &mut impl Read) -> Result<HttpRequest, HttpResponse>
         .map(|(name, value)| (name.trim().to_ascii_lowercase(), value.trim().to_string()))
         .collect();
 
-    let mut request = HttpRequest { method, path, headers, body: Vec::new() };
+    let mut request = HttpRequest { method, path, query, headers, body: Vec::new() };
 
     if request.header("transfer-encoding").is_some() {
         return Err(HttpResponse::text(411, "Send a Content-Length; chunked bodies aren't accepted."));
@@ -715,6 +720,7 @@ mod tests {
         HttpRequest {
             method: "POST".into(),
             path: "/mcp".into(),
+            query: String::new(),
             headers: vec![
                 ("host".into(), format!("127.0.0.1:{PORT}")),
                 ("authorization".into(), format!("Bearer {TOKEN}")),
@@ -1006,6 +1012,7 @@ mod tests {
         let request = read_request(&mut Cursor::new(raw.as_bytes().to_vec())).unwrap();
         assert_eq!(request.method, "POST");
         assert_eq!(request.path, "/mcp");
+        assert_eq!(request.query, "x=1");
         assert_eq!(request.header("host"), Some("127.0.0.1:47321"));
         assert_eq!(request.body, b"{}");
 

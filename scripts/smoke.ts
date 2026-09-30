@@ -1,5 +1,6 @@
 /**
- * Smoke test for Studio's spec pipeline — parse, example-generate, validate.
+ * Smoke test for Studio's spec pipeline — parse, example-generate, validate,
+ * and answer every operation the way a local mock would.
  *
  * Run against real specs, not fixtures: the point is to find out whether the
  * parser survives Stripe-scale input and whether drift detection actually fires.
@@ -14,6 +15,7 @@ import { basename } from "node:path";
 import { parseSpec } from "../src/lib/spec";
 import { exampleFor } from "../src/lib/example";
 import { validateResponse } from "../src/lib/validate";
+import { answerMockRequest, OPERATION_HEADER } from "../src/lib/localMock";
 
 function ms(start: number): string {
   return `${Math.round(performance.now() - start)}ms`;
@@ -74,6 +76,19 @@ for (const file of process.argv.slice(2)) {
       if (result.status === "ok" || result.status === "no_schema") clean += 1;
     }
     console.log(`  self-validation ${clean}/${sample.length} clean in ${ms(t3)}`);
+
+    // A local mock must find every operation by its own path and answer it.
+    const t4 = performance.now();
+    let misrouted = 0;
+    for (const op of spec.operations) {
+      const path = op.path.replace(/\{[^}]+\}/g, "x1");
+      const response = answerMockRequest(spec, { method: op.method, path, query: "", headers: {}, body: "" });
+      // A spec may declare its own 404 or 405, so go by which operation answered.
+      const answeredBy = response.headers.find(([name]) => name === OPERATION_HEADER)?.[1];
+      if (answeredBy !== `${op.method} ${op.path}`) misrouted += 1;
+    }
+    console.log(`  mock answers    ${spec.operations.length - misrouted}/${spec.operations.length} routed in ${ms(t4)}`);
+    if (misrouted) failures += 1;
 
     // Drift detection must actually fire on a mutated payload.
     const target = spec.schemas.find((s) => {
