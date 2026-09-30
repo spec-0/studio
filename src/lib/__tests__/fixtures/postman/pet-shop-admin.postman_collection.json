@@ -1,0 +1,127 @@
+{
+  "info": {
+    "name": "Pet shop admin",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "host", "value": "https://petstore.swagger.io" },
+    { "key": "apiKey", "value": "special-key", "type": "secret" },
+    { "key": "adminPassword", "value": "correct-horse-battery" }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "api_key" },
+      { "key": "value", "value": "{{apiKey}}" },
+      { "key": "in", "value": "header" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Sign in",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "tests[\"Status code is 200\"] = responseCode.code === 200;",
+              "var data = JSON.parse(responseBody);",
+              "postman.setEnvironmentVariable(\"session\", data[\"message\"]);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/v2/user/login?username=admin&password={{adminPassword}}",
+          "host": ["{{host}}"],
+          "path": ["v2", "user", "login"],
+          "query": [
+            { "key": "username", "value": "admin" },
+            { "key": "password", "value": "{{adminPassword}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Find available pets",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Session", "value": "{{session}}" }],
+        "url": "{{host}}/v2/pet/findByStatus?status=available"
+      }
+    },
+    {
+      "name": "Upload a photo",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "additionalMetadata", "value": "front view", "type": "text" },
+            { "key": "file", "type": "file", "src": "/Users/sam/Pictures/rex.jpg" }
+          ]
+        },
+        "url": {
+          "raw": "{{host}}/v2/pet/:petId/uploadImage",
+          "host": ["{{host}}"],
+          "path": ["v2", "pet", ":petId", "uploadImage"],
+          "variable": [{ "key": "petId", "value": "10" }]
+        }
+      }
+    },
+    {
+      "name": "Rename a pet",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "name", "value": "Rex II" },
+            { "key": "status", "value": "sold" },
+            { "key": "note", "value": "old", "disabled": true }
+          ]
+        },
+        "url": "{{host}}/v2/pet/10"
+      }
+    },
+    {
+      "name": "Local stock service",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "stock" },
+            { "key": "password", "value": "hunter2" }
+          ]
+        },
+        "method": "POST",
+        "header": [{ "key": "X-Stock-Token", "value": "abc.def.ghi" }],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "sku", "value": "dog food & treats" },
+            { "key": "count", "value": "{{count}}" }
+          ]
+        },
+        "url": "http://localhost:4010/stock/adjust"
+      }
+    },
+    {
+      "name": "Search (GraphQL)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "graphql",
+          "graphql": { "query": "query { pets(status: AVAILABLE) { id name } }", "variables": "{\"first\": 5}" }
+        },
+        "url": "https://graph.example.net/graphql"
+      }
+    }
+  ]
+}

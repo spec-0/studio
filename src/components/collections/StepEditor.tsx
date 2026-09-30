@@ -14,6 +14,7 @@ import { authOf, stepAuthOf } from "../../hooks/useCollections";
 import { OperationView, type RequestValues } from "../OperationView";
 import { TabList } from "../TabList";
 import { insertInto, isInsertable, type Insertable } from "./insert";
+import { ExpectedStatusField } from "./ExpectedStatus";
 import { StepResponse } from "./StepResponse";
 import { ValuePicker, type EarlierStep } from "./ValuePicker";
 
@@ -204,6 +205,7 @@ export function StepEditor({
               }}
             />
           </label>
+          <ExpectedStatusField step={step} declared={linked?.op.responses.map((r) => r.status) ?? []} onChange={onChange} />
           {step.api && (
             <label className="step-field grow">
               <span className="field-meta">Send to</span>
@@ -266,6 +268,16 @@ export function StepEditor({
         {keyError && <div className="field-meta danger-ink">{keyError}</div>}
       </header>
 
+      {step.note && (
+        <div className="verdict none step-banner step-note" role="note">
+          <span className="glyph">i</span>
+          <div>
+            {step.note.split("\n").map((line) => (
+              <div key={line}>{line}</div>
+            ))}
+          </div>
+        </div>
+      )}
       {localMockDown && (
         <div className="verdict warn step-banner" role="note">
           <AlertTriangle size={14} aria-hidden className="glyph" />

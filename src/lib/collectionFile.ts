@@ -119,13 +119,19 @@ export async function pickCollectionSaveTarget(name: string): Promise<string | n
   return typeof picked === "string" ? withCollectionSuffix(picked) : null;
 }
 
-/** Ask for a collection file to open or import, and read it. */
-export async function pickCollectionFile(): Promise<{ path: string; text: string } | null> {
+/**
+ * Ask for a collection file to open or import, and read it. Importing also
+ * takes a Postman collection (JSON); opening a file to keep linked doesn't,
+ * since Studio can only write its own format back.
+ */
+export async function pickCollectionFile(importing = false): Promise<{ path: string; text: string } | null> {
   if (!inTauri) return null;
   const { open } = await import("@tauri-apps/plugin-dialog");
   const picked = await open({
     multiple: false,
-    filters: [{ name: "spec0 Studio collection", extensions: ["yaml", "yml"] }],
+    filters: importing
+      ? [{ name: "Collection (spec0 Studio or Postman)", extensions: ["yaml", "yml", "json"] }]
+      : [{ name: "spec0 Studio collection", extensions: ["yaml", "yml"] }],
   });
   if (typeof picked !== "string") return null;
   const text = await invoke<string>("read_text", { path: picked });

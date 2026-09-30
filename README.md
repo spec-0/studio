@@ -194,8 +194,30 @@ its response is checked against that spec.
   fields. It is stored as a reference like `{{steps.createOrder.body.id}}`.
   Environment variables work as they do everywhere else.
 - **Run** sends the steps one at a time, stops at the first failure (you can turn
-  that off), and shows for each step whether it passed: a success status and a
-  response that matches its spec. The run is one entry in History.
+  that off), and shows for each step whether it passed: the status it expects
+  and a response that matches its spec. The run is one entry in History.
+- **Expected status.** A step expects any 2xx unless you say otherwise. Set
+  **Expects** on a step to a code like `404` or a range like `4XX` to test a
+  failure case, such as getting a deleted order or paying twice. The step then
+  passes when that status comes back and the response matches what the spec
+  declares for it. If the spec declares nothing for that status, the step
+  passes on the status and says the body wasn't checked.
+- **Importing from Postman.** Use **Import…** or drop a Postman collection
+  (v2.1 or v2.0 JSON) on the Collections tab. It becomes one collection, with
+  folder names at the start of each step's name. Each request is matched to an
+  operation in your library by method and path, against each spec's servers
+  (including a `{{baseUrl}}` whose value is in the collection). Matched
+  requests become linked steps; the rest are kept as plain requests, marked
+  *not in any spec*, and can be linked later. Headers, query and path values,
+  bodies and auth come across. Tokens, passwords and API keys typed into
+  Postman are never written into the collection: they become `{{variables}}`,
+  and you choose whether their values go into a new environment along with the
+  collection's variables. Studio doesn't run Postman scripts. A test that
+  checks a status sets the step's expected status, and a script that saves a
+  response value, such as `pm.environment.set("orderId", pm.response.json().id)`,
+  becomes a reference in the later steps that use it. A summary afterwards
+  lists what matched, what didn't, and anything that needs your attention.
+  Insomnia and Bruno files aren't supported yet.
 - **When a spec changes**, a step that no longer matches it is marked with what
   changed, and a step whose operation is gone can be linked to another one.
 - **Saving.** Collections are kept in Studio. You can also export one to a file,

@@ -42,6 +42,8 @@ import {
   type StepLink,
   type StepValues,
 } from "../lib/collectionLink";
+import { detectImportFormat } from "../lib/collectionImport";
+import { importPostman, type EnvironmentDraft, type ImportSummary } from "../lib/postman";
 import { mockWarnings, planStep, runSteps, verdictFor, type StepResult } from "../lib/collectionRun";
 import { transportFor, type ConnectionSettings } from "../lib/connection";
 import * as history from "../lib/history";
@@ -71,6 +73,13 @@ export interface CollectionNotice {
   kind: "info" | "warn" | "error";
   text: string;
   lines?: string[];
+}
+
+/** A Postman collection just imported: what happened, and the environment on offer. */
+export interface ImportOutcome {
+  collectionId: string;
+  summary: ImportSummary;
+  environment: EnvironmentDraft | null;
 }
 
 /** The file changed on disk and the collection has unsaved edits. */
@@ -115,6 +124,7 @@ export function useCollections({
   setRequests,
   showCollections,
   localMocks,
+  addEnvironment,
 }: {
   entries: LibraryEntry[];
   setEntries: Dispatch<SetStateAction<LibraryEntry[]>>;
@@ -131,6 +141,8 @@ export function useCollections({
     available: boolean;
     start: (entry: LibraryEntry) => Promise<void>;
   };
+  /** Create an environment (and make it active), e.g. from an imported collection's variables. */
+  addEnvironment: (draft: EnvironmentDraft) => void;
 }) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -468,16 +480,59 @@ export function useCollections({
     [commit, checkDisk],
   );
 
+  const [imported, setImported] = useState<ImportOutcome | null>(null);
+
+  /**
+   * Import a file of any kind Studio reads: its own collection format, or a
+   * Postman collection, matched against every API in the library. Anything
+   * else is refused with a message saying what the file is.
+   */
+  const importText = useCallback(
+    async (text: string, path: string | null) => {
+      setOpenError(null);
+      const format = detectImportFormat(text);
+      if (format.kind === "studio") return addFromText(text, path, false);
+      if (format.kind === "unsupported") {
+        setOpenError(`${path ? `${fileName(path)}: ` : ""}${format.message}`);
+        return;
+      }
+      try {
+        const read = await Promise.all(entries.map(async (entry) => [entry.id, await specForEntry(entry)] as const));
+        const result = importPostman(format.data, { entries, specs: new Map(read) });
+        commit([...latest.current, result.collection]);
+        setSelectedId(result.collection.id);
+        setSelectedStep(0);
+        setImported({ collectionId: result.collection.id, summary: result.summary, environment: result.environment });
+      } catch (error) {
+        setOpenError(
+          `${path ? fileName(path) : "That file"}: couldn't import it: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    },
+    [addFromText, entries, specForEntry, commit],
+  );
+
+  /** Close the import summary, creating the environment if the user asked for it. */
+  const finishImport = useCallback(
+    (environment: EnvironmentDraft | null) => {
+      if (environment) addEnvironment(environment);
+      setImported(null);
+    },
+    [addEnvironment],
+  );
+
   const openFromFile = useCallback(
     async (link: boolean) => {
       try {
-        const picked = await pickCollectionFile();
-        if (picked) addFromText(picked.text, picked.path, link);
+        const picked = await pickCollectionFile(!link);
+        if (!picked) return;
+        if (link) addFromText(picked.text, picked.path, true);
+        else await importText(picked.text, picked.path);
       } catch (error) {
         setOpenError(error instanceof Error ? error.message : String(error));
       }
     },
-    [addFromText],
+    [addFromText, importText],
   );
 
   // ── editing ────────────────────────────────────────────────────────────────
@@ -727,7 +782,7 @@ export function useCollections({
           validation = validateResponse(linked.spec.doc, declared?.schema, response.json);
         }
         const warned = mockWarnings(response.headers);
-        const checked = verdictFor(response.status, validation);
+        const checked = verdictFor(response.status, validation, step.expect?.status);
         const { verdict } = checked;
         // The mock answered, so the step passes on its response, but a request
         // the spec wouldn't accept is worth saying next to that pass.
@@ -940,6 +995,9 @@ export function useCollections({
     resolveConflict,
     openFromFile,
     addFromText,
+    importText,
+    imported,
+    finishImport,
     mockUrlFor,
     localMocks,
     addMenu,

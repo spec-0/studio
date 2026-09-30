@@ -167,3 +167,19 @@ export function withBaseUrl(file: EnvironmentFile, url: string): EnvironmentFile
       : [...file.environments, updated],
   };
 }
+
+/**
+ * Add an environment made elsewhere (an imported collection's variables) and
+ * make it the active one. Its name gets a number if another environment has it.
+ */
+export function withNewEnvironment(file: EnvironmentFile, draft: { name: string; variables: Variable[] }): EnvironmentFile {
+  const names = new Set(file.environments.map((env) => env.name));
+  let name = draft.name.trim() || "Imported";
+  for (let n = 2; names.has(name); n += 1) name = `${draft.name.trim() || "Imported"} ${n}`;
+  const env: Environment = {
+    ...newEnvironment(name),
+    id: `env_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    variables: draft.variables.map((v) => ({ ...v })),
+  };
+  return { activeId: env.id, environments: [...file.environments, env] };
+}

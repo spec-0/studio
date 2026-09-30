@@ -6,6 +6,7 @@ import {
   unresolved,
   variableMap,
   withBaseUrl,
+  withNewEnvironment,
   withVariable,
 } from "../env";
 import type { Environment, EnvironmentFile } from "../env";
@@ -132,5 +133,21 @@ describe("withBaseUrl", () => {
     expect(next.environments.map((e) => e.id)).toEqual(["s", "o"]);
     expect(next.environments[0].variables).toEqual([{ name: "baseUrl", value: "https://new", secret: false }]);
     expect(next.environments[1]).toBe(other);
+  });
+});
+
+describe("withNewEnvironment", () => {
+  it("adds the environment, makes it active, and keeps names distinct", () => {
+    const first = withNewEnvironment({ environments: [], activeId: null }, {
+      name: "Checkout flow",
+      variables: [{ name: "token", value: "t", secret: true }],
+    });
+    expect(first.environments).toHaveLength(1);
+    expect(first.activeId).toBe(first.environments[0].id);
+    expect(first.environments[0].variables).toEqual([{ name: "token", value: "t", secret: true }]);
+    const second = withNewEnvironment(first, { name: "Checkout flow", variables: [] });
+    expect(second.environments.map((e) => e.name)).toEqual(["Checkout flow", "Checkout flow 2"]);
+    expect(second.activeId).toBe(second.environments[1].id);
+    expect(second.environments[0].id).not.toBe(second.environments[1].id);
   });
 });

@@ -19,6 +19,7 @@ import { fileName, shortcut } from "../../lib/platform";
 import { inTauri } from "../../lib/request";
 import type { CollectionsApi } from "../../hooks/useCollections";
 import { ContextMenu, type MenuItem } from "../ContextMenu";
+import { ImportSummaryDialog } from "./ImportSummaryDialog";
 import { LinkOperationDialog } from "./LinkOperationDialog";
 import { StepEditor, type StepTab } from "./StepEditor";
 import { StepList, stepTitle } from "./StepList";
@@ -37,9 +38,39 @@ interface Props {
 export function CollectionsView({ api, entries, onGoLibrary }: Props) {
   const { collections, selected } = api;
   const importInput = useRef<HTMLInputElement>(null);
+  const [dropping, setDropping] = useState(false);
+  /** Only files: dragging a step to reorder it is a drag too. */
+  const carriesFiles = (event: React.DragEvent) => [...event.dataTransfer.types].includes("Files");
 
   return (
-    <div className="panes collections">
+    <div
+      className={`panes collections${dropping ? " dropping" : ""}`}
+      onDragOver={(event) => {
+        if (!carriesFiles(event)) return;
+        // A collection dropped here is imported, not added to the library as a spec.
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = "copy";
+        setDropping(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropping(false);
+      }}
+      onDrop={(event) => {
+        if (!carriesFiles(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setDropping(false);
+        const file = event.dataTransfer.files?.[0];
+        if (file) void file.text().then((text) => api.importText(text, file.name));
+      }}
+    >
+      {dropping && (
+        <div className="collections-drop" aria-hidden>
+          <Import size={20} />
+          <span>Drop to import a Postman collection or a Studio collection file</span>
+        </div>
+      )}
       <aside className="sidebar collections-side" aria-label="Collections">
         <div className="history-side-head">
           <h2>Collections</h2>
@@ -55,24 +86,24 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
               <button type="button" className="btn" onClick={() => void api.openFromFile(true)} title="Open a collection file and keep it linked, e.g. in a git repository">
                 <FolderOpen size={13} aria-hidden /> Open file…
               </button>
-              <button type="button" className="btn" onClick={() => void api.openFromFile(false)} title="Import a copy of a collection file into Studio">
+              <button type="button" className="btn" onClick={() => void api.openFromFile(false)} title="Import a Postman collection (v2.1), or a copy of a Studio collection file">
                 <Import size={13} aria-hidden /> Import…
               </button>
             </>
           ) : (
-            <button type="button" className="btn" onClick={() => importInput.current?.click()}>
+            <button type="button" className="btn" onClick={() => importInput.current?.click()} title="Import a Postman collection (v2.1), or a Studio collection file">
               <Import size={13} aria-hidden /> Import…
             </button>
           )}
           <input
             ref={importInput}
             type="file"
-            accept=".yaml,.yml"
+            accept=".yaml,.yml,.json"
             hidden
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (file) void file.text().then((text) => api.addFromText(text, null, false));
+              if (file) void file.text().then((text) => api.importText(text, file.name));
             }}
           />
         </div>
@@ -129,7 +160,8 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
               longer matches it.
             </p>
             <p>
-              Right-click an operation and choose <strong>Add to collection</strong>, or add one from History.
+              Right-click an operation and choose <strong>Add to collection</strong>, or add one from History. You can
+              also import a Postman collection: use <strong>Import…</strong> or drop the file here.
             </p>
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" className="btn primary" onClick={() => api.create()}>
@@ -142,6 +174,13 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
           </div>
         )}
       </div>
+      {api.imported && (
+        <ImportSummaryDialog
+          summary={api.imported.summary}
+          environment={api.imported.environment}
+          onDone={api.finishImport}
+        />
+      )}
     </div>
   );
 }

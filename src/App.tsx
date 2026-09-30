@@ -67,7 +67,7 @@ import { useUpdater } from "./hooks/useUpdater";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { hostOf } from "./lib/connection";
 import { authFits } from "./lib/drafts";
-import { interpolate } from "./lib/env";
+import { interpolate, withNewEnvironment, type Variable } from "./lib/env";
 import { attachApiIds, belongsTo } from "./lib/history";
 import * as library from "./lib/library";
 import type { LibraryEntry } from "./lib/library";
@@ -268,6 +268,10 @@ export default function App() {
     setRequests,
     showCollections: useCallback(() => setRoute("collections"), [setRoute]),
     localMocks,
+    addEnvironment: useCallback(
+      (draft: { name: string; variables: Variable[] }) => saveEnvFile(withNewEnvironment(envFile, draft)),
+      [envFile, saveEnvFile],
+    ),
   });
 
   const {

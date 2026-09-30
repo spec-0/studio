@@ -72,6 +72,41 @@ export interface StepAuth {
   value: string;
 }
 
+/**
+ * The status a step expects: one code (`"404"`), a class of codes (`"4XX"`),
+ * or `"2XX"`, any success, which is what a step expects when it says nothing.
+ */
+export interface StepExpect {
+  status: string;
+}
+
+/** What a step expects when it doesn't say. Never written to a file. */
+export const DEFAULT_EXPECTED_STATUS = "2XX";
+
+/** `"404"`, `"4xx"` or `"4XX"` → `"404"` / `"4XX"`; null when it isn't a status. */
+export function normaliseExpectedStatus(value: string): string | null {
+  const text = value.trim().toUpperCase();
+  return /^[1-5](\d\d|XX)$/.test(text) ? text : null;
+}
+
+/** Whether a response status is the one a step expects. */
+export function statusMatches(expected: string | undefined, status: number): boolean {
+  const want = normaliseExpectedStatus(expected ?? DEFAULT_EXPECTED_STATUS) ?? DEFAULT_EXPECTED_STATUS;
+  return want.endsWith("XX") ? Math.floor(status / 100) === Number(want[0]) : status === Number(want);
+}
+
+/** How the expectation reads in the interface: "any 2xx", "404", "any 4xx". */
+export function describeExpected(expected: string | undefined): string {
+  const want = normaliseExpectedStatus(expected ?? DEFAULT_EXPECTED_STATUS) ?? DEFAULT_EXPECTED_STATUS;
+  return want.endsWith("XX") ? `any ${want[0]}xx` : want;
+}
+
+/** The step's expected status, or undefined when it is the default. */
+export function expectedStatusOf(step: Pick<CollectionStep, "expect">): string | undefined {
+  const want = step.expect ? normaliseExpectedStatus(step.expect.status) : null;
+  return want && want !== DEFAULT_EXPECTED_STATUS ? want : undefined;
+}
+
 export interface CollectionStep {
   /**
    * The name later steps use to refer to this one: `{{steps.<key>.body.id}}`.
@@ -95,6 +130,16 @@ export interface CollectionStep {
   headers: Record<string, string>;
   body?: BodyInput;
   auth?: StepAuth;
+  /**
+   * The status this step expects. Absent means any 2xx. A step that expects
+   * 404 passes on a 404 whose body matches what the spec declares for it.
+   */
+  expect?: StepExpect;
+  /**
+   * Something to know about this step that the step itself can't say, e.g.
+   * that it came from Postman with a script Studio doesn't run.
+   */
+  note?: string;
 }
 
 export interface CollectionFileLink {
@@ -297,7 +342,19 @@ export function redactStep(step: CollectionStep): { step: CollectionStep; droppe
  *     target: mock
  *     pathParams:
  *       orderId: "{{steps.createOrder.body.id}}"
+ *   - key: getDeletedOrder
+ *     api: orders
+ *     operationId: getOrder
+ *     method: GET
+ *     path: /orders/{orderId}
+ *     pathParams:
+ *       orderId: "{{steps.createOrder.body.id}}"
+ *     expect:
+ *       status: "404"
  * ```
+ *
+ * `expect` is written only when a step expects something other than any 2xx,
+ * and `note` only when a step has one; both are optional in version 1.
  *
  * Empty maps are left out so a diff shows only what someone changed.
  */
@@ -328,6 +385,8 @@ interface FileStep {
   body?: string;
   form?: Array<{ name: string; value: string }>;
   multipart?: Array<{ name: string; value?: string; file?: string; contentType?: string }>;
+  expect?: { status: string };
+  note?: string;
 }
 
 interface FileShape {
@@ -434,6 +493,9 @@ export function serializeCollection(
         }));
       }
     }
+    const expected = expectedStatusOf(step);
+    if (expected) out.expect = { status: expected };
+    if (step.note?.trim()) out.note = step.note;
     return out;
   });
 
@@ -584,6 +646,17 @@ export function parseCollection(text: string, options: ParseOptions = {}): Colle
         ),
       };
     }
+    let expect: CollectionStep["expect"];
+    if (s.expect !== undefined && s.expect !== null) {
+      const raw = typeof s.expect === "object" ? (s.expect as { status?: unknown }).status : s.expect;
+      const status = normaliseExpectedStatus(String(raw ?? ""));
+      if (!status) {
+        throw new CollectionFormatError(
+          `Step "${s.key}": expect.status must be a status like "404", or a range like "4XX".`,
+        );
+      }
+      if (status !== DEFAULT_EXPECTED_STATUS) expect = { status };
+    }
     const auth =
       s.auth && typeof s.auth === "object"
         ? ({ ...s.auth, scheme: String(s.auth.scheme ?? ""), value: String(s.auth.value ?? "") } as StepAuth)
@@ -600,6 +673,8 @@ export function parseCollection(text: string, options: ParseOptions = {}): Colle
       headers: stringMap(s.headers, `Step "${s.key}" headers`),
       ...(body !== undefined ? { body } : {}),
       ...(auth ? { auth } : {}),
+      ...(expect ? { expect } : {}),
+      ...(typeof s.note === "string" && s.note.trim() ? { note: s.note.replace(/\n$/, "") } : {}),
     };
   });
 

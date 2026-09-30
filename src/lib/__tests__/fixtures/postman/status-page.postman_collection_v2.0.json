@@ -1,0 +1,25 @@
+{
+  "info": {
+    "name": "Status checks (v2.0)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+  },
+  "auth": { "type": "bearer", "bearer": { "token": "{{token}}" } },
+  "item": [
+    {
+      "name": "List orders",
+      "request": {
+        "method": "GET",
+        "header": "Accept: application/json\nX-Trace: on",
+        "url": "https://staging.api.example.com/v1/orders?limit=5"
+      }
+    },
+    {
+      "name": "Customer that doesn't exist",
+      "event": [{ "listen": "test", "script": { "exec": "pm.response.to.be.notFound;" } }],
+      "request": {
+        "method": "GET",
+        "url": "https://api.example.com/v1/customers/nobody"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { AlertTriangle, GripVertical, Link2Off, Unlink } from "lucide-react";
-import type { Collection } from "../../lib/collection";
+import { describeExpected, expectedStatusOf, type Collection } from "../../lib/collection";
 import { describeTarget, type StepLink } from "../../lib/collectionLink";
 import type { StepResult } from "../../lib/collectionRun";
 
@@ -62,6 +62,7 @@ export function StepList({ collection, links, results, runningIndex, selected, o
                 : "Not linked to a spec";
           const method = (step.operation?.method ?? step.request?.method ?? "GET").toUpperCase();
           const path = step.operation?.path ?? step.request?.url ?? "";
+          const expected = expectedStatusOf(step);
           const state =
             runningIndex === index
               ? "running"
@@ -122,6 +123,11 @@ export function StepList({ collection, links, results, runningIndex, selected, o
                   <span className="step-line">
                     <span className={`method ${method.toLowerCase()}`}>{method}</span>
                     <span className="path">{path}</span>
+                    {expected && (
+                      <span className="step-expect" title={`This step passes when the server answers ${describeExpected(expected)}.`}>
+                        expects {describeExpected(expected)}
+                      </span>
+                    )}
                   </span>
                   <span className="summary">
                     {step.name ? `${step.name} · ` : ""}
@@ -142,9 +148,9 @@ export function StepList({ collection, links, results, runningIndex, selected, o
                   </span>
                 )}
                 {link?.kind === "unlinked" && (
-                  <span className="step-marker" title="Not linked to an operation, so its response isn't checked.">
+                  <span className="step-marker" title="Not linked to an operation in any spec, so its response isn't checked.">
                     <Unlink size={13} aria-hidden />
-                    unlinked
+                    not in any spec
                   </span>
                 )}
                 <span id={`step-state-${index}`} className="sr-only">
@@ -153,6 +159,7 @@ export function StepList({ collection, links, results, runningIndex, selected, o
                     : link?.kind === "unresolved"
                       ? link.reason
                       : ""}
+                  {expected ? ` Expects ${describeExpected(expected)}.` : ""}
                   {result ? ` Last run: ${result.verdict === "pass" ? "passed" : result.verdict === "fail" ? "failed" : "not run"}.` : ""}
                 </span>
               </button>
