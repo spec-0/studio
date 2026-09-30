@@ -1,4 +1,5 @@
-import { dump, load } from "js-yaml";
+import { dump } from "js-yaml";
+import { loadYaml } from "./yaml";
 import { fingerprint } from "./history";
 import type { SourceKind } from "./library";
 import { redact, redactHeaders } from "./redact";
@@ -511,7 +512,7 @@ export function serializeCollection(
     "# A spec0 Studio collection. Each step points at an operation in one of the\n" +
     "# specs under `apis`; the spec stays the source of truth. Values like\n" +
     "# {{token}} come from a Studio environment and are never stored here.\n";
-  const text = header + dump(shape, { lineWidth: 100, noRefs: true, quotingType: '"' });
+  const text = header + dump(shape, { lineWidth: 100, noRefs: true, quoteStyle: "double" });
   return { text, warnings };
 }
 
@@ -562,7 +563,7 @@ export interface ParseOptions {
 export function parseCollection(text: string, options: ParseOptions = {}): Collection {
   let raw: unknown;
   try {
-    raw = load(text);
+    raw = loadYaml(text);
   } catch (error) {
     throw new CollectionFormatError(
       `This isn't valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,

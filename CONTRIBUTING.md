@@ -1,7 +1,7 @@
 # Contributing
 
 Thanks for taking a look. Studio is built with Tauri v2 (a Rust shell around a
-web view), React 18, TypeScript and Vite. It ships for macOS, Windows and Linux;
+web view), React 19, TypeScript and Vite. It ships for macOS, Windows and Linux;
 the Mac build has had the most use so far.
 
 Most of this file is a list of rules, each with the reason behind it. The reason
