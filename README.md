@@ -196,6 +196,13 @@ its response is checked against that spec.
 - **Run** sends the steps one at a time, stops at the first failure (you can turn
   that off), and shows for each step whether it passed: the status it expects
   and a response that matches its spec. The run is one entry in History.
+- **Run log.** **Runs** in a collection lists its last 20 runs. Each run's log
+  shows the steps in order: when each started, its method, URL and target, the
+  status, the expected status, the schema check, and whether it passed. It shows
+  which values were passed from earlier steps and the value used, and any that
+  couldn't be resolved. A failure says why (network error, unexpected status,
+  schema difference, unresolved value), and a step that didn't run says why it
+  was skipped. Copy a log as text, or export it as JSON or text.
 - **Expected status.** A step expects any 2xx unless you say otherwise. Set
   **Expects** on a step to a code like `404` or a range like `4XX` to test a
   failure case, such as getting a deleted order or paying twice. The step then
@@ -244,6 +251,14 @@ Use Ctrl instead of ⌘ on Windows and Linux.
 On macOS, `⇧⌘]` and `⇧⌘[` also move between request tabs, and `⇧⌘W` closes the
 window. `Ctrl+Tab` is Ctrl on every platform.
 
+### Console
+
+**Console** in the status bar (`⇧⌘Y`, or `Ctrl+Shift+Y`) opens a log of this
+session: requests as they're sent and answered, collection runs (with a link to
+each run's log), requests to local mocks, and MCP tool calls (the tool's name
+and whether it worked, never its arguments). It can be filtered and copied, keeps
+the last 1,000 entries, and a badge counts new errors. It is kept in memory only.
+
 ### Performance
 
 On Stripe's public spec (7.6 MB, 589 operations, 1440 schemas), Studio takes
@@ -268,8 +283,11 @@ servers you point it at.
   can be marked secret. There is one place for secrets, not two.
 - **Secret values are kept in your operating system's credential store**: the
   macOS Keychain, Windows Credential Manager, or the Secret Service on Linux.
-  History, error messages, exported reports and saved unsent changes show
-  `{{name}}` in place of a secret value.
+  History, error messages, exported reports, saved unsent changes, run logs and
+  the console show `{{name}}` in place of a secret value.
+- **Logs stay on this computer.** Collection run logs are saved next to your
+  other Studio data (the last 20 runs per collection); the console is kept in
+  memory and is gone when Studio quits. Neither is sent anywhere.
 - **Certificate checks are never switched off everywhere at once.** You can turn
   them off for one host at a time, and Studio reminds you when you send a
   request to that host.

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { menuClosesTabs, onCloseTabRequested } from "../lib/appMenu";
 import { sectionForKey, type ApiSection } from "../lib/navigation";
 import { isMac } from "../lib/platform";
-import { tabShortcutFor, type TabShortcut } from "../lib/shortcuts";
+import { isConsoleShortcut, tabShortcutFor, type TabShortcut } from "../lib/shortcuts";
 
 export interface ShortcutActions {
   /** ⌘/Ctrl+Enter — sends the request on screen; see `sendTargetFor`. */
@@ -30,6 +30,8 @@ export interface ShortcutActions {
    * tabs; ⌘/Ctrl+W closes the current one. See `tabShortcutFor`.
    */
   requestTab: (action: TabShortcut) => void;
+  /** ⌘⇧Y / Ctrl+Shift+Y — the app console; see `isConsoleShortcut`. */
+  toggleConsole: () => void;
 }
 
 /**
@@ -50,6 +52,9 @@ export function useShortcuts(actions: ShortcutActions) {
       if (tabAction) {
         event.preventDefault();
         act.requestTab(tabAction);
+      } else if (isConsoleShortcut(event, { mac: isMac })) {
+        event.preventDefault();
+        act.toggleConsole();
       } else if (meta && event.key === "Enter") {
         event.preventDefault();
         act.send();

@@ -47,6 +47,8 @@ pub const SUPPORTED_VERSIONS: &[&str] = &["2025-11-25", "2025-06-18", "2025-03-2
 const TOOLS_JSON: &str = include_str!("../../src/lib/mcp-tools.json");
 /// The web view is asked to run a tool with this event.
 pub const CALL_EVENT: &str = "studio://mcp-call";
+/// Tool calls answered in Rust, for the window's console: name and outcome only.
+pub const ACTIVITY_EVENT: &str = "studio://mcp-activity";
 
 const MAX_HEADER_BYTES: usize = 16 * 1024;
 const MAX_BODY_BYTES: usize = 1024 * 1024;
@@ -272,6 +274,9 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 /// Runs the tools that aren't answered in Rust. The real one asks the web view.
 pub trait ToolHost: Send + Sync {
     fn call(&self, name: &str, arguments: &Value) -> Result<Value, String>;
+    /// Tells the window's console that a call answered here (not forwarded)
+    /// happened: the tool's name and whether it worked. Never its arguments.
+    fn note(&self, _name: &str, _ok: bool) {}
 }
 
 pub struct Config {
@@ -388,6 +393,7 @@ fn dispatch(
                 .and_then(Value::as_str)
                 .ok_or((-32602, "Missing tool name.".to_string()))?;
             if !tool_names().iter().any(|known| known == name) {
+                host.note(name, false);
                 return Err((-32602, format!("Unknown tool: {name}")));
             }
             let arguments = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
@@ -395,6 +401,7 @@ fn dispatch(
                 return Err((-32602, "Tool arguments must be an object.".to_string()));
             }
             if name == "list_environments" {
+                host.note(name, true);
                 return Ok(list_environments(&config.config_dir));
             }
             Ok(match host.call(name, &arguments) {
@@ -545,6 +552,11 @@ impl ToolHost for WebviewHost {
             pending.remove(&id);
         });
         result.map_err(|_| "Studio didn't answer in time. Is its window open?".to_string())
+    }
+
+    fn note(&self, name: &str, ok: bool) {
+        // Best effort: the console is a convenience, and a closed window just misses it.
+        let _ = self.app.emit(ACTIVITY_EVENT, json!({ "name": name, "ok": ok }));
     }
 }
 
@@ -1065,5 +1077,30 @@ mod tests {
 
         stop.store(true, Ordering::Relaxed);
         thread.join().unwrap();
+    }
+
+    #[test]
+    fn calls_answered_here_are_noted_without_arguments() {
+        use std::sync::Mutex as StdMutex;
+        struct Recording(StdMutex<Vec<(String, bool)>>);
+        impl ToolHost for Recording {
+            fn call(&self, _name: &str, _arguments: &Value) -> Result<Value, String> {
+                Ok(json!({ "content": [] }))
+            }
+            fn note(&self, name: &str, ok: bool) {
+                self.0.lock().unwrap().push((name.to_string(), ok));
+            }
+        }
+        let dir = temp_dir("note");
+        let host = Recording(StdMutex::new(Vec::new()));
+        let call = |name: &str| {
+            let body = json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": { "name": name, "arguments": { "secret": "sk_live_x" } } });
+            handle(&post(&body), &config(&dir), &host);
+        };
+        call("list_environments");
+        call("no_such_tool");
+        let noted = host.0.lock().unwrap().clone();
+        assert_eq!(noted, vec![("list_environments".to_string(), true), ("no_such_tool".to_string(), false)]);
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

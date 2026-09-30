@@ -15,7 +15,9 @@
  * The last part builds a collection across two specs (the sample Orders API
  * and scripts/fixtures/payments.yaml) by right-clicking operations, runs it
  * against a fake server answered here, and shows a step made stale by a new
- * version of the payments spec.
+ * version of the payments spec. The run's log is shown in the Runs view, with
+ * its failed step opened, and then the app console with every kind of entry
+ * and a filter, including at 960px.
  *
  * Then request tabs: operations opened across both APIs, one edited and left
  * unsent (checked to come back as it was, with its marker), one sent and its
@@ -881,6 +883,110 @@ console.log("44-run-results-light");
 await toggleTheme();
 await page.screenshot({ path: `${outDir}/44-run-results-dark.png` });
 console.log("44-run-results-dark");
+
+// The run's log: the Runs view, a failed step opened, and the app console.
+{
+  const segment = (text) =>
+    must(
+      page.evaluate((t) => {
+        const tab = [...document.querySelectorAll(".collection-panes .segment")].find((el) => el.textContent?.startsWith(t));
+        tab?.click();
+        return Boolean(tab);
+      }, text),
+      `the ${text} view`,
+    ).then(() => wait(400));
+  await segment("Runs");
+  await page.waitForSelector(".runlog-timeline", { timeout: 5000 });
+  const logged = await page.evaluate(() =>
+    [...document.querySelectorAll(".runlog-step")].map((row) => [...row.classList].find((c) => c !== "runlog-step")),
+  );
+  if (logged.join(",") !== "pass,pass,fail") throw new Error(`Run log shows ${logged.join(",")}, expected pass,pass,fail`);
+  const linkText = await page.evaluate(() => document.querySelector(".runlog-step.fail .runlog-reason")?.textContent ?? "");
+  if (!linkText) throw new Error("The failed step's reason isn't shown in the run log");
+  await page.screenshot({ path: `${outDir}/44b-run-log-dark.png` });
+  console.log("44b-run-log-dark");
+  await toggleTheme();
+  await page.screenshot({ path: `${outDir}/44b-run-log-light.png` });
+  console.log("44b-run-log-light");
+  // Open the failed step, and the one that used step 1's value.
+  await page.click(".runlog-step.fail .runlog-line");
+  await page.evaluate(() => document.querySelectorAll(".runlog-step .runlog-line")[1]?.click());
+  await wait(300);
+  const details = await page.evaluate(() => document.querySelector(".runlog-step.fail .runlog-details")?.textContent ?? "");
+  if (!details.includes("Values used")) throw new Error(`The failed step's details don't show the values used: ${details}`);
+  await page.screenshot({ path: `${outDir}/44c-run-log-failure-light.png` });
+  console.log("44c-run-log-failure-light");
+  await toggleTheme();
+  await page.screenshot({ path: `${outDir}/44c-run-log-failure-dark.png` });
+  console.log("44c-run-log-failure-dark");
+  await page.setViewport({ width: 960, height: 700, deviceScaleFactor: 2 });
+  await wait(400);
+  await page.screenshot({ path: `${outDir}/44d-run-log-960-dark.png` });
+  console.log("44d-run-log-960-dark");
+  await toggleTheme();
+  await page.screenshot({ path: `${outDir}/44d-run-log-960-light.png` });
+  console.log("44d-run-log-960-light");
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+  await wait(300);
+
+  // The console. The browser preview has no local mock or MCP server (Rust
+  // owns their sockets), so one of each is added the way their bridges add
+  // them, next to the real requests and run from above.
+  await page.evaluate(async () => {
+    const consoleLog = await import("/src/lib/appConsole.ts");
+    consoleLog.logMockRequest("Orders API", { method: "GET", path: "/orders?limit=ten" }, { status: 200 }, [
+      "query parameter limit: expected an integer",
+    ]);
+    consoleLog.logMcpCall("list_local_apis", true);
+    consoleLog.logMcpCall("get_api_spec", false);
+  });
+  const badge = await page.evaluate(() => document.querySelector(".statusbar-badge")?.textContent ?? "");
+  if (!badge) throw new Error("The status bar doesn't count new errors for the console");
+  await page.click(".statusbar-console");
+  await page.waitForSelector(".console", { timeout: 5000 });
+  await wait(300);
+  const sources = await page.evaluate(() => [...new Set([...document.querySelectorAll(".console-source")].map((el) => el.textContent))]);
+  for (const want of ["request", "collection", "local mock", "MCP"]) {
+    if (!sources.includes(want)) throw new Error(`The console has no ${want} entries: ${sources.join(", ")}`);
+  }
+  await page.screenshot({ path: `${outDir}/44e-console-light.png` });
+  console.log("44e-console-light");
+  await toggleTheme();
+  await page.screenshot({ path: `${outDir}/44e-console-dark.png` });
+  console.log("44e-console-dark");
+  await must(
+    page.evaluate(() => {
+      const tab = [...document.querySelectorAll(".console-filters .segment")].find((el) => el.textContent?.startsWith("Errors"));
+      tab?.click();
+      return Boolean(tab);
+    }),
+    "the Errors filter",
+  );
+  await wait(300);
+  await page.screenshot({ path: `${outDir}/44f-console-errors-dark.png` });
+  console.log("44f-console-errors-dark");
+  await page.setViewport({ width: 960, height: 700, deviceScaleFactor: 2 });
+  await wait(300);
+  await page.screenshot({ path: `${outDir}/44f-console-errors-960-dark.png` });
+  console.log("44f-console-errors-960-dark");
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+  // "Open log" on a run goes back to it.
+  await must(
+    page.evaluate(() => {
+      const tab = [...document.querySelectorAll(".console-filters .segment")].find((el) => el.textContent?.startsWith("Collections"));
+      tab?.click();
+      return Boolean(tab);
+    }),
+    "the Collections filter",
+  );
+  await wait(200);
+  await page.click(".console-open");
+  await wait(300);
+  await page.click(".statusbar-console");
+  await page.waitForFunction(() => !document.querySelector(".console"), { timeout: 5000 });
+  if (!(await page.$(".runlog-timeline"))) throw new Error("Open log didn't show the run log");
+  await segment("Steps");
+}
 
 // A value in step 1's response, clicked: use it in a later step.
 await selectStep(1);

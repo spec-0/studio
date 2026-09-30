@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { OperationSpec, SecuritySchemeSpec } from "./spec";
 import { interpolate } from "./env";
 import { redact } from "./redact";
+import { logRequest } from "./appConsole";
 
 /**
  * Request execution.
@@ -316,10 +317,22 @@ export function buildPlan(
   return { method: op.method, url: url.toString(), headers, body: planBody };
 }
 
-export async function send(
-  plan: RequestPlan,
-  transport: Transport = {},
-): Promise<ResponseResult> {
+/**
+ * Send a request and return what came back. Each one is also noted in the app
+ * console (method, URL, status and time, redacted), which lives in memory only.
+ */
+export async function send(plan: RequestPlan, transport: Transport = {}): Promise<ResponseResult> {
+  try {
+    const response = await sendOnce(plan, transport);
+    logRequest(plan, response);
+    return response;
+  } catch (error) {
+    logRequest(plan, { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
+
+async function sendOnce(plan: RequestPlan, transport: Transport): Promise<ResponseResult> {
   const timeoutMs = transport.timeoutMs ?? 30_000;
   const doFetch = appFetch;
   const started = performance.now();

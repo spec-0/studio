@@ -6,6 +6,7 @@ import {
   parseCollection,
   renameStepKey as renameIn,
   serializeCollection,
+  statusMatches,
   textHash,
   uniqueStepKey,
   type Collection,
@@ -30,6 +31,7 @@ import type { AddedNote, AddMenuState } from "../components/collections/AddToCol
 import type { RequestValues } from "../components/OperationView";
 import {
   addOperationStep,
+  describeTarget,
   findLibraryEntry,
   inputsFromEditor,
   localMockAddress,
@@ -44,7 +46,18 @@ import {
 } from "../lib/collectionLink";
 import { detectImportFormat } from "../lib/collectionImport";
 import { importPostman, type EnvironmentDraft, type ImportSummary } from "../lib/postman";
-import { mockWarnings, planStep, runSteps, verdictFor, type StepResult } from "../lib/collectionRun";
+import { logToConsole } from "../lib/appConsole";
+import {
+  describeRun,
+  mockWarnings,
+  planStep,
+  runSteps,
+  summariseRun,
+  verdictFor,
+  type StepDescription,
+  type StepResult,
+  type TargetKind,
+} from "../lib/collectionRun";
 import { transportFor, type ConnectionSettings } from "../lib/connection";
 import * as history from "../lib/history";
 import type { HistoryEntry } from "../lib/history";
@@ -59,6 +72,7 @@ import { parseSpec, type OperationSpec, type ParsedSpec } from "../lib/spec";
 import { DEFAULT_API_URL, absoluteMockUrl, type Session } from "../lib/spec0";
 import { mockCredentials } from "../lib/targets";
 import { validateResponse, type ValidationResult } from "../lib/validate";
+import { useRunLogs } from "./useRunLogs";
 
 /** A run of one collection, as the view shows it. */
 export interface CollectionRunState {
@@ -158,6 +172,10 @@ export function useCollections({
   const cancelled = useRef(new Set<string>());
   const latest = useRef(collections);
   latest.current = collections;
+  const runLogs = useRunLogs(
+    useMemo(() => collections.map((c) => c.id), [collections]),
+    loaded,
+  );
 
   // ── storage ────────────────────────────────────────────────────────────────
 
@@ -729,10 +747,36 @@ export function useCollections({
       const keys = collection.steps.map((s) => s.key);
       const total = collection.steps.length;
 
+      /** A step as the run log first shows it: name, method, where it goes. */
+      const describe = (step: CollectionStep): StepDescription => {
+        const name = step.name || step.key;
+        const link = linkStep(step, collection, entries, specsNow);
+        if (link.kind === "ok" || link.kind === "stale") {
+          return {
+            name,
+            method: link.op.method,
+            target: describeTarget(step.target, link.spec),
+            targetKind: step.target?.kind ?? "server",
+          };
+        }
+        if (step.request) return { name, method: step.request.method, url: step.request.url, targetKind: "url" };
+        return { name, ...(step.operation ? { method: step.operation.method } : {}) };
+      };
+      const described = collection.steps.map(describe);
+      const targets = [...new Set(described.map((d) => d.target ?? d.url ?? "").filter(Boolean))];
+      const logged = { collection: { id: collection.id, name: collection.name }, runId, environment: activeEnv?.name ?? null };
+      logToConsole({
+        source: "collection",
+        level: "info",
+        run: { collectionId: collection.id, runId },
+        text: `Run started: ${collection.name} · ${total} step${total === 1 ? "" : "s"}${activeEnv ? ` · ${activeEnv.name}` : ""}`,
+      });
+
       const execute = async (
         step: CollectionStep,
         outputs: ReadonlyMap<string, StepOutput>,
         index: number,
+        emit: Parameters<Parameters<typeof runSteps>[1]>[3],
       ): Promise<StepResult> => {
         const link = linkStep(step, collection, entries, specsNow);
         if (link.kind === "unresolved") return { key: step.key, verdict: "fail", reason: link.reason };
@@ -767,14 +811,19 @@ export function useCollections({
           auth,
           mock,
         });
+        if (planned.links?.length) emit({ type: "references_resolved", links: planned.links });
         if ("error" in planned) return { key: step.key, verdict: "fail", reason: planned.error };
         const plan = planned.plan;
 
+        const targetKind: TargetKind = linked ? (step.target?.kind ?? "server") : "url";
+        emit({ type: "request_sent", method: plan.method, url: plan.url, headers: plan.headers, targetKind });
         let response;
         try {
           response = await send(plan, { ...transportFor(connection, plan.url), jar: linked?.entry.id ?? "__scratch__" });
         } catch (error) {
-          return { key: step.key, verdict: "fail", reason: describeSendError(error, inTauri), request: plan };
+          const reason = describeSendError(error, inTauri);
+          emit({ type: "request_failed", error: reason });
+          return { key: step.key, verdict: "fail", reason, request: plan };
         }
         let validation: ValidationResult | null = null;
         if (linked) {
@@ -782,6 +831,31 @@ export function useCollections({
           validation = validateResponse(linked.spec.doc, declared?.schema, response.json);
         }
         const warned = mockWarnings(response.headers);
+        emit({
+          type: "response_received",
+          status: response.status,
+          statusText: response.statusText,
+          ms: response.ms,
+          bytes: response.bytes,
+          ...(warned.length ? { warnings: warned } : {}),
+        });
+        emit({
+          type: "status_check",
+          expected: step.expect?.status ?? "2xx",
+          actual: response.status,
+          ok: statusMatches(step.expect?.status, response.status),
+        });
+        emit(
+          validation
+            ? {
+                type: "schema_check",
+                result:
+                  validation.status === "no_schema" ? "not_checked" : validation.status === "ok" ? "ok" : validation.status,
+                findings: validation.findings.length,
+                ...(validation.note ? { note: validation.note } : {}),
+              }
+            : { type: "schema_check", result: "not_checked", findings: 0, note: "this request isn't linked to an operation" },
+        );
         const checked = verdictFor(response.status, validation, step.expect?.status);
         const { verdict } = checked;
         // The mock answered, so the step passes on its response, but a request
@@ -842,11 +916,21 @@ export function useCollections({
         cancelled: () => cancelled.current.has(id),
         onResult: (partial) =>
           setRuns((prev) => ({ ...prev, [id]: { runId, at, running: true, results: partial } })),
+        run: { collection: logged.collection, environment: logged.environment, targets },
+        describe: (_step, index) => described[index],
+        onEvent: (event) => runLogs.onEvent(logged, event),
       });
       setRuns((prev) => ({ ...prev, [id]: { runId, at, running: false, results } }));
+      const summary = summariseRun(results);
+      logToConsole({
+        source: "collection",
+        level: summary.failed ? "error" : "info",
+        run: { collectionId: collection.id, runId },
+        text: `Run finished: ${collection.name} · ${describeRun(summary)}`,
+      });
       setRequests(await history.loadHistory());
     },
-    [runs, ensureSpecs, entries, mockUrlFor, session, tokenFor, vars, connection, activeEnv?.name, setRequests, localMocks.running],
+    [runs, ensureSpecs, entries, mockUrlFor, session, tokenFor, vars, connection, activeEnv, setRequests, localMocks.running, runLogs.onEvent],
   );
 
   const stop = useCallback((id: string) => {
@@ -1007,6 +1091,7 @@ export function useCollections({
     added,
     dismissAdded: useCallback(() => setAdded(null), []),
     addApiToLibrary,
+    runLogs,
   };
 }
 

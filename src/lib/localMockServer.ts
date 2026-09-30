@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { logMockRequest } from "./appConsole";
+import { mockWarnings } from "./collectionRun";
 import * as library from "./library";
 import {
   answerMockRequest,
@@ -145,6 +147,13 @@ export async function answerForwarded(payload: MockRequest & { mock: string }): 
   }
 }
 
+/** Note a request a mock answered in the app console (in memory only). */
+async function noteInConsole(request: MockRequest & { mock: string }, response: MockResponse): Promise<void> {
+  const spec = await specFor(request.mock).catch(() => null);
+  const headers = Object.fromEntries(response.headers);
+  logMockRequest(spec?.title || "API", request, response, mockWarnings(headers));
+}
+
 let bridge: Promise<UnlistenFn> | null = null;
 
 /** Answer `studio://local-mock-request` events. Registered once per page load. */
@@ -152,7 +161,10 @@ export function ensureLocalMockBridge(): Promise<UnlistenFn> {
   if (!inTauri) return Promise.resolve(() => {});
   bridge ??= listen<RequestPayload>("studio://local-mock-request", (event) => {
     const { call, ...request } = event.payload;
-    void answerForwarded(request).then((response) => invoke("local_mock_respond", { call, response }));
+    void answerForwarded(request).then(async (response) => {
+      await invoke("local_mock_respond", { call, response });
+      await noteInConsole(request, response);
+    });
   });
   return bridge;
 }

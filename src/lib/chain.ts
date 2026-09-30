@@ -123,38 +123,63 @@ export interface ResolveContext {
 }
 
 /**
+ * One `{{steps.…}}` reference as a run resolved it: where it was used, which
+ * step's value it named, and the value, or why there wasn't one.
+ */
+export interface ResolvedLink {
+  /** Where the value went, e.g. `path orderId` or `header Authorization`. Empty when the caller didn't say. */
+  target: string;
+  /** The reference without braces, e.g. `steps.createOrder.body.id`. */
+  source: string;
+  /** The value used, as text. Absent when it couldn't be resolved. */
+  value?: string;
+  /** Why it couldn't be resolved. */
+  error?: string;
+}
+
+/**
  * Fill in every `{{steps.…}}` reference in `text`.
  *
  * Anything that can't be filled is reported, not guessed: a step that fails for
  * a reference it couldn't resolve says which reference and why, and nothing is
  * sent with a hole in it.
+ *
+ * `links` lists every reference met, resolved or not, for the run log; `target`
+ * says where the text is used and is copied onto each one.
  */
-export function resolveStepRefs(text: string, context: ResolveContext): { text: string; errors: string[] } {
-  if (!text.includes("steps.")) return { text, errors: [] };
+export function resolveStepRefs(
+  text: string,
+  context: ResolveContext,
+  target = "",
+): { text: string; errors: string[]; links: ResolvedLink[] } {
+  if (!text.includes("steps.")) return { text, errors: [], links: [] };
   const errors: string[] = [];
+  const links: ResolvedLink[] = [];
+  const fail = (whole: string, source: string, error: string) => {
+    errors.push(error);
+    links.push({ target, source, error });
+    return whole;
+  };
   const filled = text.replace(REF, (whole, key: string, rawPath: string) => {
     const path = parsePath(rawPath);
+    const source = `steps.${key}${rawPath}`;
     if (!context.keys.includes(key)) {
-      errors.push(`${whole}: there's no step called "${key}" in this collection`);
-      return whole;
+      return fail(whole, source, `${whole}: there's no step called "${key}" in this collection`);
     }
     const output = context.outputs.get(key);
     if (!output) {
-      errors.push(`${whole}: step "${key}" hasn't run yet in this run, so it has no response to use`);
-      return whole;
+      return fail(whole, source, `${whole}: step "${key}" hasn't run yet in this run, so it has no response to use`);
     }
     if (!path.length) {
-      errors.push(`${whole}: say which part to use, e.g. {{steps.${key}.body.id}}`);
-      return whole;
+      return fail(whole, source, `${whole}: say which part to use, e.g. {{steps.${key}.body.id}}`);
     }
     const result = lookup(output, key, path);
-    if (!result.found) {
-      errors.push(result.problem);
-      return whole;
-    }
-    return asText(result.value);
+    if (!result.found) return fail(whole, source, result.problem);
+    const value = asText(result.value);
+    links.push({ target, source, value });
+    return value;
   });
-  return { text: filled, errors: [...new Set(errors)] };
+  return { text: filled, errors: [...new Set(errors)], links };
 }
 
 // ── what can be picked ────────────────────────────────────────────────────────

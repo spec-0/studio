@@ -78,3 +78,24 @@ export function redactHeaders(
   }
   return out;
 }
+
+/**
+ * Redact every string in a plain value (objects, arrays, strings), with any
+ * `headers` object going through `redactHeaders` so a Basic credential is
+ * caught too. For structured logs, where a secret could sit in any field.
+ */
+export function redactDeep<T>(value: T): T {
+  if (typeof value === "string") return redact(value) as T;
+  if (Array.isArray(value)) return value.map((item) => redactDeep(item)) as T;
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      out[key] =
+        key === "headers" && item && typeof item === "object" && !Array.isArray(item)
+          ? redactDeep(redactHeaders(item as Record<string, string>))
+          : redactDeep(item);
+    }
+    return out as T;
+  }
+  return value;
+}

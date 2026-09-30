@@ -9,6 +9,8 @@
 //!  - `cli_config` reads exactly one well-known file and nothing else.
 //!  - `write_collection` writes a collection file at a path the user chose in a
 //!    save dialog (or opened before), and only a file whose name says it is one.
+//!  - `write_run_log` writes an exported collection run log at a path the user
+//!    chose in a save dialog, and only a `*.spec0-run.json` or `.txt` file.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -69,6 +71,18 @@ pub fn store_delete(app: tauri::AppHandle, name: String) -> Result<(), String> {
 const COLLECTION_SUFFIXES: [&str; 2] = [".spec0-collection.yaml", ".spec0-collection.yml"];
 
 fn collection_path(path: &str) -> Result<PathBuf, String> {
+    path_with_suffix(path, &COLLECTION_SUFFIXES, ".spec0-collection.yaml")
+}
+
+/// What an exported run log's name must end with, for the same reason.
+const RUN_LOG_SUFFIXES: [&str; 2] = [".spec0-run.json", ".spec0-run.txt"];
+
+fn run_log_path(path: &str) -> Result<PathBuf, String> {
+    path_with_suffix(path, &RUN_LOG_SUFFIXES, ".spec0-run.json or .spec0-run.txt")
+}
+
+/// An absolute path whose file name ends in one of `suffixes` (with something before it).
+fn path_with_suffix(path: &str, suffixes: &[&str], what: &str) -> Result<PathBuf, String> {
     let candidate = PathBuf::from(path);
     let name = candidate
         .file_name()
@@ -78,10 +92,18 @@ fn collection_path(path: &str) -> Result<PathBuf, String> {
     if !candidate.is_absolute() {
         return Err(format!("not an absolute path: {path}"));
     }
-    if !COLLECTION_SUFFIXES.iter().any(|suffix| name.ends_with(suffix) && name.len() > suffix.len()) {
-        return Err(format!("only .spec0-collection.yaml files can be written: {path}"));
+    if !suffixes.iter().any(|suffix| name.ends_with(suffix) && name.len() > suffix.len()) {
+        return Err(format!("only {what} files can be written: {path}"));
     }
     Ok(candidate)
+}
+
+/// Write a collection run's log where the user chose to export it. The web view
+/// has already redacted it.
+#[tauri::command]
+pub fn write_run_log(path: String, contents: String) -> Result<(), String> {
+    let target = run_log_path(&path)?;
+    fs::write(&target, contents).map_err(|error| format!("{path}: {error}"))
 }
 
 /// Write a collection file the user saved to a folder.
@@ -131,6 +153,16 @@ mod tests {
         assert!(collection_path(&absolute("orders.yaml")).is_err());
         assert!(collection_path(&absolute(".spec0-collection.yaml")).is_err());
         assert!(collection_path("relative.spec0-collection.yaml").is_err());
+    }
+
+    #[test]
+    fn run_log_files_only() {
+        assert!(run_log_path(&absolute("checkout-2026.spec0-run.json")).is_ok());
+        assert!(run_log_path(&absolute("Checkout.SPEC0-RUN.TXT")).is_ok());
+        assert!(run_log_path(&absolute("checkout.json")).is_err());
+        assert!(run_log_path(&absolute(".spec0-run.json")).is_err());
+        assert!(run_log_path(&absolute("x.spec0-collection.yaml")).is_err());
+        assert!(run_log_path("relative.spec0-run.json").is_err());
     }
 
     #[test]

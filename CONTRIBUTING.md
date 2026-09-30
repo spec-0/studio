@@ -89,7 +89,8 @@ the plugin back.
   access and shouldn't share one permission. For the first, the file picker is
   the user's consent. Writing works the same way: `write_collection` writes a
   collection file where the user chose to save it, and refuses any file whose
-  name doesn't end in `.spec0-collection.yaml`.
+  name doesn't end in `.spec0-collection.yaml`. `write_run_log` is the same for
+  an exported collection run log (`.spec0-run.json` or `.spec0-run.txt`).
 - **`src/lib/` holds the logic, `src/components/` holds the interface.** Spec
   parsing, example generation, validation, environments, history and the spec0
   client don't depend on React and can be tested without it.
