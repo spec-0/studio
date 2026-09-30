@@ -15,7 +15,7 @@
 OpenAPI spec.
 
 <p align="center">
-  <img alt="Opening the Swagger Petstore spec from a URL in Spec0 Studio, sending a request that passes the schema check, then looking at it in History" src=".github/assets/studio-demo.gif" width="900">
+  <img alt="Starting a local mock of the Payments API, pointing a request at it, and sending it: the response comes back 200 and matches the declared schema" src=".github/assets/readme/hero-local-mock.gif" width="960">
 </p>
 
 It's for developers who already have an OpenAPI spec (the YAML or JSON file that
@@ -25,6 +25,55 @@ the API and its description drift apart.
 
 Studio is free and open source (MIT) and works without an account. It's young,
 and we'd like to hear what breaks.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img alt="A 200 response to GET /orders with the note: Response matches the declared schema, above the JSON body" src=".github/assets/readme/request-check.png" width="100%"><br>
+      <sub><b>Requests</b> built from the spec, each response checked against it.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img alt="The Graph tab: the Product schema, the operations and the ProductList schema that use it, and the Money schema it refers to" src=".github/assets/readme/schema-graph.png" width="100%"><br>
+      <sub><b>Schema graph:</b> how the spec's schemas refer to each other.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/chain-dark.png">
+        <img alt="The Chain view of a three-step Checkout collection: lines run from the order id in step 1's response to the fields it fills in steps 2 and 3, with the value each one passed" src=".github/assets/readme/chain-light.png" width="100%">
+      </picture><br>
+      <sub><b>Collections:</b> the Chain view shows which values pass between steps.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/run-log-dark.png">
+        <img alt="A collection's run log: two steps passed, the third failed with a schema difference, each step showing its target, the values it used, the request and the response" src=".github/assets/readme/run-log-light.png" width="100%">
+      </picture><br>
+      <sub><b>Run log:</b> every step of a run, and why one failed.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img alt="A request sent to a local mock at 127.0.0.1:4010, marked LOCAL MOCK, with a response that matches the schema" src=".github/assets/readme/local-mock.png" width="100%"><br>
+      <sub><b>Local mock:</b> any spec, on this computer, no account needed.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img alt="Your mock is ready: the hosted mock's address, its key (hidden), and buttons to send a test request, rebuild the mock or regenerate the key" src=".github/assets/readme/hosted-mock.png" width="100%"><br>
+      <sub><b>Hosted mock</b> to share with your team (needs Spec0).</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img alt="A terminal: Claude Code asks Studio's MCP server which APIs are open, then writes a curl command for the Orders mock that reads the key from an environment variable" src=".github/assets/readme/mcp-terminal.gif" width="100%"><br>
+      <sub><b>Local MCP server:</b> a coding agent asks Studio about your APIs.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img alt="The summary after importing a Postman collection: 7 requests linked to a spec, 1 not in any spec, and the status checks and saved values that became expected statuses and step references" src=".github/assets/readme/postman-import.png" width="100%"><br>
+      <sub><b>Postman import:</b> requests matched to operations in your specs.</sub>
+    </td>
+  </tr>
+</table>
 
 ## Download
 
@@ -77,8 +126,10 @@ If you use Postman, Insomnia, Bruno or Yaak, the main differences are:
 - **It works with no account and sends no telemetry.** History and environments
   stay on your machine, and secrets go in your operating system's credential store.
 - **It's younger and does less.** There is no scripting, no shared team workspace,
-  no import of collections from other tools yet, and no gRPC or WebSocket support. Mock servers are
-  available only through the optional [Spec0 connection](#connecting-to-spec0-optional).
+  no command-line runner, and no gRPC or WebSocket support. Postman collections
+  can be imported (their scripts aren't run); Insomnia and Bruno files can't yet.
+  Mocks run on your computer; a hosted mock you can share needs the optional
+  [Spec0 connection](#connecting-to-spec0-optional).
 
 ## Features
 
@@ -90,7 +141,8 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
 ### Your specs
 
 - **Three sources.** Add an API from a local file, a URL, or a Spec0 account.
-  OpenAPI 3.0 and 3.1, YAML or JSON.
+  OpenAPI 3.0 and 3.1, YAML or JSON. *Add an API* opens on your Spec0
+  organisation when you're signed in, and on a local file when you're not.
 - **Swagger 2.0 too.** Studio converts a Swagger 2.0 spec to OpenAPI 3.0 when you
   open it, on your computer, and says so on the API. The Raw tab still shows the
   file as imported.
@@ -107,6 +159,10 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
   a readable API reference. Both work offline.
 - **Git details.** If the spec file is in a git repository, Studio shows its
   branch, commit, and whether the file has changed since that commit.
+
+<p align="center">
+  <img alt="The Graph tab of the Catalog API: clicking a schema opens its fields in the side panel, then the operations are shown and the Product schema's example is opened" src=".github/assets/readme/schema-graph.gif" width="960">
+</p>
 
 ### Sending requests
 
@@ -135,6 +191,13 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
   you sent earlier in the same session shows its last response, marked with
   the time it was sent, and says so if you've edited the request since. After a
   restart, earlier responses are in History.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/request-tabs-dark.png">
+    <img alt="Request tabs across two APIs; the POST /orders tab and the editor show a dot and Unsent changes, with Discard changes next to it" src=".github/assets/readme/request-tabs-light.png" width="960">
+  </picture>
+</p>
 
 ### Checking responses
 
@@ -283,6 +346,13 @@ each run's log), requests to local mocks, and MCP tool calls (the tool's name
 and whether it worked, never its arguments). It can be filtered and copied, keeps
 the last 1,000 entries, and a badge counts new errors. It is kept in memory only.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/console-dark.png">
+    <img alt="The console with requests, the start and end of a collection run with Open log links, a local mock request with a warning, and two MCP tool calls" src=".github/assets/readme/console-light.png" width="960">
+  </picture>
+</p>
+
 ### Performance
 
 On Stripe's public spec (7.6 MB, 589 operations, 1440 schemas), Studio takes
@@ -344,7 +414,9 @@ Everything above works without an account. If your team uses
 [Spec0](https://spec0.io), you can sign in to browse your organisation's APIs,
 pull their specs, use hosted mock servers as request targets, and publish a
 local spec to your organisation. The Mocks tab lists your organisation's hosted
-mock servers. Sign in and out in Settings, under Account & Spec0. Signing out
+mock servers. Sign in and out in Settings, under Account & Spec0; **Sign in to
+Spec0…** there and in the Mocks tab opens a dialog with just the sign-in
+choices. Signing out
 returns Studio to local-only use, and nothing is lost.
 
 ## Local mocks
@@ -419,6 +491,10 @@ server runs only while Studio is open.
 - **Collections run in Studio only.** There is no command-line runner yet, and
   an OAuth step uses the token Studio already holds for that API and
   environment; get one from the API's Auth section first.
+- **A Postman import doesn't bring everything across.** Scripts aren't run
+  (only status checks and saved response values are converted), OAuth 2 and
+  digest auth are noted rather than converted, and a body that sends a whole
+  file is left out. The step's note or the import summary says what was skipped.
 - **The Windows and Linux builds are new** and have had much less use than the
   Mac build. Please [open an issue](https://github.com/spec-0/studio/issues) if
   something looks or works wrong.

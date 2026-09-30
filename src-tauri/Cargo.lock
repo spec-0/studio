@@ -4262,7 +4262,7 @@ dependencies = [
 
 [[package]]
 name = "spec0-studio"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base64 0.23.1",
  "cookie_store",
