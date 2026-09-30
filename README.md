@@ -11,69 +11,22 @@
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/spec-0/studio?color=52525B"></a>
 </p>
 
-**Spec0 Studio** is a desktop app for calling and testing APIs, built around your
-OpenAPI spec.
-
 <p align="center">
-  <img alt="Starting a local mock of the Payments API, pointing a request at it, and sending it: the response comes back 200 and matches the declared schema" src=".github/assets/readme/hero-local-mock.gif" width="960">
+  A desktop app for calling and testing APIs, built around your OpenAPI spec.
 </p>
 
-It's for developers who already have an OpenAPI spec (the YAML or JSON file that
-describes an API). You open the spec, Studio builds the requests from it, and each
-JSON response is checked against the schema the spec declares, so you notice when
-the API and its description drift apart.
+**Spec0 Studio** is for developers who already have an OpenAPI spec (the YAML or
+JSON file that describes an API). You open the spec, Studio builds the requests
+from it, and each JSON response is checked against the schema the spec declares,
+so you notice when the API and its description drift apart.
 
 Studio is free and open source (MIT) and works without an account. It's young,
 and we'd like to hear what breaks.
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <img alt="A 200 response to GET /orders with the note: Response matches the declared schema, above the JSON body" src=".github/assets/readme/request-check.png" width="100%"><br>
-      <sub><b>Requests</b> built from the spec, each response checked against it.</sub>
-    </td>
-    <td width="50%" valign="top">
-      <img alt="The Graph tab: the Product schema, the operations and the ProductList schema that use it, and the Money schema it refers to" src=".github/assets/readme/schema-graph.png" width="100%"><br>
-      <sub><b>Schema graph:</b> how the spec's schemas refer to each other.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/chain-dark.png">
-        <img alt="The Chain view of a three-step Checkout collection: lines run from the order id in step 1's response to the fields it fills in steps 2 and 3, with the value each one passed" src=".github/assets/readme/chain-light.png" width="100%">
-      </picture><br>
-      <sub><b>Collections:</b> the Chain view shows which values pass between steps.</sub>
-    </td>
-    <td width="50%" valign="top">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/run-log-dark.png">
-        <img alt="A collection's run log: two steps passed, the third failed with a schema difference, each step showing its target, the values it used, the request and the response" src=".github/assets/readme/run-log-light.png" width="100%">
-      </picture><br>
-      <sub><b>Run log:</b> every step of a run, and why one failed.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <img alt="A request sent to a local mock at 127.0.0.1:4010, marked LOCAL MOCK, with a response that matches the schema" src=".github/assets/readme/local-mock.png" width="100%"><br>
-      <sub><b>Local mock:</b> any spec, on this computer, no account needed.</sub>
-    </td>
-    <td width="50%" valign="top">
-      <img alt="Your mock is ready: the hosted mock's address, its key (hidden), and buttons to send a test request, rebuild the mock or regenerate the key" src=".github/assets/readme/hosted-mock.png" width="100%"><br>
-      <sub><b>Hosted mock</b> to share with your team (needs Spec0).</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <img alt="A terminal: Claude Code asks Studio's MCP server which APIs are open, then writes a curl command for the Orders mock that reads the key from an environment variable" src=".github/assets/readme/mcp-terminal.gif" width="100%"><br>
-      <sub><b>Local MCP server:</b> a coding agent asks Studio about your APIs.</sub>
-    </td>
-    <td width="50%" valign="top">
-      <img alt="The summary after importing a Postman collection: 7 requests linked to a spec, 1 not in any spec, and the status checks and saved values that became expected statuses and step references" src=".github/assets/readme/postman-import.png" width="100%"><br>
-      <sub><b>Postman import:</b> requests matched to operations in your specs.</sub>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img alt="Starting a local mock of the Payments API, pointing a request at it, and sending it: the response comes back 200 and matches the declared schema" src=".github/assets/readme/hero-local-mock.gif" width="960"><br>
+  <sub>Starting a local mock from a spec and sending a request to it. The response is checked against the spec.</sub>
+</p>
 
 ## Download
 
@@ -112,6 +65,107 @@ there is a newer version and install it.
 - An AppImage replaces itself.
 - A `.deb` install asks for your password (through `pkexec`) to install the new package.
 - On Windows the installer runs and then Studio starts again.
+
+## What you can do
+
+### Send requests built from the spec, and check what comes back
+
+Studio fills in each request from the spec: allowed values become dropdowns and
+bodies start with the real field names. Every JSON response is checked against
+the schema the spec declares for that status code, including fields the spec
+doesn't mention.
+
+<p align="center">
+  <img alt="A 200 response to GET /orders with the note: Response matches the declared schema, above the JSON body" src=".github/assets/readme/request-check.png" width="480"><br>
+  <sub>A response that matches the schema the spec declares.</sub>
+</p>
+
+### See how the schemas fit together
+
+The Graph tab shows which schemas refer to which, and which operations use
+them. Click a schema to see its fields and an example.
+
+<p align="center">
+  <img alt="The Graph tab of the Catalog API: clicking a schema opens its fields in the side panel, then the operations are shown and the Product schema's example is opened" src=".github/assets/readme/schema-graph.gif" width="720"><br>
+  <sub>The Graph tab of a Catalog API.</sub>
+</p>
+
+### Chain requests into collections
+
+A collection runs steps in order, often across several specs: create an order,
+get it, pay for it. A later step can take a value from an earlier step's
+response, and the Chain view shows every value that passes between steps.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/chain-dark.png">
+    <img alt="The Chain view of a three-step Checkout collection: lines run from the order id in step 1's response to the fields it fills in steps 2 and 3, with the value each one passed" src=".github/assets/readme/chain-light.png" width="720">
+  </picture><br>
+  <sub>The Chain view of a three-step checkout collection.</sub>
+</p>
+
+### See why a run failed
+
+Each run of a collection gets a log: every step's target, the values it used,
+the request, the response, and why a step failed or was skipped.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/run-log-dark.png">
+    <img alt="A collection's run log: two steps passed, the third failed with a schema difference, each step showing its target, the values it used, the request and the response" src=".github/assets/readme/run-log-light.png" width="720">
+  </picture><br>
+  <sub>A run log where the third step failed with a schema difference.</sub>
+</p>
+
+### Bring your Postman collections
+
+Import a Postman collection and each request is matched to an operation in your
+specs. Status checks and saved response values become expected statuses and
+step references; the summary says what matched and what didn't.
+
+<p align="center">
+  <img alt="The summary after importing a Postman collection: 7 requests linked to a spec, 1 not in any spec, and the status checks and saved values that became expected statuses and step references" src=".github/assets/readme/postman-import.png" width="720"><br>
+  <sub>The summary after importing a Postman collection.</sub>
+</p>
+
+### Let a coding agent ask about your APIs
+
+Studio can run a local MCP server, so coding agents such as Claude Code or
+Cursor can read the APIs in your library, including specs you haven't
+published anywhere. It is off until you start it.
+
+<p align="center">
+  <img alt="A terminal: Claude Code asks Studio's MCP server which APIs are open, then writes a curl command for the Orders mock that reads the key from an environment variable" src=".github/assets/readme/mcp-terminal.gif" width="720"><br>
+  <sub>A coding agent asks Studio which APIs are open, then calls a mock.</sub>
+</p>
+
+<details>
+<summary>More screenshots</summary>
+
+<br>
+
+A request sent to a local mock, on this computer, with no account:
+
+<p align="center">
+  <img alt="A request sent to a local mock at 127.0.0.1:4010, marked LOCAL MOCK, with a response that matches the schema" src=".github/assets/readme/local-mock.png" width="720">
+</p>
+
+A hosted mock to share with your team (needs the optional [Spec0 connection](#connecting-to-spec0-optional)):
+
+<p align="center">
+  <img alt="Your mock is ready: the hosted mock's address, its key (hidden), and buttons to send a test request, rebuild the mock or regenerate the key" src=".github/assets/readme/hosted-mock.png" width="720">
+</p>
+
+The console, with requests, a collection run, a local mock request and MCP tool calls:
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/console-dark.png">
+    <img alt="The console with requests, the start and end of a collection run with Open log links, a local mock request with a warning, and two MCP tool calls" src=".github/assets/readme/console-light.png" width="720">
+  </picture>
+</p>
+
+</details>
 
 ## How this differs
 
@@ -160,10 +214,6 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
 - **Git details.** If the spec file is in a git repository, Studio shows its
   branch, commit, and whether the file has changed since that commit.
 
-<p align="center">
-  <img alt="The Graph tab of the Catalog API: clicking a schema opens its fields in the side panel, then the operations are shown and the Product schema's example is opened" src=".github/assets/readme/schema-graph.gif" width="960">
-</p>
-
 ### Sending requests
 
 - **Forms from the spec.** A list of allowed values becomes a dropdown, a
@@ -195,8 +245,9 @@ whether you're local or signed in, and Settings (⌘, or Ctrl+,) are on the righ
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/request-tabs-dark.png">
-    <img alt="Request tabs across two APIs; the POST /orders tab and the editor show a dot and Unsent changes, with Discard changes next to it" src=".github/assets/readme/request-tabs-light.png" width="960">
-  </picture>
+    <img alt="Request tabs across two APIs; the POST /orders tab and the editor show a dot and Unsent changes, with Discard changes next to it" src=".github/assets/readme/request-tabs-light.png" width="720">
+  </picture><br>
+  <sub>Request tabs across two APIs. The dot marks a request with unsent changes.</sub>
 </p>
 
 ### Checking responses
@@ -345,13 +396,6 @@ session: requests as they're sent and answered, collection runs (with a link to
 each run's log), requests to local mocks, and MCP tool calls (the tool's name
 and whether it worked, never its arguments). It can be filtered and copied, keeps
 the last 1,000 entries, and a badge counts new errors. It is kept in memory only.
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/console-dark.png">
-    <img alt="The console with requests, the start and end of a collection run with Open log links, a local mock request with a warning, and two MCP tool calls" src=".github/assets/readme/console-light.png" width="960">
-  </picture>
-</p>
 
 ### Performance
 
