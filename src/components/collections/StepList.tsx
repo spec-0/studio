@@ -17,6 +17,8 @@ interface Props {
   onMenu: (index: number, at: { x: number; y: number }) => void;
   /** Delete or Backspace on the selected row. */
   onRemove: (index: number) => void;
+  /** How many links into each step can't work, by step index. */
+  brokenLinks?: Record<number, number>;
 }
 
 /** What to call a step in the list and in messages. */
@@ -35,7 +37,7 @@ export function stepTitle(collection: Collection, index: number): string {
  * warning when the spec changed under it, a cross when its operation is gone,
  * and the last run's result.
  */
-export function StepList({ collection, links, results, runningIndex, selected, onSelect, onMove, onMenu, onRemove }: Props) {
+export function StepList({ collection, links, results, runningIndex, selected, onSelect, onMove, onMenu, onRemove, brokenLinks = {} }: Props) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<number | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -170,6 +172,12 @@ export function StepList({ collection, links, results, runningIndex, selected, o
                     missing
                   </span>
                 )}
+                {brokenLinks[index] > 0 && (
+                  <span className="step-marker danger" title="A value this step takes from another step can't be filled. See the Chain view.">
+                    <Link2Off size={13} aria-hidden />
+                    {brokenLinks[index] === 1 ? "broken link" : `${brokenLinks[index]} broken links`}
+                  </span>
+                )}
                 {link?.kind === "unlinked" && (
                   <span className="step-marker" title="Not linked to an operation in any spec, so its response isn't checked.">
                     <Unlink size={13} aria-hidden />
@@ -183,6 +191,7 @@ export function StepList({ collection, links, results, runningIndex, selected, o
                       ? link.reason
                       : ""}
                   {expected ? ` Expects ${describeExpected(expected)}.` : ""}
+                  {brokenLinks[index] ? ` ${brokenLinks[index]} of its links can't be filled.` : ""}
                   {result ? ` Last run: ${result.verdict === "pass" ? "passed" : result.verdict === "fail" ? "failed" : "not run"}.` : ""}
                 </span>
               </button>

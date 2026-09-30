@@ -899,6 +899,10 @@ function CollectionDetail({
               onMove={requestMove}
               onMenu={(i, at) => setMenu({ ...at, items: stepMenu(i), label: `Actions for step ${i + 1}` })}
               onRemove={requestRemove}
+              brokenLinks={views.reduce<Record<number, number>>((acc, v) => {
+                if (v.check.state === "broken") acc[v.targetIndex] = (acc[v.targetIndex] ?? 0) + 1;
+                return acc;
+              }, {})}
             />
             <div className="field-meta step-list-hint">
               Drag to reorder, or {`Alt+↑ / Alt+↓`}. Right-click a step for more. Right-click an operation in an API to add a step.

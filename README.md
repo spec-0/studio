@@ -183,16 +183,40 @@ A collection runs steps in order, often across several specs: create an order,
 get it, pay for it. Each step points at an operation in one of your specs, so
 its response is checked against that spec.
 
+- **Creating, renaming and removing.** A new collection asks for its name first,
+  from the **+** in the list or from **Add to collection ▸ New collection…**.
+  Rename one by clicking its name in the header, or right-click it in the list
+  for **Rename…** and **Delete…** (deleting asks first).
 - **Adding steps.** Right-click an operation (or press Shift+F10) and choose
   **Add to collection**. The operation on screen is added with what you've filled
   in. A request in History can be added too, with the values it was sent with.
 - **Each step has its own inputs and target**: parameters, headers, body, and
   where it goes (any of the API's servers, its hosted or local mock, or a URL
   you type). Reorder steps by dragging, or with Alt+↑ and Alt+↓.
-- **Using an earlier step's response.** Click a value in a step's response and
-  choose **Use in a later step**, or pick it from the list above a step's
-  fields. It is stored as a reference like `{{steps.createOrder.body.id}}`.
-  Environment variables work as they do everywhere else.
+- **The step menu.** Right-click a step, or use its **⋯** button, for **Change
+  operation…**, **Duplicate**, **Move up**, **Move down** and **Remove step**.
+  Delete removes the selected step while the step list has focus. Removing a
+  step that later steps take values from says which ones first.
+- **Passing values between steps.** A later step can take a value from an
+  earlier step's response, such as the id of the order step 1 created. Use the
+  link button next to a field, **Take a body field from an earlier step** under
+  a body, or click a value in a step's response and choose **Use in a later
+  step**. Pick the field to fill and the value to fill it with: from the last
+  run's response, or from the response the spec declares if nothing has run
+  yet. The field then shows where its value comes from ("from createOrder →
+  body.id") instead of the value, with **Change** and a way to remove it.
+  Fields inside a JSON body work too, such as `items[0].sku`. In the file a
+  link is a reference like `{{steps.createOrder.body.id}}`, so hand-written
+  references work the same way.
+- **The Chain view** (**Steps | Chain | Runs** in the collection header) shows
+  every step in order, what each one gives to later steps and takes from
+  earlier ones, with a line from each value to the field it fills, and every
+  link again in a list. After a run, each link shows the value it passed
+  (secrets hidden). A link that can't work is shown in red with the reason: its
+  step was removed, it now runs after the step that uses it, or the field wasn't
+  in the last response. Each one has a fix, such as moving the step back or
+  choosing another value. Moving a step in a way that would break a link asks
+  first.
 - **Run** sends the steps one at a time, stops at the first failure (you can turn
   that off), and shows for each step whether it passed: the status it expects
   and a response that matches its spec. The run is one entry in History.

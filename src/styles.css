@@ -3011,7 +3011,9 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
 .chain-take-line .link-source, .link-chip .link-source { flex: none; }
 .chain-take-line .link-source .mono, .link-chip .link-source .mono { overflow: visible; }
 .chain-take-line { flex-wrap: wrap; row-gap: 4px; }
-.chain-take-line .chain-value { flex: 0 1 auto; min-width: 48px; }
+/* The slot takes what's left (up to a limit) and the value sits in it at its own width. */
+.chain-value-slot { flex: 1 1 0; min-width: 56px; max-width: 260px; display: flex; }
+.chain-value-slot .chain-value { max-width: 100%; }
 .link-chip-text { flex: none; overflow: visible; }
 .link-chip-value { min-width: 40px; }
 .collection-title-row .history-check { white-space: nowrap; }

@@ -266,8 +266,10 @@ export function ChainView({ collection, views, steps, results, runningIndex, onA
                               </span>
                             )}
                             {value && !notRun && (
-                              <span className="mono chain-value" title={`Passed on the last run: ${value.full}`}>
-                                {value.short}
+                              <span className="chain-value-slot">
+                                <span className="mono chain-value" title={`Passed on the last run: ${value.full}`}>
+                                  {value.short}
+                                </span>
                               </span>
                             )}
                             {notRun && <span className="field-meta">not sent: this step didn&apos;t run</span>}

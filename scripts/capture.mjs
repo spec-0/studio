@@ -19,6 +19,14 @@
  * its failed step opened, and then the app console with every kind of entry
  * and a filter, including at 960px.
  *
+ * The collection's links (step 2's orderId and two of step 3's body fields,
+ * all from step 1) are added with the link dialog, from a field's link button
+ * and from the Chain view, which is shown before and after the run. Moving
+ * step 1 down is warned about, then shown as a broken link with its fix. The
+ * step menu, the warning for removing a step others depend on, renaming from
+ * the list, and the chain at the minimum width follow. Earlier, the Add an API
+ * dialog is shown signed out and signed in, and Settings' sign-in dialog.
+ *
  * Then request tabs: operations opened across both APIs, one edited and left
  * unsent (checked to come back as it was, with its marker), one sent and its
  * answer brought back labelled, and the strip at the minimum width.
