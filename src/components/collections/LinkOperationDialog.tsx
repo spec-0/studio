@@ -12,13 +12,16 @@ interface Props {
   loadSpec: (entry: LibraryEntry) => Promise<ParsedSpec | null>;
   onPick: (entry: LibraryEntry, op: OperationSpec) => void;
   onClose: () => void;
+  /** "Change operation" for a linked step, "Link to an operation" for one that isn't. */
+  title?: string;
 }
 
 /**
- * "Link to an operation…": choose an API from the library, then one of its
- * operations. The step keeps its inputs.
+ * "Change operation…" (or "Link to an operation…" for a step that isn't
+ * linked): choose an API from the library, then one of its operations. The
+ * step keeps its inputs.
  */
-export function LinkOperationDialog({ entries, initialEntryId, hint, loadSpec, onPick, onClose }: Props) {
+export function LinkOperationDialog({ entries, initialEntryId, hint, loadSpec, onPick, onClose, title = "Link to an operation" }: Props) {
   const [entryId, setEntryId] = useState(initialEntryId ?? entries[0]?.id ?? "");
   const [spec, setSpec] = useState<ParsedSpec | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,7 +61,7 @@ export function LinkOperationDialog({ entries, initialEntryId, hint, loadSpec, o
         className="palette link-dialog"
         role="dialog"
         aria-modal="true"
-        aria-label="Link to an operation"
+        aria-label={title}
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
@@ -68,7 +71,7 @@ export function LinkOperationDialog({ entries, initialEntryId, hint, loadSpec, o
         }}
       >
         <div className="link-head">
-          <strong>Link to an operation</strong>
+          <strong>{title}</strong>
           <span className="meta">was {hint}</span>
           <span className="spacer" />
           <button type="button" className="icon-btn tight" aria-label="Close" onClick={onClose}>

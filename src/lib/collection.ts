@@ -716,6 +716,21 @@ export function moveStep(collection: Collection, from: number, to: number): Coll
 }
 
 /**
+ * Copy a step and put the copy right after it, under a new key. References in
+ * it still point where the original's did.
+ */
+export function duplicateStep(collection: Collection, index: number): Collection {
+  const step = collection.steps[index];
+  if (!step) return collection;
+  const copy: CollectionStep = structuredClone(step);
+  copy.key = uniqueStepKey(step.key.replace(/\d+$/, "") || step.key, collection.steps.map((s) => s.key));
+  if (step.name) copy.name = `${step.name} (copy)`;
+  const steps = [...collection.steps];
+  steps.splice(index + 1, 0, copy);
+  return { ...collection, steps };
+}
+
+/**
  * Rename a step's key, and every reference to it in the other steps, so a
  * rename can't quietly break a later step.
  */

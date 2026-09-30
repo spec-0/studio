@@ -37,12 +37,26 @@ interface Props {
   ) => void;
   onTrySample: () => void;
   onClose: () => void;
-  /** Which tab to land on — the title-bar connection chip opens straight to spec0. */
+  /** Which tab to land on. Without one: Spec0 when signed in, Local file when not. */
   initialSource?: Source;
+  /**
+   * "signin" is the same dialog used only to sign in, e.g. from Settings: titled
+   * for that, with the Spec0 sign-in choices and no other tabs.
+   */
+  mode?: "add" | "signin";
+  /** From the sign-in dialog, once signed in: show the organisation's APIs. */
+  onBrowse?: () => void;
 }
 
+/** The tabs, in order: your organisation's APIs first, then a URL, then a file. */
+const SOURCES: ReadonlyArray<{ id: Source; label: string }> = [
+  { id: "spec0", label: "Spec0" },
+  { id: "url", label: "URL" },
+  { id: "file", label: "Local file" },
+];
+
 /**
- * Where a spec comes from: a local file, a URL, or the org's spec0 catalog.
+ * Add an API: from the org's Spec0 catalog, a URL, or a local file.
  *
  * spec0 is one source among three, never a gate — nothing here is required to use
  * the client, which is the free-tier rule the whole product rests on.
@@ -56,7 +70,10 @@ export function OpenDialog({
   onTrySample,
   onClose,
   initialSource,
+  mode = "add",
+  onBrowse,
 }: Props) {
+  const signingIn = mode === "signin";
   const [source, setSource] = useState<Source>(initialSource ?? (session ? "spec0" : "file"));
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -96,9 +113,9 @@ export function OpenDialog({
   };
 
   useEffect(() => {
-    if (session && source === "spec0" && !catalog.length) void loadCatalog(session);
+    if (session && source === "spec0" && !signingIn && !catalog.length) void loadCatalog(session);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, source]);
+  }, [session, source, signingIn]);
 
   const connect = async (make: () => Promise<Session | null>, label: string) => {
     setBusy(label);
@@ -110,7 +127,7 @@ export function OpenDialog({
       if (!next) throw new Error("No session was returned.");
       await verify(next);
       onSession(next);
-      await loadCatalog(next);
+      if (!signingIn) await loadCatalog(next);
     } catch (caught) {
       // Pressing Cancel on the sign-in page is a choice, not a failure.
       if (caught instanceof SignInCancelled) setNotice("Sign-in cancelled.");
@@ -184,28 +201,36 @@ export function OpenDialog({
 
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="modal wide" onClick={(event) => event.stopPropagation()}>
+      <div
+        className={`modal ${signingIn ? "sign-in" : "wide"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="open-dialog-title"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="modal-head">
-          <strong>Open a spec</strong>
+          <strong id="open-dialog-title">{signingIn ? "Sign in to Spec0" : "Add an API"}</strong>
           <span className="spacer" />
           <button className="btn" onClick={onClose}>
             Close
           </button>
         </div>
 
-        <div className="tabs" style={{ padding: "6px 12px 0" }}>
-          {(["file", "url", "spec0"] as const).map((tab) => (
-            <button
-              key={tab}
-              className="tab"
-              role="tab"
-              aria-selected={source === tab}
-              onClick={() => setSource(tab)}
-            >
-              {tab === "file" ? "Local file" : tab === "url" ? "URL" : "spec0"}
-            </button>
-          ))}
-        </div>
+        {!signingIn && (
+          <div className="tabs" role="tablist" aria-label="Where the API comes from" style={{ padding: "6px 12px 0" }}>
+            {SOURCES.map((tab) => (
+              <button
+                key={tab.id}
+                className="tab"
+                role="tab"
+                aria-selected={source === tab.id}
+                onClick={() => setSource(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="modal-body">
           {busy && <div className="verdict none">{busy}</div>}
@@ -375,7 +400,29 @@ export function OpenDialog({
             </>
           )}
 
-          {source === "spec0" && session && (
+          {signingIn && session && !busy && (
+            <>
+              <div className="verdict ok" role="status">
+                <span className="glyph">✓</span>
+                <span>
+                  Signed in to <strong>{session.orgName}</strong>. Your organisation&apos;s APIs and hosted mocks are
+                  available in Studio now.
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                {onBrowse && (
+                  <button className="btn primary" onClick={onBrowse}>
+                    <Search size={12} /> Browse your organisation&apos;s APIs
+                  </button>
+                )}
+                <button className="btn" onClick={onClose}>
+                  Done
+                </button>
+              </div>
+            </>
+          )}
+
+          {source === "spec0" && session && !signingIn && (
             <>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span className="tag ok">connected</span>

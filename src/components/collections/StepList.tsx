@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AlertTriangle, GripVertical, Link2Off, Unlink } from "lucide-react";
+import { AlertTriangle, GripVertical, Link2Off, MoreHorizontal, Unlink } from "lucide-react";
 import { describeExpected, expectedStatusOf, type Collection } from "../../lib/collection";
 import { describeTarget, type StepLink } from "../../lib/collectionLink";
 import type { StepResult } from "../../lib/collectionRun";
@@ -13,6 +13,10 @@ interface Props {
   selected: number;
   onSelect: (index: number) => void;
   onMove: (from: number, to: number) => void;
+  /** Open the step's menu at a point: right-click, the row's ⋯ button, or the context-menu key. */
+  onMenu: (index: number, at: { x: number; y: number }) => void;
+  /** Delete or Backspace on the selected row. */
+  onRemove: (index: number) => void;
 }
 
 /** What to call a step in the list and in messages. */
@@ -25,11 +29,13 @@ export function stepTitle(collection: Collection, index: number): string {
  * The steps, in the order they run.
  *
  * Reordered by dragging a row, or from the keyboard with Alt+↑ and Alt+↓ on the
- * selected row; the new position is announced. Each row carries its marker: a
+ * selected row; the new position is announced. Each row has a menu (right-click,
+ * the ⋯ button on hover, or Shift+F10), and Delete removes the selected step
+ * while the list has focus. Each row carries its marker: a
  * warning when the spec changed under it, a cross when its operation is gone,
  * and the last run's result.
  */
-export function StepList({ collection, links, results, runningIndex, selected, onSelect, onMove }: Props) {
+export function StepList({ collection, links, results, runningIndex, selected, onSelect, onMove, onMenu, onRemove }: Props) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<number | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -48,7 +54,7 @@ export function StepList({ collection, links, results, runningIndex, selected, o
       <ol
         ref={list}
         className="step-list"
-        aria-label="Steps, in the order they run. Alt+Up and Alt+Down move the selected step."
+        aria-label="Steps, in the order they run. Alt+Up and Alt+Down move the selected step, Delete removes it, Shift+F10 opens its menu."
       >
         {collection.steps.map((step, index) => {
           const link = links[index];
@@ -102,7 +108,24 @@ export function StepList({ collection, links, results, runningIndex, selected, o
                   setDropAt(null);
                 }}
                 onClick={() => onSelect(index)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  onSelect(index);
+                  onMenu(index, { x: event.clientX, y: event.clientY });
+                }}
                 onKeyDown={(event) => {
+                  // The row has focus, so this is never someone typing in a field.
+                  if ((event.key === "Delete" || event.key === "Backspace") && !event.altKey && !event.metaKey && !event.ctrlKey) {
+                    event.preventDefault();
+                    onRemove(index);
+                    return;
+                  }
+                  if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+                    event.preventDefault();
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    onMenu(index, { x: rect.left + 24, y: rect.bottom });
+                    return;
+                  }
                   if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
                     event.preventDefault();
                     move(index, index + (event.key === "ArrowUp" ? -1 : 1));
@@ -162,6 +185,20 @@ export function StepList({ collection, links, results, runningIndex, selected, o
                   {expected ? ` Expects ${describeExpected(expected)}.` : ""}
                   {result ? ` Last run: ${result.verdict === "pass" ? "passed" : result.verdict === "fail" ? "failed" : "not run"}.` : ""}
                 </span>
+              </button>
+              <button
+                type="button"
+                className="icon-btn tight step-row-menu"
+                aria-label={`Actions for step ${index + 1}, ${stepTitle(collection, index)}`}
+                aria-haspopup="menu"
+                tabIndex={-1}
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  onSelect(index);
+                  onMenu(index, { x: rect.right - 180, y: rect.bottom + 4 });
+                }}
+              >
+                <MoreHorizontal size={14} />
               </button>
             </li>
           );

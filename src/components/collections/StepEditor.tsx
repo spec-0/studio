@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Link2, Link2Off, Trash2 } from "lucide-react";
-import type { CollectionStep, StepTarget } from "../../lib/collection";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AlertTriangle, Link2, Link2Off, MoreHorizontal } from "lucide-react";
+import { findRefs } from "../../lib/chain";
+import { describeLinkTarget, type LinkTarget, type LinkView } from "../../lib/chainLinks";
+import type { Collection, CollectionStep, StepTarget } from "../../lib/collection";
 import {
   describeTarget,
   inputsFromEditor,
@@ -13,12 +15,28 @@ import { SCRATCH_METHODS } from "../../lib/scratch";
 import { authOf, stepAuthOf } from "../../hooks/useCollections";
 import { OperationView, type RequestValues } from "../OperationView";
 import { TabList } from "../TabList";
-import { insertInto, isInsertable, type Insertable } from "./insert";
 import { ExpectedStatusField } from "./ExpectedStatus";
+import { LinkChip } from "./LinkChip";
 import { StepResponse } from "./StepResponse";
-import { ValuePicker, type EarlierStep } from "./ValuePicker";
 
 export type StepTab = "request" | "response";
+
+/** The links of the step on screen, and what can be done with them. */
+export interface StepChain {
+  collection: Collection;
+  /** There's an earlier step to take a value from. */
+  canLink: boolean;
+  /** The link a reference in a field is, checked against the collection as it is now. */
+  linkFor: (target: LinkTarget, reference: string, whole: boolean) => LinkView;
+  /** Links into the body (JSON fields, or a body that isn't JSON). */
+  bodyLinks: LinkView[];
+  /** Why the body's fields can't be listed, when they can't. */
+  bodyProblem: string | null;
+  onAdd: (target?: LinkTarget) => void;
+  onEdit: (view: LinkView) => void;
+  onRemove: (view: LinkView) => void;
+  fixFor: (view: LinkView) => { label: string; run: () => void } | null;
+}
 
 interface Props {
   step: CollectionStep;
@@ -29,7 +47,7 @@ interface Props {
   mockUrl: string | null;
   /** The API's local mock: its port while it runs, and starting it. Null where there are no local mocks. */
   localMock: { port: number | null; onStart: () => void } | null;
-  earlier: EarlierStep[];
+  chain: StepChain;
   result: StepResult | undefined;
   running: boolean;
   tab: StepTab;
@@ -38,15 +56,12 @@ interface Props {
   onChange: (change: (step: CollectionStep) => CollectionStep) => void;
   /** Rename the key; returns a problem to show, or null. */
   onRenameKey: (to: string) => string | null;
-  onRemove: () => void;
+  /** The step's menu: change operation, duplicate, move, remove. */
+  onMenu: (anchor: DOMRect) => void;
+  /** Point a step whose operation is missing at another one. */
   onLink: () => void;
-  /** A reference waiting for the user to click the field it goes into. */
-  pendingInsert: string | null;
-  onInserted: () => void;
   /** A value clicked in this step's response, to use in a later step. */
   onPickFromResponse: (reference: string, anchor: DOMRect) => void;
-  /** Copy a reference when there's no field to put it in. */
-  onCopied: (reference: string) => void;
   /** Changes whenever the step is replaced from outside the editor, e.g. reloaded from its file. */
   revision: number;
 }
@@ -65,19 +80,16 @@ export function StepEditor({
   link,
   mockUrl,
   localMock,
-  earlier,
+  chain,
   result,
   running,
   tab,
   onTab,
   onChange,
   onRenameKey,
-  onRemove,
+  onMenu,
   onLink,
-  pendingInsert,
-  onInserted,
   onPickFromResponse,
-  onCopied,
   revision,
 }: Props) {
   const [keyDraft, setKeyDraft] = useState(step.key);
@@ -95,32 +107,77 @@ export function StepEditor({
   );
   const localMockDown = step.target?.kind === "local-mock" && !localMock?.port;
 
-  // ── putting a reference into a field ───────────────────────────────────────
-  const area = useRef<HTMLDivElement>(null);
-  const lastField = useRef<Insertable | null>(null);
-  const pending = useRef(pendingInsert);
-  pending.current = pendingInsert;
-  useEffect(() => {
-    const node = area.current;
-    if (!node) return;
-    const onFocus = (event: FocusEvent) => {
-      const target = event.target;
-      if (!isInsertable(target) || target.closest("[data-no-insert]") || target.hasAttribute("data-no-insert")) return;
-      lastField.current = target;
-      if (pending.current) {
-        insertInto(target, pending.current);
-        onInserted();
-      }
+  // ── fields filled from earlier steps ───────────────────────────────────────
+  /**
+   * A field whose whole value is a link shows the link, not `{{steps.…}}`; any
+   * other field keeps its input, with a button to link it instead.
+   */
+  const linkSlot = (target: LinkTarget, value: string, control: ReactNode): ReactNode => {
+    const refs = findRefs(value);
+    const chip = (reference: string, whole: boolean) => {
+      const view = chain.linkFor(target, reference, whole);
+      return (
+        <LinkChip
+          key={reference}
+          collection={chain.collection}
+          view={view}
+          inline={!whole}
+          onEdit={() => chain.onEdit(view)}
+          onRemove={() => chain.onRemove(view)}
+          fix={chain.fixFor(view)}
+        />
+      );
     };
-    node.addEventListener("focusin", onFocus);
-    return () => node.removeEventListener("focusin", onFocus);
-  }, [onInserted, tab]);
-
-  const pick = (reference: string) => {
-    const field = lastField.current;
-    if (field && document.body.contains(field)) insertInto(field, reference);
-    else onCopied(reference);
+    if (refs.length === 1 && value.trim() === refs[0].raw) return chip(refs[0].raw, true);
+    const named = target.in === "body" || target.in === "text" || Boolean(target.name);
+    const label = target.in === "path" || target.in === "query" || target.in === "header" || target.in === "form" ? target.name : "this field";
+    return (
+      <div className="linkable">
+        <div className="linkable-row">
+          {control}
+          {chain.canLink && named && (
+            <button
+              type="button"
+              className="icon-btn tight linkable-btn"
+              aria-label={`Take ${label} from an earlier step`}
+              title="Take this value from an earlier step"
+              onClick={() => chain.onAdd(target)}
+            >
+              <Link2 size={13} />
+            </button>
+          )}
+        </div>
+        {refs.map((ref) => chip(ref.raw, false))}
+      </div>
+    );
   };
+
+  const bodyExtra = (
+    <div className="body-links">
+      {chain.bodyLinks.length > 0 && <div className="field-meta">Filled from earlier steps</div>}
+      {chain.bodyLinks.map((view) => (
+        <div className="body-link-row" key={`${describeLinkTarget(view.target)}|${view.reference}`}>
+          <span className="mono body-link-field">{describeLinkTarget(view.target)}</span>
+          <LinkChip
+            collection={chain.collection}
+            view={view}
+            inline={!view.whole}
+            onEdit={() => chain.onEdit(view)}
+            onRemove={() => chain.onRemove(view)}
+            fix={chain.fixFor(view)}
+          />
+        </div>
+      ))}
+      {chain.bodyProblem && chain.bodyLinks.length > 0 && (
+        <div className="field-meta">{chain.bodyProblem} Its links are shown as they appear in the text.</div>
+      )}
+      {chain.canLink && (
+        <button type="button" className="btn ghost body-link-add" onClick={() => chain.onAdd()}>
+          <Link2 size={12} aria-hidden /> Take a body field from an earlier step
+        </button>
+      )}
+    </div>
+  );
 
   // ── the operation editor's values → the step ───────────────────────────────
   const stepRef = useRef(step);
@@ -164,17 +221,19 @@ export function StepEditor({
           <span className={`method-chip ${method.toLowerCase()}`}>{method}</span>
           <span className="step-head-path mono">{step.operation?.path ?? step.request?.url}</span>
           <span className="spacer" />
-          <button type="button" className="btn" onClick={onLink}>
-            <Link2 size={13} aria-hidden />
-            {step.api ? "Link to another operation…" : "Link to an operation…"}
-          </button>
-          <button type="button" className="icon-btn danger" aria-label={`Remove step ${step.key}`} title="Remove step" onClick={onRemove}>
-            <Trash2 size={14} />
+          <button
+            type="button"
+            className="btn step-menu-btn"
+            aria-haspopup="menu"
+            aria-label={`Actions for step ${index + 1}`}
+            onClick={(event) => onMenu(event.currentTarget.getBoundingClientRect())}
+          >
+            <MoreHorizontal size={14} aria-hidden /> Step
           </button>
         </div>
         <div className="step-head-fields">
           <label className="step-field">
-            <span className="field-meta">Key, for {"{{steps."}{step.key}{".…}}"}</span>
+            <span className="field-meta" title="How the collection file, and links from later steps, refer to this step">Key</span>
             <input
               className="mono"
               value={keyDraft}
@@ -353,24 +412,11 @@ export function StepEditor({
         onSelect={onTab}
       />
 
-      <div className="step-body" ref={area}>
-        {pendingInsert && tab === "request" && (
-          <div className="verdict none pending-insert" role="status">
-            <span className="glyph">→</span>
-            <span>
-              Click the field to fill with <code>{pendingInsert}</code>
-            </span>
-            <span className="spacer" />
-            <button type="button" className="btn ghost" onClick={onInserted} data-no-insert>
-              Cancel
-            </button>
-          </div>
-        )}
+      <div className="step-body">
         {tab === "response" ? (
           <StepResponse stepKey={step.key} result={result} running={running} onPick={onPickFromResponse} />
         ) : (
           <>
-            <ValuePicker steps={earlier} onPick={pick} />
             {linked ? (
               <div className="step-operation">
                 <OperationView
@@ -387,6 +433,8 @@ export function StepEditor({
                   onValuesChange={onValuesChange}
                   prefill={prefill}
                   mode="step"
+                  linkSlot={linkSlot}
+                  bodyExtra={bodyExtra}
                 />
               </div>
             ) : (
