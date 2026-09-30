@@ -258,6 +258,8 @@ function accessPath(text: string): PathSegment[] | null {
     }
     at = pattern.lastIndex;
   }
+  // `.length` is JavaScript, not a field; a reference would look for a field of that name.
+  if (out[out.length - 1] === "length") return null;
   return out;
 }
 

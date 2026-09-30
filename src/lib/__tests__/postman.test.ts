@@ -414,8 +414,8 @@ describe("reading test scripts", () => {
       { variable: "a", source: { kind: "body", path: ["data", "items", 0, "id"] } },
       { variable: "b", source: { kind: "body", path: ["order-id"] } },
       { variable: "c", source: { kind: "header", name: "Location" } },
-      // `.length` reads as a field; Studio's reference would look for a field called length.
-      { variable: "d", source: { kind: "body", path: ["items", "length"] } },
+      // `.length` is a count, not a field a reference could point at.
+      { variable: "d", source: null },
       { variable: "e", source: null },
       { variable: "f", source: null },
     ]);
