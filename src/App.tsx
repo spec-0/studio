@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiBar, API_PANEL_ID } from "./components/ApiBar";
 import { ApiSwitcher } from "./components/ApiSwitcher";
 import { AddedToast, AddToCollectionMenu } from "./components/collections/AddToCollection";
+import { NameDialog } from "./components/collections/NameDialog";
 import { CollectionsView } from "./components/collections/CollectionsView";
 import { DeepLinkDialog } from "./components/DeepLinkDialog";
 import { DocumentView } from "./components/DocumentView";
@@ -138,6 +139,8 @@ export default function App() {
     showOpen,
     setShowOpen,
     openTab,
+    openMode,
+    setOpenMode,
     showEnvs,
     setShowEnvs,
     showRun,
@@ -147,6 +150,7 @@ export default function App() {
     showSwitcher,
     setShowSwitcher,
     openSignIn,
+    openCatalog,
     closeOpen,
     closeOnEscape,
   } = useDialogs();
@@ -607,7 +611,7 @@ export default function App() {
                 <AccountSettings
                   session={session}
                   onSignIn={openSignIn}
-                  onBrowseCatalog={openSignIn}
+                  onBrowseCatalog={openCatalog}
                   onSignOut={() => updateSession(null)}
                   onOpenSpec0={() => void openInBrowser(session?.appUrl ?? "")}
                 />
@@ -1110,7 +1114,9 @@ export default function App() {
 
       {showOpen && (
         <OpenDialog
-          initialSource={openTab}
+          initialSource={openTab ?? undefined}
+          mode={openMode}
+          onBrowse={() => setOpenMode("add")}
           session={session}
           onSession={updateSession}
           onOpenFile={() => void openFile()}
@@ -1158,6 +1164,13 @@ export default function App() {
         />
       )}
 
+      {collections.naming && (
+        <NameDialog
+          key={`${collections.naming.title}|${collections.naming.initial}`}
+          state={collections.naming}
+          onClose={collections.closeNaming}
+        />
+      )}
       <AddToCollectionMenu
         state={collections.addMenu}
         collections={collections.collections}

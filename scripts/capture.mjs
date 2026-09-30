@@ -19,6 +19,14 @@
  * its failed step opened, and then the app console with every kind of entry
  * and a filter, including at 960px.
  *
+ * The collection's links (step 2's orderId and two of step 3's body fields,
+ * all from step 1) are added with the link dialog, from a field's link button
+ * and from the Chain view, which is shown before and after the run. Moving
+ * step 1 down is warned about, then shown as a broken link with its fix. The
+ * step menu, the warning for removing a step others depend on, renaming from
+ * the list, and the chain at the minimum width follow. Earlier, the Add an API
+ * dialog is shown signed out and signed in, and Settings' sign-in dialog.
+ *
  * Then request tabs: operations opened across both APIs, one edited and left
  * unsent (checked to come back as it was, with its marker), one sent and its
  * answer brought back labelled, and the strip at the minimum width.
@@ -487,6 +495,53 @@ await openJourneyFromLibrary(UPLOADED);
 await shootBoth("24a-journey-sign-in", "light");
 await closeJourney();
 
+// Add an API, signed out: the tabs run Spec0, URL, Local file, and it opens on
+// Local file. Then Settings' "Sign in to Spec0…" opens a dialog titled for it.
+const openAddApi = async () => {
+  await must(clickTab(".nav-tab", "APIs"), "the APIs tab");
+  await wait(300);
+  await page.evaluate(() => document.querySelector('[aria-label="Back to all APIs"]')?.click());
+  await wait(300);
+  await must(clickByText(".btn.primary", "Add API"), "the Add API button");
+  await page.waitForSelector('[aria-labelledby="open-dialog-title"]', { timeout: 5000 });
+  await wait(300);
+  return page.evaluate(() => ({
+    title: document.querySelector("#open-dialog-title")?.textContent,
+    tabs: [...document.querySelectorAll('[aria-labelledby="open-dialog-title"] [role="tab"]')].map((t) => t.textContent),
+    selected: document.querySelector('[aria-labelledby="open-dialog-title"] [role="tab"][aria-selected="true"]')?.textContent,
+  }));
+};
+{
+  const shown = await openAddApi();
+  if (shown.title !== "Add an API" || shown.tabs.join(",") !== "Spec0,URL,Local file" || shown.selected !== "Local file") {
+    throw new Error(`Add an API, signed out: ${JSON.stringify(shown)}`);
+  }
+  await page.screenshot({ path: `${outDir}/23b-add-api-signed-out-light.png` });
+  console.log("23b-add-api-signed-out-light");
+  await must(clickTab('[aria-labelledby="open-dialog-title"] .tab', "Spec0"), "the Spec0 tab");
+  await wait(300);
+  await page.screenshot({ path: `${outDir}/23c-add-api-spec0-signed-out-light.png` });
+  console.log("23c-add-api-spec0-signed-out-light");
+  await page.keyboard.press("Escape");
+  await wait(300);
+  await must(clickLabel("Settings"), "the Settings button");
+  await must(clickTab(".settings-tab", "Account & Spec0"), "the Account section");
+  await wait(300);
+  await must(clickByText(".btn", "Sign in to Spec0…"), "Sign in to Spec0…");
+  await page.waitForSelector(".modal.sign-in", { timeout: 5000 });
+  await wait(300);
+  const title = await page.evaluate(() => document.querySelector("#open-dialog-title")?.textContent);
+  if (title !== "Sign in to Spec0") throw new Error(`The sign-in dialog is titled "${title}"`);
+  await page.screenshot({ path: `${outDir}/23d-sign-in-dialog-light.png` });
+  console.log("23d-sign-in-dialog-light");
+  await toggleTheme();
+  await page.screenshot({ path: `${outDir}/23d-sign-in-dialog-dark.png` });
+  console.log("23d-sign-in-dialog-dark");
+  await toggleTheme();
+  await page.keyboard.press("Escape");
+  await wait(300);
+}
+
 // Signed in: a session and the org's mocks, answered here so no request
 // leaves the machine.
 const FAKE_API = "https://spec0.invalid";
@@ -523,6 +578,7 @@ const answer = (method, path) => {
   if (key) return [200, { mockServerId: key[1], apiKey: `mk_demo_${key[1]}_${key[2] ? "new" : "7f3a9c21"}`, apiKeyPreview: "mk_…" }];
   if (path.endsWith("/mocks")) return [200, fake.mocks];
   if (path.endsWith("/orgs/summary")) return [200, { name: "Acme" }];
+  if (method === "GET" && path.endsWith("/apis/team") && fake.catalog) return [200, fake.catalog];
   return [200, []];
 };
 await page.setRequestInterception(true);
@@ -572,6 +628,28 @@ await must(clickTab(".nav-tab", "Mocks"), "the Mocks tab");
 await wait(400);
 await page.screenshot({ path: `${outDir}/26-mocks-signed-in-dark.png` });
 console.log("26-mocks-signed-in-dark");
+
+// Add an API, signed in: it opens on Spec0, with the organisation's APIs.
+fake.catalog = [
+  { apiId: "a1", apiName: "Orders API", teamName: "Checkout", version: "1.4.0", description: "Orders and their line items" },
+  { apiId: "a2", apiName: "Payments", teamName: "Payments", version: "2.0.1", description: "Card and bank payments" },
+  { apiId: "a3", apiName: "Inventory", teamName: "Warehouse", version: "0.9.0" },
+];
+{
+  const shown = await openAddApi();
+  if (shown.selected !== "Spec0") throw new Error(`Add an API, signed in, opened on ${shown.selected}`);
+  await page.waitForFunction(() => document.querySelectorAll('[aria-labelledby="open-dialog-title"] .row').length >= 3, { timeout: 5000 });
+  await wait(300);
+  await page.screenshot({ path: `${outDir}/26z-add-api-signed-in-dark.png` });
+  console.log("26z-add-api-signed-in-dark");
+  await toggleTheme();
+  await page.screenshot({ path: `${outDir}/26z-add-api-signed-in-light.png` });
+  console.log("26z-add-api-signed-in-light");
+  await toggleTheme();
+  await page.keyboard.press("Escape");
+  await wait(300);
+}
+fake.catalog = null;
 
 // "Create a mock server" signed in, dark theme here. Two teams, so the team
 // step shows; usage comes from the (fake) server's numbers.
@@ -797,14 +875,79 @@ await upload.uploadFile(PAYMENTS);
 await page.waitForSelector(".sidebar .row", { timeout: 15000 });
 await wait(500);
 
-// Step 1: POST /orders, open in the editor, then right-click it → New collection….
+/** Answer the name dialog a new collection opens with. */
+const nameCollection = async (name, shot) => {
+  await page.waitForSelector(".name-dialog input", { timeout: 5000 });
+  await wait(250);
+  if (shot) {
+    await page.screenshot({ path: `${outDir}/${shot}.png` });
+    console.log(shot);
+  }
+  await page.evaluate((text) => {
+    const field = document.querySelector(".name-dialog input");
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(field, text);
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  }, name);
+  await wait(100);
+  await page.click(".name-dialog .btn.primary");
+  await wait(400);
+};
+/** In the link dialog: a field on the left, a step and a value on the right. */
+const linkDialog = {
+  target: (label) =>
+    must(
+      page.evaluate((l) => {
+        const option = [...document.querySelectorAll(".link-col:first-child .link-option")].find(
+          (o) => o.querySelector(".link-option-name")?.textContent?.replace("*", "") === l,
+        );
+        option?.click();
+        return Boolean(option);
+      }, label),
+      `the field ${label} in the link dialog`,
+    ).then(() => wait(150)),
+  sourceStep: (key) =>
+    page.evaluate((k) => {
+      const select = document.querySelector(".link-col:last-child select");
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set.call(select, k);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }, key).then(() => wait(200)),
+  source: (label) =>
+    must(
+      page.evaluate((l) => {
+        const option = [...document.querySelectorAll(".link-col:last-child .link-option")].find(
+          (o) => o.querySelector(".link-option-name")?.textContent === l,
+        );
+        option?.click();
+        return Boolean(option);
+      }, label),
+      `the value ${label} in the link dialog`,
+    ).then(() => wait(150)),
+  save: async () => {
+    await page.click(".link-value-dialog .modal-foot .btn.primary");
+    await wait(400);
+    if (await page.$(".link-value-dialog")) throw new Error("The link dialog didn't close after saving");
+  },
+};
+/** Steps | Chain in the collection header. */
+const collectionView = (name) =>
+  must(
+    page.evaluate((n) => {
+      const tab = [...document.querySelectorAll(".collection-views [role=tab]")].find((t) => t.textContent?.trim().startsWith(n));
+      tab?.click();
+      return Boolean(tab);
+    }, name),
+    `the ${name} view`,
+  ).then(() => wait(500));
+
+// Step 1: POST /orders, open in the editor, then right-click it → New collection…,
+// which asks for the collection's name first.
 await openApi(SAMPLE);
 await (await operationRow("POST", "/orders")).click();
 await wait(500);
 await addToCollection("POST", "/orders", "New collection", "40-add-to-collection-menu-light");
+await nameCollection("Checkout", "40b-name-new-collection-light");
 await page.waitForSelector(".collection-title", { timeout: 5000 });
-await setField(".collection-title", "Checkout");
-await wait(300);
+if ((await page.$eval(".collection-title", (el) => el.value)) !== "Checkout") throw new Error("The new collection isn't called Checkout");
 
 // Step 2: GET /orders/{orderId}, from the same API.
 await openApi(SAMPLE);
@@ -829,34 +972,57 @@ await selectStep(1);
 await sendStepTo("");
 await wait(200);
 
-// Step 2 goes to staging and takes the new order's id, picked from step 1's declared response.
+// Step 2 goes to staging and takes the new order's id: the link button next to
+// orderId opens the link dialog on that field, and body.id is picked from step
+// 1's declared response.
 await selectStep(2);
 await sendStepTo("server:https://staging");
 await wait(300);
-const orderIdField = await page.evaluateHandle(() =>
-  [...document.querySelectorAll(".step-operation .field")]
-    .find((f) => f.querySelector(".field-name")?.textContent?.startsWith("orderId"))
-    ?.querySelector("input"),
-);
-await orderIdField.asElement().click({ clickCount: 3 });
-await clickByText(".value-picker-toggle", "Use a value from an earlier step");
-await page.waitForSelector(".value-pick", { timeout: 5000 });
-await page.evaluate(() =>
-  [...document.querySelectorAll(".value-pick")].find((b) => b.querySelector(".mono")?.textContent === "body.id")?.click(),
-);
-await wait(400);
-const picked = await orderIdField.evaluate((el) => el.value);
-if (picked !== "{{steps.createOrder.body.id}}") throw new Error(`Picking a value put "${picked}" in orderId`);
-await page.screenshot({ path: `${outDir}/42-value-picker-light.png` });
-console.log("42-value-picker-light");
+await must(clickLabel("Take orderId from an earlier step"), "the link button next to orderId");
+await page.waitForSelector(".link-value-dialog", { timeout: 5000 });
+await linkDialog.source("body.id");
+await page.screenshot({ path: `${outDir}/42-link-dialog-light.png` });
+console.log("42-link-dialog-light");
+await linkDialog.save();
+const chipText = await page.evaluate(() => document.querySelector(".step-operation .link-chip")?.textContent ?? "");
+if (!chipText.includes("createOrder") || !chipText.includes("body.id")) throw new Error(`orderId doesn't show its link: "${chipText}"`);
 
-// Step 3's body refers to step 1 too.
-await selectStep(3);
-await setField(
-  ".step-operation textarea.editor",
-  '{\n  "orderId": "{{steps.createOrder.body.id}}",\n  "amount": {{steps.createOrder.body.total}}\n}',
-);
+// Step 3's body takes two values from step 1, added from the chain view.
+await collectionView("Chain");
+await page.waitForSelector(".chain-step", { timeout: 5000 });
+const addInto = async (stepNumber, field, source) => {
+  await page.evaluate((n) => document.querySelectorAll(".chain-step")[n - 1]?.querySelector(".chain-add")?.click(), stepNumber);
+  await page.waitForSelector(".link-value-dialog", { timeout: 5000 });
+  await linkDialog.target(field);
+  await linkDialog.sourceStep("createOrder");
+  await linkDialog.source(source);
+};
+await addInto(3, "orderId", "body.id");
+await linkDialog.save();
+await addInto(3, "amount", "body.total");
+await page.screenshot({ path: `${outDir}/42b-link-dialog-body-light.png` });
+console.log("42b-link-dialog-body-light");
+await linkDialog.save();
+const linkCount = await page.evaluate(() => document.querySelectorAll(".chain-row.take").length);
+if (linkCount !== 3) throw new Error(`Expected 3 links in the chain, found ${linkCount}`);
 await wait(300);
+await page.screenshot({ path: `${outDir}/43-chain-before-run-light.png` });
+console.log("43-chain-before-run-light");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/43-chain-before-run-dark.png` });
+console.log("43-chain-before-run-dark");
+await toggleTheme();
+
+// The same links, seen from a step: a chip in place of the field.
+await collectionView("Steps");
+await selectStep(3);
+await page.evaluate(() => document.querySelector(".body-links")?.scrollIntoView({ block: "center" }));
+await wait(300);
+await page.screenshot({ path: `${outDir}/43b-body-links-light.png` });
+console.log("43b-body-links-light");
+await selectStep(2);
+await page.screenshot({ path: `${outDir}/43c-field-chip-light.png` });
+console.log("43c-field-chip-light");
 await selectStep(1);
 await page.screenshot({ path: `${outDir}/43-collection-detail-light.png` });
 console.log("43-collection-detail-light");
@@ -883,13 +1049,23 @@ console.log("44-run-results-light");
 await toggleTheme();
 await page.screenshot({ path: `${outDir}/44-run-results-dark.png` });
 console.log("44-run-results-dark");
+await collectionView("Chain");
+const passed = await page.evaluate(() => [...document.querySelectorAll(".chain-row.take .chain-value")].map((el) => el.textContent));
+if (!passed.some((v) => v?.startsWith("3f1c0b8e"))) throw new Error(`The chain doesn't show the values passed: ${passed.join(" | ")}`);
+await page.screenshot({ path: `${outDir}/44e-chain-after-run-dark.png` });
+console.log("44e-chain-after-run-dark");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/44e-chain-after-run-light.png` });
+console.log("44e-chain-after-run-light");
+await toggleTheme();
+await collectionView("Steps");
 
 // The run's log: the Runs view, a failed step opened, and the app console.
 {
   const segment = (text) =>
     must(
       page.evaluate((t) => {
-        const tab = [...document.querySelectorAll(".collection-panes .segment")].find((el) => el.textContent?.startsWith(t));
+        const tab = [...document.querySelectorAll(".collection-views .segment")].find((el) => el.textContent?.startsWith(t));
         tab?.click();
         return Boolean(tab);
       }, text),
@@ -1035,10 +1211,98 @@ await toggleTheme();
 await page.screenshot({ path: `${outDir}/47-stale-step-light.png` });
 console.log("47-stale-step-light");
 
+// Moving a step so a link's source runs too late: warned first, then shown as
+// broken in the chain, with the fix one click away.
+await collectionView("Steps");
+await selectStep(1);
+await page.focus(".step-row[aria-current=step]");
+await page.keyboard.down("Alt");
+await page.keyboard.press("ArrowDown");
+await page.keyboard.up("Alt");
+await page.waitForSelector(".confirm-dialog", { timeout: 5000 });
+await wait(250);
+await page.screenshot({ path: `${outDir}/47b-move-warning-light.png` });
+console.log("47b-move-warning-light");
+await clickByText(".confirm-dialog .btn", "Move anyway");
+await wait(400);
+await collectionView("Chain");
+await page.waitForSelector(".chain-row.take.broken", { timeout: 5000 });
+await page.screenshot({ path: `${outDir}/47c-broken-link-light.png` });
+console.log("47c-broken-link-light");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/47c-broken-link-dark.png` });
+console.log("47c-broken-link-dark");
+await toggleTheme();
+await collectionView("Steps");
+await selectStep(1);
+await page.screenshot({ path: `${outDir}/47d-broken-chip-light.png` });
+console.log("47d-broken-chip-light");
+await collectionView("Chain");
+await clickByText(".chain-problem .btn", "Move createOrder before getOrder");
+await wait(400);
+if (await page.$(".chain-row.take.broken")) throw new Error("The fix didn't mend the broken link");
+
+// The step menu, from a right-click on a step.
+await collectionView("Steps");
+await page.evaluate(() => {
+  const row = document.querySelectorAll(".step-row")[1];
+  const rect = row.getBoundingClientRect();
+  row.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: rect.left + 120, clientY: rect.top + 20 }));
+});
+await page.waitForSelector(".context-menu", { timeout: 5000 });
+await wait(250);
+await page.screenshot({ path: `${outDir}/47e-step-menu-light.png` });
+console.log("47e-step-menu-light");
+await page.keyboard.press("Escape");
+await wait(200);
+
+// Delete on a step that later steps take values from: warned, naming them.
+await selectStep(1);
+await page.focus(".step-row[aria-current=step]");
+await page.keyboard.press("Delete");
+await page.waitForSelector(".confirm-dialog", { timeout: 5000 });
+await wait(250);
+const warning = await page.$eval(".confirm-dialog", (el) => el.textContent);
+if (!warning.includes("getOrder") || !warning.includes("createPayment")) throw new Error(`The remove warning doesn't name the steps: ${warning}`);
+await page.screenshot({ path: `${outDir}/47f-remove-warning-light.png` });
+console.log("47f-remove-warning-light");
+await clickByText(".confirm-dialog .btn", "Cancel");
+await wait(200);
+
+// Rename from the list's right-click menu.
+await page.evaluate(() => {
+  const row = document.querySelector(".collection-row");
+  const rect = row.getBoundingClientRect();
+  row.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: rect.left + 60, clientY: rect.top + 16 }));
+});
+await page.waitForSelector(".context-menu", { timeout: 5000 });
+await page.screenshot({ path: `${outDir}/47g-collection-menu-light.png` });
+console.log("47g-collection-menu-light");
+await (await menuItem("Rename")).asElement().click();
+await nameCollection("Checkout flow", "47h-rename-light");
+if ((await page.$eval(".collection-title", (el) => el.value)) !== "Checkout flow") throw new Error("Renaming from the list didn't rename it");
+
+// The minimum window width: the chain and a step still read.
+await page.setViewport({ width: 960, height: 720, deviceScaleFactor: 2 });
+await wait(400);
+await collectionView("Chain");
+await page.screenshot({ path: `${outDir}/47i-chain-960-light.png` });
+console.log("47i-chain-960-light");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/47i-chain-960-dark.png` });
+console.log("47i-chain-960-dark");
+await toggleTheme();
+await collectionView("Steps");
+await selectStep(2);
+await page.screenshot({ path: `${outDir}/47j-step-960-light.png` });
+console.log("47j-step-960-light");
+await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+await wait(300);
+
 // A second collection, so the list is a list.
 await page.click('[aria-label="New collection"]');
+await nameCollection("Smoke tests");
 await page.waitForSelector(".collection-title", { timeout: 5000 });
-await setField(".collection-title", "Smoke tests");
 await wait(300);
 await page.screenshot({ path: `${outDir}/48-collections-list-light.png` });
 console.log("48-collections-list-light");

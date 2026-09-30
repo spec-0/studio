@@ -2418,35 +2418,6 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .pending-insert { margin: 10px 16px 0; align-items: center; }
 .pending-insert .spacer { flex: 1; }
 
-.value-picker { margin: 10px 16px 0; border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
-.value-picker-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  color: hsl(var(--ink-2));
-}
-.value-picker-toggle:hover { color: hsl(var(--ink)); }
-.value-picker-body { padding: 0 10px 10px; display: grid; gap: 6px; }
-.value-picker-bar { display: flex; gap: 6px; }
-.value-picker-bar select, .value-picker-bar input { font-size: 12px; padding: 3px 6px; }
-.value-picker-list { max-height: 180px; overflow-y: auto; display: grid; }
-.value-pick {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 3px 6px;
-  border-radius: 4px;
-  text-align: left;
-  font-size: 11.5px;
-}
-.value-pick:hover, .value-pick:focus-visible { background: hsl(var(--accent-soft)); }
-.value-pick .mono { color: hsl(var(--primary)); }
-.value-pick .meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-
 .step-response { padding: 12px 16px 24px; }
 .step-result-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0; }
 .step-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -2751,3 +2722,298 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
   .console-entry { grid-template-columns: 84px 70px minmax(0, 1fr) auto; }
   .console-search { width: 120px; }
 }
+
+/* ─── Naming, confirming ──────────────────────────────────────────────────── */
+
+.modal.name-dialog { width: min(420px, 100%); }
+.name-field { display: grid; gap: 4px; }
+.name-field input { font-size: 14px; padding: 7px 9px; }
+.modal.confirm-dialog { width: min(500px, 100%); }
+.confirm-dialog .modal-body { display: grid; gap: 10px; }
+.confirm-list { margin: 0 0 0 18px; display: grid; gap: 3px; font-size: 12.5px; }
+.modal.sign-in { width: min(560px, 100%); }
+
+/* The ⋯ on a collection or a step: shown on hover and on the selected row. */
+.collection-row-wrap, .step-row-wrap { position: relative; }
+.collection-row-menu, .step-row-menu {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  background: hsl(var(--bg));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  transition: opacity var(--fast);
+}
+.collection-row-wrap:hover .collection-row-menu,
+.collection-row-wrap .row[aria-selected="true"] + .collection-row-menu,
+.step-row-wrap:hover .step-row-menu,
+.step-row-wrap .step-row[aria-current="step"] + .step-row-menu,
+.collection-row-menu:focus-visible, .step-row-menu:focus-visible { opacity: 1; }
+.step-row { padding-right: 34px; }
+.collection-row { padding-right: 34px; }
+.step-menu-btn { padding: 3px 9px; }
+
+/* Steps | Chain */
+.collection-views { margin-left: 0; }
+.segment { display: inline-flex; align-items: center; gap: 5px; }
+.segment-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: hsl(var(--ink-3));
+}
+.segment-alert { width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--danger)); }
+
+/* ─── Links between steps ─────────────────────────────────────────────────── */
+
+/* A field that can take a value from an earlier step: its input and a link button. */
+.linkable { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.linkable-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.linkable-row > input, .linkable-row > select { flex: 1; min-width: 0; }
+.linkable-btn { color: hsl(var(--ink-3)); }
+.linkable-btn:hover { color: hsl(var(--primary)); background: hsl(var(--accent-soft)); }
+
+.link-chip-wrap { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.link-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid hsl(var(--primary) / 0.35);
+  border-radius: 6px;
+  background: hsl(var(--accent-soft));
+  font-size: 12px;
+}
+.link-chip-wrap.inline .link-chip { min-height: 24px; font-size: 11.5px; background: transparent; border-style: dashed; }
+.link-chip .spacer { flex: 1; }
+.link-chip-icon { color: hsl(var(--primary)); flex: none; }
+.link-chip-text { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.link-chip-from { color: hsl(var(--ink-3)); }
+.link-chip-value {
+  font-size: 11px;
+  color: hsl(var(--ink-2));
+  padding: 0 6px;
+  border-radius: 4px;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--border));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+  flex: 0 1 auto;
+}
+.link-chip-unchecked { color: hsl(var(--ink-3)); display: inline-grid; }
+.link-chip-btn { padding: 2px 8px; }
+.link-chip.broken { border-color: hsl(var(--danger) / 0.55); background: hsl(var(--danger) / 0.07); }
+.link-chip.broken .link-chip-icon { color: hsl(var(--danger)); }
+.link-chip-problem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: hsl(var(--danger));
+}
+.link-chip-problem .btn { padding: 2px 8px; color: hsl(var(--ink)); }
+
+.link-source { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; }
+.link-source .mono { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-step-no {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: hsl(var(--ink-2));
+  background: hsl(var(--surface-hover));
+  align-self: center;
+}
+.link-step-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-arrow { color: hsl(var(--ink-3)); }
+
+.body-links { display: grid; gap: 6px; margin-top: 8px; }
+.body-link-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.body-link-field { font-size: 11.5px; flex: 0 0 auto; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.body-link-add { justify-self: start; padding: 3px 8px; color: hsl(var(--ink-2)); }
+.body-link-add:hover { color: hsl(var(--primary)); }
+
+/* The add / change link dialog: the field on the left, the value on the right. */
+.modal.link-value-dialog { width: min(780px, 100%); max-height: min(640px, 100%); }
+.link-columns { display: grid; grid-template-columns: 1fr 1fr; min-height: 0; flex: 1; overflow: hidden; }
+.link-col { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; min-height: 0; min-width: 0; }
+.link-col + .link-col { border-left: 1px solid hsl(var(--border)); }
+.link-col h3 { font-size: 12px; font-weight: 600; }
+.link-select { display: grid; gap: 3px; }
+.link-select select { font-size: 12.5px; padding: 4px 7px; }
+.link-filter { font-size: 12px; padding: 4px 7px; }
+.link-options { display: grid; align-content: start; gap: 1px; overflow-y: auto; min-height: 120px; flex: 1; margin: 0 -6px; padding: 0 6px; }
+.link-group { display: grid; gap: 1px; margin-bottom: 8px; }
+.link-group-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--ink-3));
+  padding: 4px 8px 2px;
+}
+.link-option {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  text-align: left;
+  border-left: 2px solid transparent;
+  min-width: 0;
+}
+.link-option:hover { background: hsl(var(--surface-hover)); }
+.link-option[aria-checked="true"] { background: hsl(var(--accent-soft)); border-left-color: hsl(var(--primary)); }
+.link-option-name { font-size: 12px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-option-meta { margin-left: auto; font-size: 11px; color: hsl(var(--ink-3)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-family: var(--font-mono); }
+.link-typed { display: flex; gap: 6px; padding: 2px 0; }
+.link-typed input { flex: 1; min-width: 0; font-size: 12px; padding: 4px 7px; }
+.link-typed input[aria-invalid="true"] { border-color: hsl(var(--danger) / 0.6); }
+.link-typed .btn { padding: 3px 9px; }
+.link-note { padding: 2px 2px; }
+.link-foot { flex-wrap: wrap; }
+.link-summary { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; }
+.link-summary svg { color: hsl(var(--primary)); flex: none; }
+.link-summary .mono { font-size: 11.5px; }
+
+/* ─── The chain view ──────────────────────────────────────────────────────── */
+
+.collection-body.chain-body { display: block; overflow-y: auto; }
+.chain-view { padding: 14px 16px 32px; max-width: 980px; }
+.chain-bar { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+.chain-lead { flex: 1; color: hsl(var(--ink-2)); font-size: 12.5px; max-width: 62ch; }
+.chain-alert { margin-bottom: 12px; align-items: center; }
+.chain-empty { padding: 48px 16px; }
+
+.chain-graph {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--chain-gutter, 26px) minmax(0, 1fr);
+}
+.chain-lines { position: absolute; left: 0; top: 0; overflow: visible; }
+.chain-steps { grid-column: 2; list-style: none; display: grid; gap: 10px; min-width: 0; }
+.chain-step {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--bg));
+  box-shadow: var(--shadow-1);
+  min-width: 0;
+}
+.chain-step-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px 7px 10px;
+  min-width: 0;
+  background: hsl(var(--surface));
+  border-bottom: 1px solid hsl(var(--border));
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.chain-step:not(:has(.chain-rows, .chain-add)) .chain-step-head { border-bottom: none; border-radius: var(--radius); }
+.chain-step-head .spacer { flex: 1; }
+.chain-step-head .run-dot { margin: 0; flex: none; }
+.chain-step-head .method { width: auto; flex: none; }
+.chain-step-head .btn { padding: 2px 8px; }
+.chain-step-no { font-family: var(--font-mono); font-size: 11px; color: hsl(var(--ink-3)); min-width: 12px; text-align: right; }
+.chain-step-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; }
+.chain-step-title strong { font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.chain-step-path { font-size: 11.5px; color: hsl(var(--ink-3)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.chain-rows { display: grid; padding: 4px 0; }
+.chain-rows + .chain-rows { border-top: 1px dashed hsl(var(--border)); }
+.chain-rows-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: hsl(var(--ink-3));
+  padding: 2px 10px;
+}
+.chain-row { display: grid; gap: 3px; padding: 4px 8px 4px 10px; min-width: 0; border-left: 2px solid transparent; }
+.chain-row.give { display: flex; align-items: baseline; gap: 10px; }
+.chain-row.hot { background: hsl(var(--accent-soft)); border-left-color: hsl(var(--primary)); }
+.chain-row.take.broken { background: hsl(var(--danger) / 0.06); border-left-color: hsl(var(--danger)); }
+.chain-take-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.chain-take-line .spacer { flex: 1; }
+.chain-take-line .btn { padding: 2px 8px; }
+.chain-take-arrow { color: hsl(var(--ink-3)); flex: none; }
+.chain-row.hot .chain-take-arrow { color: hsl(var(--primary)); }
+.chain-field { font-size: 12px; font-weight: 500; white-space: nowrap; }
+.chain-value {
+  font-size: 11px;
+  color: hsl(var(--ink-2));
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+  min-width: 0;
+}
+.chain-used { margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.chain-unchecked { color: hsl(var(--ink-3)); display: inline-grid; }
+.chain-problem { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11.5px; color: hsl(var(--danger)); padding-left: 2px; }
+.chain-problem .btn { padding: 2px 8px; color: hsl(var(--ink)); }
+.chain-partial { padding-left: 2px; }
+.chain-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  color: hsl(var(--ink-3));
+  border-top: 1px solid hsl(var(--border));
+  border-radius: 0 0 var(--radius) var(--radius);
+  text-align: left;
+}
+.chain-add:hover { color: hsl(var(--primary)); background: hsl(var(--surface-hover)); }
+
+.chain-line { cursor: default; }
+.chain-hit { fill: none; stroke: transparent; stroke-width: 10; }
+.chain-stroke { fill: none; stroke: hsl(var(--ink-3)); stroke-width: 1.5; transition: stroke var(--fast), opacity var(--fast); }
+.chain-dot, .chain-head { fill: hsl(var(--ink-3)); transition: fill var(--fast), opacity var(--fast); }
+.chain-line.unchecked .chain-stroke { stroke-dasharray: 2 3; }
+.chain-line.broken .chain-stroke { stroke: hsl(var(--danger)); stroke-dasharray: 5 3; }
+.chain-line.broken .chain-dot, .chain-line.broken .chain-head { fill: hsl(var(--danger)); }
+.chain-line.hot .chain-stroke { stroke: hsl(var(--primary)); stroke-width: 2; }
+.chain-line.hot .chain-dot, .chain-line.hot .chain-head { fill: hsl(var(--primary)); }
+.chain-line.dim { opacity: 0.35; }
+
+.chain-list { margin-top: 22px; }
+.chain-list h3 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: hsl(var(--ink-3));
+  margin-bottom: 6px;
+}
+.chain-table { width: 100%; }
+.chain-table td { vertical-align: top; font-size: 12px; }
+.chain-table td .mono { font-size: 11.5px; }
+.chain-table tr.hot td { background: hsl(var(--accent-soft)); }
+.chain-table tr.broken td:first-child { box-shadow: inset 2px 0 0 hsl(var(--danger)); }
+.chain-table-actions { white-space: nowrap; text-align: right; }
+.chain-table-actions .btn { padding: 2px 8px; }
+/* Names stay whole; the passed value is what gives way when space is short. */
+.chain-take-line .link-source, .link-chip .link-source { flex: none; }
+.chain-take-line .link-source .mono, .link-chip .link-source .mono { overflow: visible; }
+.chain-take-line { flex-wrap: wrap; row-gap: 4px; }
+/* The slot takes what's left (up to a limit) and the value sits in it at its own width. */
+.chain-value-slot { flex: 1 1 0; min-width: 56px; max-width: 260px; display: flex; }
+.chain-value-slot .chain-value { max-width: 100%; }
+.link-chip-text { flex: none; overflow: visible; }
+.link-chip-value { min-width: 40px; }
+.collection-title-row .history-check { white-space: nowrap; }

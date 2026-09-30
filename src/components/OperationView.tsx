@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   bodyModeFor,
   deref,
@@ -10,6 +10,7 @@ import {
 import { seedEditor, type EditorPrefill, type EditorState } from "../lib/editor";
 import { pickAnyFile } from "../lib/store";
 import type { AuthState, BodyInput, MultipartPart } from "../lib/request";
+import type { LinkTarget } from "../lib/chainLinks";
 
 interface Props {
   spec: ParsedSpec;
@@ -49,6 +50,13 @@ interface Props {
    * unseen), and number fields are plain text so a `{{reference}}` fits.
    */
   mode?: "request" | "step";
+  /**
+   * In a collection step: wraps the control of each field that can take a value
+   * from an earlier step, to show its link (or a way to add one) instead.
+   */
+  linkSlot?: (target: LinkTarget, value: string, control: ReactNode) => ReactNode;
+  /** In a collection step: shown under the body editor, e.g. the body fields that are linked. */
+  bodyExtra?: ReactNode;
 }
 
 export interface RequestValues {
@@ -77,7 +85,11 @@ export function OperationView({
   draft,
   onEditorChange,
   unsent,
+  linkSlot,
+  bodyExtra,
 }: Props) {
+  const slot = (target: LinkTarget, value: string, control: ReactNode) =>
+    linkSlot ? linkSlot(target, value, control) : control;
   const editableExtraHeaders = mode === "step";
   // Seeded before the first render, so the values reported on mount are the
   // real ones rather than a blank form that is filled in a moment later.
@@ -218,8 +230,8 @@ export function OperationView({
                       </div>
                       <div className="field-meta">{typeLabel(spec.doc, p.schema)}</div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      {enumValues ? (
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {slot({ in: where, name: p.name }, bag(where)[p.name] ?? "", enumValues ? (
                         <select
                           value={bag(where)[p.name] ?? ""}
                           onChange={(e) =>
@@ -258,7 +270,7 @@ export function OperationView({
                             setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))
                           }
                         />
-                      )}
+                      ))}
                       {p.description && <div className="field-meta">{p.description}</div>}
                     </div>
                   </div>
@@ -308,16 +320,18 @@ export function OperationView({
                         }
                       />
                     </div>
-                    <div style={{ flex: 1, display: "flex", gap: 6 }}>
-                      <input
-                        value={row.value}
-                        placeholder="value — {{vars}} work here"
-                        onChange={(e) =>
-                          setFormFields((prev) =>
-                            prev.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)),
-                          )
-                        }
-                      />
+                    <div style={{ flex: 1, display: "flex", gap: 6, minWidth: 0 }}>
+                      {slot({ in: "form", name: row.key }, row.value, (
+                        <input
+                          value={row.value}
+                          placeholder="value — {{vars}} work here"
+                          onChange={(e) =>
+                            setFormFields((prev) =>
+                              prev.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)),
+                            )
+                          }
+                        />
+                      ))}
                       <button
                         className="btn"
                         style={{ padding: "2px 8px" }}
@@ -420,6 +434,7 @@ export function OperationView({
                 </div>
               </>
             )}
+            {bodyExtra}
             <BodySchema doc={spec.doc} schema={op.requestBody.schema} />
           </div>
         )}
@@ -553,16 +568,18 @@ export function OperationView({
                   }
                 />
               </div>
-              <div style={{ flex: 1, display: "flex", gap: 6 }}>
-                <input
-                  value={row.value}
-                  placeholder="Value — {{vars}} work here"
-                  onChange={(e) =>
-                    setCustom((prev) =>
-                      prev.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)),
-                    )
-                  }
-                />
+              <div style={{ flex: 1, display: "flex", gap: 6, minWidth: 0 }}>
+                {slot({ in: "header", name: row.key.trim() }, row.value, (
+                  <input
+                    value={row.value}
+                    placeholder="Value — {{vars}} work here"
+                    onChange={(e) =>
+                      setCustom((prev) =>
+                        prev.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)),
+                      )
+                    }
+                  />
+                ))}
                 <button
                   className="btn"
                   style={{ padding: "2px 8px" }}

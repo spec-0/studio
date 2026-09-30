@@ -46,6 +46,37 @@ export function referenceFor(stepKey: string, path: PathSegment[]): string {
   return `{{steps.${stepKey}${tail}}}`;
 }
 
+/** One `{{steps.…}}` reference found in a piece of text. */
+export interface FoundRef {
+  /** The reference exactly as written, braces included. */
+  raw: string;
+  /** Where it starts in the text. */
+  index: number;
+  step: string;
+  path: PathSegment[];
+}
+
+/** Every step reference in `text`, in order. */
+export function findRefs(text: string): FoundRef[] {
+  if (!text || !text.includes("steps.")) return [];
+  return [...text.matchAll(REF)].map((match) => ({
+    raw: match[0],
+    index: match.index ?? 0,
+    step: match[1],
+    path: parsePath(match[2]),
+  }));
+}
+
+/** `["body", "items", 0, "sku"]` → `body.items[0].sku`, as the interface shows a field. */
+export function pathLabel(path: PathSegment[]): string {
+  return describePath(path);
+}
+
+/** A value as it is put into a request: strings as they are, anything else as JSON. */
+export function valueText(value: unknown): string {
+  return asText(value);
+}
+
 /** The step keys a piece of text refers to. */
 export function referencedSteps(text: string): string[] {
   return [...new Set([...text.matchAll(REF)].map((match) => match[1]))];
@@ -199,6 +230,11 @@ export function fieldsFromOutput(stepKey: string, output: StepOutput): PickableF
   const visit = (value: unknown, path: PathSegment[], depth: number) => {
     if (out.length >= MAX_FIELDS) return;
     if (value && typeof value === "object" && depth < 8) {
+      // An object or a list can be passed on whole, as well as field by field.
+      if (path.length > 1) {
+        const preview = Array.isArray(value) ? `[${value.length} item${value.length === 1 ? "" : "s"}]` : "{…}";
+        out.push({ path, reference: referenceFor(stepKey, path), preview });
+      }
       const entries = Array.isArray(value)
         ? value.slice(0, 20).map((item, index) => [index, item] as const)
         : Object.entries(value as Record<string, unknown>);
@@ -231,11 +267,13 @@ export function fieldsFromSchema(stepKey: string, doc: Json, schema: Json | unde
     if (seen.has(resolved) || depth > 5) return;
     const next = new Set(seen).add(resolved);
     if (resolved.type === "array" || resolved.items) {
+      if (path.length > 1) out.push({ path, reference: referenceFor(stepKey, path), preview: "array" });
       visit(resolved.items, [...path, 0], depth + 1, next);
       return;
     }
     const props = Object.entries<Json>(resolved.properties ?? {});
     const composed: Json[] = [...(resolved.allOf ?? [])];
+    if (path.length > 1 && props.length) out.push({ path, reference: referenceFor(stepKey, path), preview: "object" });
     if (!props.length && !composed.length) {
       if (path.length > 1) {
         out.push({ path, reference: referenceFor(stepKey, path), preview: String(resolved.type ?? "value") });

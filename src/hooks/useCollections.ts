@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { StepOutput } from "../lib/chain";
 import {
+  duplicateStep as duplicateIn,
   moveStep as moveStepIn,
   newCollection,
   parseCollection,
@@ -94,6 +95,25 @@ export interface ImportOutcome {
   collectionId: string;
   summary: ImportSummary;
   environment: EnvironmentDraft | null;
+}
+
+/** Asking for a collection's name: when creating one, or renaming it. */
+export interface NamingState {
+  title: string;
+  /** What the name field starts with. */
+  initial: string;
+  /** The button that confirms. */
+  confirm: string;
+  /** The collection being renamed; absent when creating. */
+  collectionId?: string;
+  apply: (name: string) => void;
+}
+
+/** A step just removed, to put back. */
+export interface RemovedStep {
+  collectionId: string;
+  before: Collection;
+  label: string;
 }
 
 /** The file changed on disk and the collection has unsaved edits. */
@@ -574,6 +594,39 @@ export function useCollections({
     for (let n = 2; ; n += 1) if (!names.has(`${base} ${n}`)) return `${base} ${n}`;
   }, []);
 
+  const [naming, setNaming] = useState<NamingState | null>(null);
+
+  /** Ask for a name, then create the collection (and run `then` with it). */
+  const requestNew = useCallback(
+    (steps?: (collection: Collection) => Collection, then?: (collection: Collection) => void) => {
+      setNaming({
+        title: "New collection",
+        initial: freshName(),
+        confirm: "Create",
+        apply: (name) => {
+          const collection = create(name, steps);
+          then?.(collection);
+        },
+      });
+    },
+    [create, freshName],
+  );
+
+  const requestRename = useCallback(
+    (id: string) => {
+      const collection = latest.current.find((c) => c.id === id);
+      if (!collection) return;
+      setNaming({
+        title: "Rename collection",
+        initial: collection.name,
+        confirm: "Rename",
+        collectionId: id,
+        apply: (name) => update(id, (c) => (c.name === name ? c : { ...c, name })),
+      });
+    },
+    [update],
+  );
+
   const remove = useCallback(
     (id: string) => {
       const next = latest.current.filter((c) => c.id !== id);
@@ -625,10 +678,55 @@ export function useCollections({
     [update],
   );
 
+  const [removed, setRemoved] = useState<RemovedStep | null>(null);
+
   const removeStep = useCallback(
     (id: string, index: number) => {
+      const before = latest.current.find((c) => c.id === id);
+      const step = before?.steps[index];
+      if (!before || !step) return;
       update(id, (c) => removeIn(c, index));
       setSelectedStep((current) => Math.max(0, current >= index ? current - 1 : current));
+      setRemoved({ collectionId: id, before, label: step.name || step.key });
+      setRevision((n) => n + 1);
+    },
+    [update],
+  );
+
+  /** Put back the step removed last, with everything else as it was then. */
+  const undoRemove = useCallback(() => {
+    if (!removed) return;
+    const index = removed.before.steps.findIndex((s) => !latest.current.find((c) => c.id === removed.collectionId)?.steps.some((t) => t.key === s.key));
+    update(removed.collectionId, () => removed.before);
+    if (index >= 0) setSelectedStep(index);
+    setRemoved(null);
+    setRevision((n) => n + 1);
+  }, [removed, update]);
+
+  const duplicateStep = useCallback(
+    (id: string, index: number) => {
+      update(id, (c) => duplicateIn(c, index));
+      setSelectedStep(index + 1);
+    },
+    [update],
+  );
+
+  /**
+   * Change the links between steps. The step editor holds its own fields while
+   * it's open, so it is re-read afterwards. Returns a problem to show, or null.
+   */
+  const editChain = useCallback(
+    (id: string, change: (collection: Collection) => Collection): string | null => {
+      const collection = latest.current.find((c) => c.id === id);
+      if (!collection) return null;
+      try {
+        change(collection);
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+      update(id, change);
+      setRevision((n) => n + 1);
+      return null;
     },
     [update],
   );
@@ -980,11 +1078,18 @@ export function useCollections({
           const values = editor ? inputsFromEditor(op, editor.values) : undefined;
           const target = editor ? targetFromAddress(editor.address, spec, editor.mockUrl) : undefined;
           const auth = editor ? stepAuthOf(editor.auth) : undefined;
-          afterAdd(addOperation(collectionId, entry, spec, op, values, target, auth), !collectionId, what);
+          // A new collection is named first; nothing is created if that's cancelled.
+          if (!collectionId) {
+            requestNew(undefined, (created) =>
+              afterAdd(addOperation(created.id, entry, spec, op, values, target, auth), true, what),
+            );
+            return;
+          }
+          afterAdd(addOperation(collectionId, entry, spec, op, values, target, auth), false, what);
         },
       });
     },
-    [addOperation, afterAdd],
+    [addOperation, afterAdd, requestNew],
   );
 
   /** "Add to a collection" on a recorded request, keeping the values it was sent with. */
@@ -994,10 +1099,16 @@ export function useCollections({
       setAddMenu({
         ...position,
         what,
-        onAdd: (collectionId) => afterAdd(addRecorded(collectionId, record, spec), !collectionId, what),
+        onAdd: (collectionId) => {
+          if (!collectionId) {
+            requestNew(undefined, (created) => afterAdd(addRecorded(created.id, record, spec), true, what));
+            return;
+          }
+          afterAdd(addRecorded(collectionId, record, spec), false, what);
+        },
       });
     },
-    [addRecorded, afterAdd],
+    [addRecorded, afterAdd, requestNew],
   );
 
   /**
@@ -1059,7 +1170,11 @@ export function useCollections({
     conflicts,
     openError,
     setOpenError,
-    create: useCallback(() => create(freshName()), [create, freshName]),
+    create: useCallback((name?: string) => create(name ?? freshName()), [create, freshName]),
+    requestNew: useCallback(() => requestNew(), [requestNew]),
+    requestRename,
+    naming,
+    closeNaming: useCallback(() => setNaming(null), []),
     remove,
     rename,
     setStopOnFailure,
@@ -1067,6 +1182,11 @@ export function useCollections({
     renameStepKey,
     moveStep,
     removeStep,
+    removed,
+    undoRemove,
+    dismissRemoved: useCallback(() => setRemoved(null), []),
+    duplicateStep,
+    editChain,
     relinkStep,
     addOperation,
     addRecorded,
