@@ -19,20 +19,20 @@
 #   TAURI_SIGNING_PRIVATE_KEY           the update signing key (tauri signer generate)
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password
 #
-# Notes learned the hard way, do not remove:
+# Important, do not remove:
 #   * `security set-key-partition-list` is REQUIRED. Without it codesign blocks
 #     on a GUI keychain prompt that no runner can answer, and the job hangs until
 #     it times out rather than failing fast.
 #   * Notarization is submitted with the notarytool bundled in Xcode. Runners
-#     have Xcode selected by default, so this is automatic — but if you ever add
-#     an `xcode-select` step pointing at the Command Line Tools, don't. That
-#     build of notarytool reports its version as `unknown (0)` and submissions
-#     made with it were never processed.
+#     have Xcode selected by default, so this is automatic. Don't add an
+#     `xcode-select` step pointing at the Command Line Tools: that build of
+#     notarytool reports its version as `unknown (0)` and its submissions are
+#     never processed.
 #
 # Update signing: `bundle.createUpdaterArtifacts` is false in tauri.conf.json so
 # a local `tauri build` works without the key. The build jobs switch it on with
 # `--config updater.conf.json` when `preflight` says the key is set up. The
-# Windows installer is NOT code-signed — there is no certificate — and the docs
+# Windows installer is NOT code-signed (there is no certificate), and the docs
 # say so.
 
 name: Release
@@ -141,7 +141,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
@@ -195,7 +195,7 @@ jobs:
           chmod 600 $RUNNER_TEMP/private_keys/AuthKey.p8
 
       # Tauri signs, submits to the notary service, waits, and staples the ticket
-      # into the .app before building the .dmg from it — so the app a user drags
+      # into the .app before building the .dmg from it, so the app a user drags
       # out of the disk image carries its own ticket and launches offline.
       #
       # With update files on, the same invocation also archives the stapled
@@ -218,7 +218,7 @@ jobs:
           fi
           npx tauri build --target universal-apple-darwin --bundles app,dmg "${EXTRA[@]}"
 
-      # The .dmg is what people download, and it needs its own notarization —
+      # The .dmg is what people download, and it needs its own notarization:
       # a signed-but-unnotarized disk image still raises "Apple cannot check it
       # for malicious software" on the machine that fetched it. Tauri notarizes
       # and staples the .app; the image it then builds is signed only.
@@ -236,7 +236,7 @@ jobs:
 
       # Prove the artifacts are what we claim before anyone downloads them.
       # Gatekeeper is the only check that speaks for the end user's machine, and
-      # `stapler validate` is what proves it will still pass with no network —
+      # `stapler validate` is what proves it will still pass with no network;
       # spctl alone can be satisfied by an online lookup and hides a missing
       # ticket.
       - name: Verify notarization and Gatekeeper
@@ -244,11 +244,11 @@ jobs:
           BUNDLE=src-tauri/target/universal-apple-darwin/release/bundle
           DMG=$(ls "$BUNDLE"/dmg/*.dmg)
 
-          echo "── disk image ──"
+          echo "Disk image:"
           xcrun stapler validate "$DMG"
           spctl --assess --type open --context context:primary-signature --verbose=4 "$DMG"
 
-          echo "── the app inside it ──"
+          echo "The app inside it:"
           MNT=$(mktemp -d)
           hdiutil attach "$DMG" -nobrowse -quiet -mountpoint "$MNT"
           APP="$MNT/spec0 Studio.app"
@@ -321,7 +321,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
@@ -389,7 +389,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
@@ -402,7 +402,7 @@ jobs:
         run: npm ci
 
       # NSIS only: one per-user installer that needs no admin rights. Not
-      # code-signed — see docs/RELEASING.md for what Windows shows because of it.
+      # code-signed; see docs/RELEASING.md for what Windows shows because of it.
       - name: Build
         env:
           UPDATER: ${{ needs.preflight.outputs.updater }}
