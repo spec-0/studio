@@ -38,6 +38,13 @@ export const STORE = {
   updates: "updates.json",
   /** Collections kept in Studio, and the file each folder-backed one is linked to. */
   collections: "collections.json",
+  /**
+   * Unsent changes in the operation editor, per API and operation. Secret values
+   * are written as `{{references}}`, and literal auth values are left out.
+   */
+  drafts: "drafts.json",
+  /** The request tabs that were open. */
+  tabs: "tabs.json",
 } as const;
 
 /** Fixed files above, plus per-API blobs like `spec_<id>.json`. */

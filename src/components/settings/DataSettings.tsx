@@ -76,7 +76,9 @@ export function DataSettings({ historyCount, onClearHistory }: Props) {
         <h3>On this machine</h3>
         <p className="settings-lead">
           Your library, environments, history and settings are kept in{" "}
-          <span className="mono">{location ?? "…"}</span>.
+          <span className="mono">{location ?? "…"}</span>. So are your open request tabs and
+          unsent changes, with secret values written as <code>{"{{references}}"}</code>; an auth
+          value typed straight into a request is kept only until Studio quits.
         </p>
         <p className="field-meta">
           No telemetry, analytics or crash reporting. Studio makes no request you didn&apos;t ask

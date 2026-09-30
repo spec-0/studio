@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
+import { menuClosesTabs, onCloseTabRequested } from "../lib/appMenu";
 import { sectionForKey, type ApiSection } from "../lib/navigation";
+import { isMac } from "../lib/platform";
+import { tabShortcutFor, type TabShortcut } from "../lib/shortcuts";
 
 export interface ShortcutActions {
   /** ⌘/Ctrl+Enter — sends the request on screen; see `sendTargetFor`. */
@@ -22,6 +25,11 @@ export interface ShortcutActions {
   toggleTheme: () => void;
   /** Escape */
   closeDialogs: () => void;
+  /**
+   * Ctrl+Tab / Ctrl+Shift+Tab (and ⌘⇧] / ⌘⇧[ on macOS) move between request
+   * tabs; ⌘/Ctrl+W closes the current one. See `tabShortcutFor`.
+   */
+  requestTab: (action: TabShortcut) => void;
 }
 
 /**
@@ -38,7 +46,11 @@ export function useShortcuts(actions: ShortcutActions) {
     const onKey = (event: KeyboardEvent) => {
       const act = latest.current;
       const meta = event.metaKey || event.ctrlKey;
-      if (meta && event.key === "Enter") {
+      const tabAction = tabShortcutFor(event, { mac: isMac, menuClosesTabs });
+      if (tabAction) {
+        event.preventDefault();
+        act.requestTab(tabAction);
+      } else if (meta && event.key === "Enter") {
         event.preventDefault();
         act.send();
       } else if (meta && event.key === "o") {
@@ -73,6 +85,17 @@ export function useShortcuts(actions: ShortcutActions) {
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // ⌘W in the macOS app arrives from the menu instead.
+    let stopped = false;
+    let stopMenu: (() => void) | null = null;
+    void onCloseTabRequested(() => latest.current.requestTab("close")).then((unlisten) => {
+      if (stopped) unlisten();
+      else stopMenu = unlisten;
+    });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      stopped = true;
+      stopMenu?.();
+    };
   }, []);
 }

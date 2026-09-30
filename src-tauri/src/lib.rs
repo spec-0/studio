@@ -77,6 +77,7 @@ pub fn run() {
             local_mock::local_mock_list,
             local_mock::local_mock_respond,
             deep_link::deep_link_take,
+            menu::menu_close_tab,
         ])
         .run(tauri::generate_context!())
         .expect("error while running spec0 Studio");

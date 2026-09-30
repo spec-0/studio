@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  bodyFieldNames,
   bodyModeFor,
   deref,
   typeLabel,
@@ -8,7 +7,7 @@ import {
   type OperationSpec,
   type ParsedSpec,
 } from "../lib/spec";
-import { exampleBody, exampleParam } from "../lib/example";
+import { seedEditor, type EditorPrefill, type EditorState } from "../lib/editor";
 import { pickAnyFile } from "../lib/store";
 import type { AuthState, BodyInput, MultipartPart } from "../lib/request";
 
@@ -30,66 +29,26 @@ interface Props {
    * Path and query values are recovered from the recorded URL; without them the
    * copy would come back with its path fields empty.
    */
-  prefill?: {
-    headers: Record<string, string>;
-    body?: string;
-    pathParams?: Record<string, string>;
-    queryParams?: Record<string, string>;
-    /** Form fields or multipart parts, for an operation that takes them. */
-    form?: Array<{ key: string; value: string }>;
-    parts?: MultipartPart[];
-  } | null;
+  prefill?: EditorPrefill | null;
+  /**
+   * Unsent changes from an earlier visit, restored exactly as they were left.
+   * Takes the place of both the prefill and the examples. Applied when the
+   * operation opens; the caller remounts the editor to apply another one.
+   */
+  draft?: EditorState | null;
+  /** Every change to the fields, as they are on screen, so a draft can keep them. */
+  onEditorChange?: (state: EditorState) => void;
+  /**
+   * Shown when the fields differ from what was last sent (or from the spec's
+   * examples, if nothing was sent): a marker, and a way back to the examples.
+   */
+  unsent?: { onDiscard: () => void } | null;
   /**
    * "step" is a collection step: prefilled headers the operation doesn't
    * declare are shown as editable rows (they are part of the step, not sent
    * unseen), and number fields are plain text so a `{{reference}}` fits.
    */
   mode?: "request" | "step";
-}
-
-interface Seed {
-  pathParams: Record<string, string>;
-  queryParams: Record<string, string>;
-  headerParams: Record<string, string>;
-  body: string;
-  formFields: Array<{ key: string; value: string }>;
-  parts: MultipartPart[];
-  custom: Array<{ key: string; value: string }>;
-}
-
-/** What every input starts from: the prefill where there is one, examples otherwise. */
-function seedFor(spec: ParsedSpec, op: OperationSpec, prefill: Props["prefill"], split: boolean): Seed {
-  const seed = (where: string) =>
-    Object.fromEntries(
-      op.parameters
-        .filter((p) => p.in === where)
-        .map((p) => [p.name, p.required ? exampleParam(spec.doc, p.schema, p.name) : ""]),
-    );
-  let headerParams = prefill?.headers ?? seed("header");
-  let custom: Array<{ key: string; value: string }> = [];
-  if (prefill && split) {
-    const declared = op.parameters.filter((p) => p.in === "header").map((p) => p.name);
-    headerParams = Object.fromEntries(declared.map((name) => [name, ""]));
-    for (const [key, value] of Object.entries(prefill.headers)) {
-      const match = declared.find((name) => name.toLowerCase() === key.toLowerCase());
-      if (match) headerParams[match] = value;
-      else custom.push({ key, value });
-    }
-  }
-  // Form fields and multipart parts start from the names the schema declares,
-  // so an upload endpoint opens with its parts already listed.
-  const declaredFields = bodyFieldNames(spec.doc, op.requestBody?.schema);
-  return {
-    // A copied recording supplies the values that were actually sent; only fall
-    // back to generated examples when there is nothing to start from.
-    pathParams: prefill?.pathParams ?? seed("path"),
-    queryParams: prefill?.queryParams ?? seed("query"),
-    headerParams,
-    body: prefill?.body ?? (op.requestBody ? exampleBody(spec.doc, op.requestBody.schema, op.requestBody.media) : ""),
-    formFields: prefill?.form ?? declaredFields.map((name) => ({ key: name, value: "" })),
-    parts: prefill?.parts ?? declaredFields.map((name) => ({ name, value: "" })),
-    custom,
-  };
 }
 
 export interface RequestValues {
@@ -115,14 +74,17 @@ export function OperationView({
   onConfigureOAuth,
   oauthStatus,
   mode = "request",
+  draft,
+  onEditorChange,
+  unsent,
 }: Props) {
   const editableExtraHeaders = mode === "step";
   // Seeded before the first render, so the values reported on mount are the
   // real ones rather than a blank form that is filled in a moment later.
   const seeded = useMemo(
-    () => seedFor(spec, op, prefill, editableExtraHeaders),
+    () => draft ?? seedEditor(spec, op, prefill, editableExtraHeaders),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [op, spec.doc, prefill, editableExtraHeaders],
+    [op, spec.doc, prefill, draft, editableExtraHeaders],
   );
   const [pathParams, setPathParams] = useState<Record<string, string>>(seeded.pathParams);
   const [queryParams, setQueryParams] = useState<Record<string, string>>(seeded.queryParams);
@@ -165,7 +127,8 @@ export function OperationView({
           ? { kind: "multipart", parts }
           : body;
     onValuesChange({ pathParams, queryParams, headerParams: merged, body: payload });
-  }, [pathParams, queryParams, headerParams, body, formFields, parts, bodyMode, custom, onValuesChange]);
+    onEditorChange?.({ pathParams, queryParams, headerParams, body, formFields, parts, custom });
+  }, [pathParams, queryParams, headerParams, body, formFields, parts, bodyMode, custom, onValuesChange, onEditorChange]);
 
   const bodyError = useMemo(() => {
     if (!body.trim()) return null;
@@ -209,6 +172,20 @@ export function OperationView({
           {op.deprecated && (
             <span className="tag" style={{ color: "hsl(var(--danger))" }}>
               deprecated
+            </span>
+          )}
+          {unsent && (
+            <span className="unsent-note">
+              <span className="dirty-dot" aria-hidden="true" />
+              Unsent changes
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={unsent.onDiscard}
+                title="Go back to the values the spec suggests"
+              >
+                Discard changes
+              </button>
             </span>
           )}
         </div>

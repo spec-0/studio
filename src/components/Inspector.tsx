@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, History } from "lucide-react";
 import type { ResponseResult } from "../lib/request";
 import type { ValidationResult } from "../lib/validate";
 
@@ -29,6 +29,12 @@ interface Props {
    * thing this pane must not do.
    */
   noSchema?: boolean;
+  /**
+   * The answer was brought back from earlier this session, when its request
+   * was shown again: when it was sent, and whether the request has been
+   * edited since. Said above everything else, so it never reads as new.
+   */
+  restored?: { sentAt: string; editedSince: boolean } | null;
 }
 
 const KIND_GLYPH: Record<string, string> = {
@@ -49,8 +55,19 @@ export function Inspector({
   onRefreshMock,
   onSaveBody,
   noSchema = false,
+  restored = null,
 }: Props) {
   const [view, setView] = useState<"body" | "headers" | "curl">("body");
+
+  const restoredNote = restored && (
+    <div className="verdict none restored-note" role="status">
+      <History size={13} className="glyph" aria-hidden="true" />
+      <span>
+        Sent at {clockTime(restored.sentAt)}, earlier in this session. Not sent again since.
+        {restored.editedSince && " The request has been edited since, so this isn't its answer."}
+      </span>
+    </div>
+  );
 
   if (error) {
     return (
@@ -59,7 +76,7 @@ export function Inspector({
           <strong style={{ fontSize: 12 }}>Request failed</strong>
         </div>
         <div className="insp-body">
-
+          {restoredNote}
           <div className="error-box">{error}</div>
         </div>
       </>
@@ -98,6 +115,7 @@ export function Inspector({
       </div>
 
       <div className="insp-body">
+        {restoredNote}
         {result.redirects && result.redirects.length > 0 && (
           <div className="verdict none">
             <span className="glyph">↳</span>
@@ -298,6 +316,16 @@ function Verdict({
       </div>
     </>
   );
+}
+
+/** "14:03:12" today, or the date as well for anything older. */
+function clockTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const time = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return date.toDateString() === new Date().toDateString()
+    ? time
+    : `${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${time}`;
 }
 
 function formatBytes(bytes: number): string {

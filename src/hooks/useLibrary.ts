@@ -24,6 +24,11 @@ import {
   updateMarks,
 } from "../lib/sync";
 
+/** Where to land when an API opens: one operation, as a request tab asks. */
+export interface OpenFocus {
+  operationId: string;
+}
+
 /**
  * The library of APIs: adding, opening, refreshing and removing entries,
  * checking spec0 for newer copies, and rebuilding hosted mocks.
@@ -42,8 +47,8 @@ export function useLibrary({
   requests: HistoryEntry[];
   current: LibraryEntry | null;
   setCurrent: Dispatch<SetStateAction<LibraryEntry | null>>;
-  /** Show a parsed spec in the workspace. */
-  applySpec: (parsed: ParsedSpec, entry: LibraryEntry, text: string) => void;
+  /** Show a parsed spec in the workspace, on a given operation if there is one. */
+  applySpec: (parsed: ParsedSpec, entry: LibraryEntry, text: string, focus?: OpenFocus) => void;
   closeApi: () => void;
 }) {
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
@@ -56,8 +61,8 @@ export function useLibrary({
 
   /** Open a spec, clearing any earlier load error. */
   const openSpec = useCallback(
-    (parsed: ParsedSpec, entry: LibraryEntry, text: string) => {
-      applySpec(parsed, entry, text);
+    (parsed: ParsedSpec, entry: LibraryEntry, text: string, focus?: OpenFocus) => {
+      applySpec(parsed, entry, text, focus);
       setLoadError(null);
     },
     [applySpec],
@@ -187,8 +192,16 @@ export function useLibrary({
     [session],
   );
 
+  /** APIs whose Spec0 environments were refreshed this session. */
+  const synced = useRef(new Set<string>());
+
+  /**
+   * Open an API from the library. With `focus`, on that operation (a request
+   * tab); switching tabs doesn't ask Spec0 again for environments it already
+   * refreshed this session.
+   */
   const openEntry = useCallback(
-    async (entry: LibraryEntry) => {
+    async (entry: LibraryEntry, focus?: OpenFocus) => {
       setLoading(`Opening ${entry.title}…`);
       setLoadError(null);
       try {
@@ -197,9 +210,12 @@ export function useLibrary({
           setLoadError(`${entry.title}: the stored document is missing. Refresh or re-add it.`);
           return;
         }
-        openSpec(parseSpec(text, entry.title, documentUrlOf(entry.source)), entry, text);
+        openSpec(parseSpec(text, entry.title, documentUrlOf(entry.source)), entry, text, focus);
         setEntries(await library.touchOpened(entry.id));
-        void syncEnvironments(entry);
+        if (!focus || !synced.current.has(entry.id)) {
+          synced.current.add(entry.id);
+          void syncEnvironments(entry);
+        }
       } catch (error) {
         setLoadError(`${entry.title}: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
