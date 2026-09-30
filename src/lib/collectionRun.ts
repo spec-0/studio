@@ -1,5 +1,5 @@
 import { resolveStepRefs, type StepOutput } from "./chain";
-import type { CollectionStep } from "./collection";
+import { describeExpected, expectedStatusOf, statusMatches, type CollectionStep } from "./collection";
 import { unresolved } from "./env";
 import type { HistoryEntry } from "./history";
 import { buildPlan, type AuthState, type BodyInput, type RequestPlan } from "./request";
@@ -147,14 +147,29 @@ export function planStep(step: CollectionStep, context: PlanContext): { plan: Re
 // ── pass or fail ──────────────────────────────────────────────────────────────
 
 /**
- * Whether a step passed: a response came back, with a success status, that
- * matches what the spec declares for it.
+ * Whether a step passed: a response came back with the status the step
+ * expects (any 2xx unless it says otherwise), and it matches what the spec
+ * declares for that status.
  *
- * A response the spec has no schema for passes on its status, and the result
- * says it wasn't checked, so "pass" never quietly means "checked".
+ * The schema is the one the spec gives for the status that came back, so a
+ * step expecting 404 is checked against the spec's 404 response. A response
+ * the spec has no schema for passes on its status, and the result says it
+ * wasn't checked, so "pass" never quietly means "checked".
  */
-export function verdictFor(status: number, validation: ValidationResult | null): { verdict: "pass" | "fail"; reason?: string } {
-  if (status >= 400) return { verdict: "fail", reason: `The server answered ${status}.` };
+export function verdictFor(
+  status: number,
+  validation: ValidationResult | null,
+  expected?: string,
+): { verdict: "pass" | "fail"; reason?: string } {
+  if (!statusMatches(expected, status)) {
+    const want = expectedStatusOf({ expect: expected ? { status: expected } : undefined });
+    return {
+      verdict: "fail",
+      reason: want
+        ? `Expected ${describeExpected(want)}, but the server answered ${status}.`
+        : `The server answered ${status}.`,
+    };
+  }
   if (!validation) return { verdict: "pass", reason: "Not checked: this request isn't linked to an operation." };
   if (validation.status === "mismatch") {
     const n = validation.findings.length;

@@ -2347,6 +2347,53 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .step-marker.warn { color: hsl(var(--warning)); }
 .step-marker.danger { color: hsl(var(--danger)); }
 .step-list-hint { padding: 6px 12px 12px; }
+.step-expect {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border-strong));
+  color: hsl(var(--ink-2));
+  line-height: 16px;
+}
+.step-expect-field { width: 110px; }
+.step-note { font-size: 12px; }
+.step-note > div { display: grid; gap: 2px; }
+
+/* Dropping a file on the Collections tab imports it. */
+.panes.collections { position: relative; }
+.collections-drop {
+  position: absolute;
+  inset: 8px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 2px dashed hsl(var(--primary) / 0.6);
+  border-radius: var(--radius);
+  background: hsl(var(--bg) / 0.88);
+  color: hsl(var(--ink));
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.modal.import-summary { width: min(620px, 100%); }
+.import-summary .modal-foot .spacer { flex: 1; }
+.import-headline { margin: 0 0 12px; font-size: 13.5px; }
+.import-section { padding: 10px 0; border-top: 1px solid hsl(var(--border)); display: grid; gap: 6px; }
+.import-section h3 { margin: 0; font-size: 12px; font-weight: 600; }
+.import-section p { margin: 0; }
+.import-list, .import-vars, .import-bullets { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.import-list li { display: flex; align-items: baseline; gap: 10px; min-width: 0; font-size: 12.5px; }
+.import-list li > :first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-request { font-size: 12px; }
+.import-reason { flex: 0 1 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-bullets { list-style: disc; padding-left: 18px; font-size: 12.5px; }
+.import-bullets code, .import-vars code { font-size: 11.5px; overflow-wrap: anywhere; }
+.import-vars { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.import-vars li { display: inline-flex; align-items: center; gap: 5px; }
 
 .step-editor { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .step-head { padding: 10px 16px 8px; display: grid; gap: 8px; }

@@ -20,6 +20,11 @@
  * Then request tabs: operations opened across both APIs, one edited and left
  * unsent (checked to come back as it was, with its marker), one sent and its
  * answer brought back labelled, and the strip at the minimum width.
+ *
+ * Then it imports a Postman collection (src/lib/__tests__/fixtures/postman/
+ * checkout.postman_collection.json), shows the import summary, and runs the
+ * result: steps linked to both specs, one request that isn't in any spec, and
+ * a step that expects a 404 and passes.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -36,6 +41,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // For the collection at the end: its fake servers' order, and what they were sent.
 var collectionCalls = [];
+var paidOrders = new Set();
 var ORDER = {
   id: "3f1c0b8e-5d2a-4c1e-9b7f-2a6d8e4c1b90",
   status: "pending",
@@ -57,7 +63,10 @@ await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
 const errors = [];
 page.on("pageerror", (error) => errors.push(String(error)));
 page.on("console", (message) => {
-  if (message.type() === "error") errors.push(message.text());
+  // Steps that expect a 404 or a 409 get one; Chrome logs every such response.
+  if (message.type() === "error" && !/^Failed to load resource: the server responded with a status of (404|409)\b/.test(message.text())) {
+    errors.push(message.text());
+  }
 });
 
 // Start from a clean library so the run is reproducible.
@@ -1073,22 +1082,105 @@ console.log("48-collections-list-dark");
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
 }
 
+// ── Importing a Postman collection ───────────────────────────────────────────
+const POSTMAN = join(HERE, "../src/lib/__tests__/fixtures/postman/checkout.postman_collection.json");
+await must(clickTab(".nav-tab", "Collections"), "the Collections tab");
+await wait(300);
+const importInput = await page.$('.collections-actions input[type="file"]');
+await importInput.uploadFile(POSTMAN);
+await page.waitForSelector(".import-summary", { timeout: 10000 }).catch(async (error) => {
+  await page.screenshot({ path: `${outDir}/debug-import.png` });
+  console.log("open error:", await page.evaluate(() => document.querySelector(".collections-error")?.textContent));
+  throw error;
+});
+await wait(400);
+await page.screenshot({ path: `${outDir}/53-import-summary-dark.png` });
+console.log("53-import-summary-dark");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/53-import-summary-light.png` });
+console.log("53-import-summary-light");
+const headline = await page.evaluate(() => document.querySelector(".import-headline")?.textContent ?? "");
+if (!/8 requests from Postman: 7 linked to a spec, 1 not in any spec/.test(headline)) {
+  throw new Error(`Unexpected import summary: ${headline}`);
+}
+await clickByText(".import-summary .btn.primary", "Done");
+await page.waitForFunction(() => !document.querySelector(".import-summary"), { timeout: 5000 });
+await page.waitForSelector(".step-row", { timeout: 5000 });
+await wait(500);
+const imported = await page.evaluate(() => ({
+  steps: document.querySelectorAll(".step-row").length,
+  notInSpec: [...document.querySelectorAll(".step-marker")].filter((m) => m.textContent?.includes("not in any spec")).length,
+  expects: [...document.querySelectorAll(".step-expect")].map((e) => e.textContent?.trim()),
+}));
+if (imported.steps !== 8 || imported.notInSpec !== 1 || !imported.expects.includes("expects 404")) {
+  throw new Error(`Unexpected imported collection: ${JSON.stringify(imported)}`);
+}
+await page.screenshot({ path: `${outDir}/54-imported-collection-light.png` });
+console.log("54-imported-collection-light");
+
+// Run it: the environment it made is active, so the token and ids resolve.
+await clickByText(".collection-head .btn.primary", "Run");
+await page.waitForFunction(() => document.querySelector(".collection-meta")?.textContent?.includes("Last run"), {
+  timeout: 15000,
+});
+await wait(600);
+const importedVerdicts = await page.evaluate(() =>
+  [...document.querySelectorAll(".step-row .run-dot")].map((dot) => [...dot.classList].find((c) => c !== "run-dot")),
+);
+if (importedVerdicts.some((v) => v !== "pass")) {
+  await page.screenshot({ path: `${outDir}/debug-import-run.png` });
+  throw new Error(`Expected every imported step to pass, got ${importedVerdicts.join(",")}`);
+}
+const created = collectionCalls.find((c) => c.method === "POST" && c.url.endsWith("/v1/orders") && c.auth);
+if (created?.auth !== "Bearer demo-token-7f3a9c") throw new Error("The imported token didn't come from the environment");
+console.log("imported collection run: all pass, including an expected 404");
+await selectStep(4);
+await must(clickTab(".step-tabs .tab", "Response"), "the Response tab");
+await wait(400);
+await page.screenshot({ path: `${outDir}/55-expected-404-light.png` });
+console.log("55-expected-404-light");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/55-expected-404-dark.png` });
+console.log("55-expected-404-dark");
+await selectStep(8);
+await must(clickTab(".step-tabs .tab", "Request"), "the Request tab");
+await wait(300);
+await page.screenshot({ path: `${outDir}/56-not-in-any-spec-dark.png` });
+console.log("56-not-in-any-spec-dark");
+
 function answerCollectionServer(request) {
   const url = new globalThis.URL(request.url());
   if (!["api.example.com", "staging.api.example.com", "payments.invalid"].includes(url.hostname)) return false;
   const cors = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Headers": "*, Authorization",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
   if (request.method() === "OPTIONS") {
     void request.respond({ status: 204, headers: cors });
     return true;
   }
-  collectionCalls.push({ method: request.method(), url: request.url(), body: request.postData() });
+  const headers = request.headers();
+  collectionCalls.push({ method: request.method(), url: request.url(), body: request.postData(), auth: headers.authorization });
   const reply = (status, body) =>
     void request.respond({ status, headers: cors, contentType: "application/json", body: JSON.stringify(body) });
-  if (url.hostname === "payments.invalid" && request.method() === "POST" && url.pathname === "/v1/payments") {
+  if (url.hostname === "payments.invalid" && headers["x-payments-key"]) {
+    // The imported collection's payments, sent with its key: well-formed, and a second payment for an order is refused.
+    if (request.method() === "POST" && url.pathname === "/v1/payments") {
+      const sent = JSON.parse(request.postData() ?? "{}");
+      if (paidOrders.has(sent.orderId)) return reply(409, { title: "Already paid", status: 409 }), true;
+      paidOrders.add(sent.orderId);
+      reply(201, { id: "pay_8Kd1", orderId: sent.orderId, status: "captured", amount: { amount: 3998, currency: "EUR" } });
+    } else if (request.method() === "GET" && url.pathname === "/v1/payments/pay_8Kd1") {
+      reply(200, { id: "pay_8Kd1", orderId: ORDER.id, status: "captured", amount: { amount: 3998, currency: "EUR" } });
+    } else reply(404, { title: "Not found", status: 404 });
+    return true;
+  }
+  if (request.method() === "GET" && url.pathname === "/v1/health") {
+    reply(200, { status: "ok" });
+  } else if (request.method() === "GET" && url.pathname === "/v1/orders") {
+    reply(200, { data: [{ ...ORDER, status: "paid" }], nextCursor: null });
+  } else if (url.hostname === "payments.invalid" && request.method() === "POST" && url.pathname === "/v1/payments") {
     const sent = JSON.parse(request.postData() ?? "{}");
     // The amount comes back as a string: drift the check should catch.
     reply(201, { id: "pay_7Hq2", orderId: sent.orderId, status: "captured", amount: { amount: "39.98", currency: "EUR" } });

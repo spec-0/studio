@@ -368,6 +368,8 @@ export function relinkStep(
     headers: step.headers,
     ...(step.body !== undefined ? { body: step.body } : {}),
     ...(step.auth ? { auth: step.auth } : {}),
+    ...(step.expect ? { expect: step.expect } : {}),
+    ...(step.note ? { note: step.note } : {}),
   };
   const steps = collection.steps.map((s, i) => (i === index ? relinked : s));
   // An API no step uses any more is dropped, so the file doesn't collect them.
