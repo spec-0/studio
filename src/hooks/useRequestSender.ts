@@ -237,7 +237,11 @@ export function useRequestSender({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pad, vars, connection, environmentName]);
 
+  /** What the operation editor holds right now. */
+  const currentValues = useCallback(() => values.current, []);
+
   return {
+    currentValues,
     sending,
     result,
     validation,

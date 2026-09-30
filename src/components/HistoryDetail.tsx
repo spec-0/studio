@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, History as HistoryIcon, RefreshCw, X } from "lucide-react";
+import { Copy, History as HistoryIcon, ListPlus, RefreshCw, X } from "lucide-react";
 import {
   absoluteTime,
   copyDestination,
@@ -27,6 +27,8 @@ interface Props {
   specLoading?: boolean;
   onCopy: (entry: HistoryEntry, destination: "operation" | "scratch") => void;
   onClose?: () => void;
+  /** "Add to a collection": opens the menu of collections under the button. */
+  onAddToCollection?: (entry: HistoryEntry, position: { x: number; y: number }) => void;
 }
 
 /**
@@ -38,7 +40,7 @@ interface Props {
  * a response from three weeks ago look like one from three seconds ago; this
  * view exists so that can't happen.
  */
-export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClose }: Props) {
+export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClose, onAddToCollection }: Props) {
   const [showing, setShowing] = useState<"recorded" | "current">("recorded");
   const [current, setCurrent] = useState<ValidationResult | null>(null);
 
@@ -128,12 +130,19 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
               <dd>{entry.environment}</dd>
             </div>
           )}
-          {entry.runId && (
+          {entry.collection ? (
+            <div>
+              <dt>From</dt>
+              <dd>
+                Collection {entry.collection.name}, step {entry.collection.index + 1} of {entry.collection.total}
+              </dd>
+            </div>
+          ) : entry.runId ? (
             <div>
               <dt>From</dt>
               <dd>A run against the spec</dd>
             </div>
-          )}
+          ) : null}
         </dl>
         <div className="record-actions">
           <button
@@ -147,6 +156,21 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
               ? "Copy to a new request"
               : "Copy to the scratch pad"}
           </button>
+          {onAddToCollection && (
+            <button
+              className="btn"
+              disabled={specLoading}
+              aria-haspopup="menu"
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                onAddToCollection(entry, { x: rect.left, y: rect.bottom + 4 });
+              }}
+              title="Add this request as a step, with the values it was sent with"
+            >
+              <ListPlus size={13} />
+              Add to a collection
+            </button>
+          )}
           {destination.kind === "scratch" && destination.reason && (
             <span className="record-note">{destination.reason}</span>
           )}

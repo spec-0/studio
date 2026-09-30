@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { ApiBar, API_PANEL_ID } from "./components/ApiBar";
 import { ApiSwitcher } from "./components/ApiSwitcher";
+import { AddedToast, AddToCollectionMenu } from "./components/collections/AddToCollection";
+import { CollectionsView } from "./components/collections/CollectionsView";
 import { DeepLinkDialog } from "./components/DeepLinkDialog";
 import { DocumentView } from "./components/DocumentView";
 import { EnvironmentsDialog } from "./components/EnvironmentsDialog";
@@ -35,6 +37,7 @@ import { McpHost } from "./components/mcp/McpHost";
 import { UrlBar } from "./components/UrlBar";
 import { useBoot } from "./hooks/useBoot";
 import { useBulkRun } from "./hooks/useBulkRun";
+import { useCollections } from "./hooks/useCollections";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
 import { useDeepLinks } from "./hooks/useDeepLinks";
 import { useDialogs } from "./hooks/useDialogs";
@@ -167,6 +170,7 @@ export default function App() {
   });
 
   const {
+    currentValues,
     sending,
     result,
     validation,
@@ -230,6 +234,17 @@ export default function App() {
     saveMockKey,
   } = useLibrary({ session, requests, current, setCurrent, applySpec, closeApi });
   useLocalMocksFollowLibrary(entries, localMocks);
+
+  const collections = useCollections({
+    entries,
+    setEntries,
+    session,
+    vars,
+    activeEnv,
+    connection,
+    setRequests,
+    showCollections: useCallback(() => setRoute("collections"), [setRoute]),
+  });
 
   const {
     showPublish,
@@ -551,6 +566,15 @@ export default function App() {
           />
           <StatusBar summary="Settings · saved as you change them" envName={activeEnv?.name} result={null} />
         </>
+      ) : route === "collections" ? (
+        <>
+          <CollectionsView api={collections} entries={entries} onGoLibrary={goLibrary} />
+          <StatusBar
+            summary="Collections · steps point at operations in your specs"
+            envName={activeEnv?.name}
+            result={null}
+          />
+        </>
       ) : route === "mocks" ? (
         <>
           <MocksView
@@ -599,6 +623,7 @@ export default function App() {
             specFor={specFor}
             onCopy={copyRecord}
             onClear={clearHistory}
+            onAddToCollection={(entry, position, entrySpec) => collections.openRecordMenu(position, entry, entrySpec)}
           />
           <StatusBar
             summary="History · kept 30 days, only on this machine"
@@ -627,6 +652,7 @@ export default function App() {
                         spec={null}
                         onCopy={copyRecord}
                         onClose={() => setRecord(null)}
+                        onAddToCollection={(entry, position) => collections.openRecordMenu(position, entry, null)}
                       />
                     ),
                   }
@@ -719,6 +745,19 @@ export default function App() {
               selectedRecord={record?.id ?? null}
               onOpenRecord={setRecord}
               onOpenAllHistory={openHistory}
+              onOperationMenu={(op, position) =>
+                current &&
+                collections.openOperationMenu(position, {
+                  entry: current,
+                  spec: spec!,
+                  op,
+                  // The operation on screen is added as it's filled in, aimed where it's aimed.
+                  editor:
+                    op.id === operation?.id && view === "operation" && !record
+                      ? { values: currentValues(), address: server, mockUrl, auth }
+                      : null,
+                })
+              }
             />
             )}
 
@@ -730,6 +769,7 @@ export default function App() {
                   spec={spec}
                   onCopy={copyRecord}
                   onClose={() => setRecord(null)}
+                  onAddToCollection={(entry, position) => collections.openRecordMenu(position, entry, spec)}
                 />
               )}
               {!record && (
@@ -1018,6 +1058,20 @@ export default function App() {
         />
       )}
 
+      <AddToCollectionMenu
+        state={collections.addMenu}
+        collections={collections.collections}
+        onClose={collections.closeAddMenu}
+      />
+      <AddedToast
+        note={route === "collections" ? null : collections.added}
+        onOpen={(id) => {
+          collections.select(id);
+          collections.dismissAdded();
+          setRoute("collections");
+        }}
+        onDismiss={collections.dismissAdded}
+      />
       <UpdateDialog updater={updater} />
       <DeepLinkDialog links={deepLinks} />
       <McpHost />

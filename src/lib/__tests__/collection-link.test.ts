@@ -3,10 +3,12 @@ import { newCollection, type Collection, type CollectionStep } from "../collecti
 import {
   addOperationStep,
   findLibraryEntry,
+  inputsFromEditor,
   linkStep,
   relinkStep,
   removeStep,
   resolveTarget,
+  sameInputs,
   stepValuesFromHistory,
   targetFromAddress,
   targetOptions,
@@ -236,5 +238,43 @@ describe("targets", () => {
     });
     expect(targetFromAddress("https://mock.test", sample, "https://mock.test")).toEqual({ kind: "mock" });
     expect(targetFromAddress("{{baseUrl}}", sample, null)).toEqual({ kind: "custom", url: "{{baseUrl}}" });
+  });
+});
+
+describe("keeping what the editor holds", () => {
+  it("leaves out empty fields the step never had", () => {
+    const list = sample.operations.find((o) => o.operationId === "listOrders")!;
+    const get = sample.operations.find((o) => o.operationId === "getOrder")!;
+    expect(
+      inputsFromEditor(list, { pathParams: {}, queryParams: { status: "", limit: "10", cursor: "" }, headerParams: { "X-A": "" }, body: "" }),
+    ).toEqual({ pathParams: {}, queryParams: { limit: "10" }, headers: {} });
+    const emptied = { pathParams: { orderId: "" }, queryParams: {}, headerParams: {}, body: "" };
+    // A field the step had and the user emptied stays; one it never had doesn't appear by opening it.
+    expect(inputsFromEditor(get, emptied, { pathParams: { orderId: "o_1" }, queryParams: {}, headers: {} }).pathParams).toEqual({
+      orderId: "",
+    });
+    expect(inputsFromEditor(get, emptied, { pathParams: {}, queryParams: {}, headers: {} }).pathParams).toEqual({});
+  });
+
+  it("keeps a body only for an operation that takes one, and only when it has something in it", () => {
+    const create = sample.operations.find((o) => o.operationId === "createOrder")!;
+    const list = sample.operations.find((o) => o.operationId === "listOrders")!;
+    const empty = { pathParams: {}, queryParams: {}, headerParams: {} };
+    expect(inputsFromEditor(create, { ...empty, body: "  " }).body).toBeUndefined();
+    expect(inputsFromEditor(create, { ...empty, body: "{}" }).body).toBe("{}");
+    expect(inputsFromEditor(list, { ...empty, body: "{}" }).body).toBeUndefined();
+    expect(
+      inputsFromEditor(create, { ...empty, body: { kind: "form", fields: [{ key: "a", value: "" }] } }).body,
+    ).toBeUndefined();
+  });
+
+  it("compares inputs without caring about key order", () => {
+    expect(
+      sameInputs(
+        { pathParams: {}, queryParams: { a: "1", b: "2" }, headers: {} },
+        { pathParams: {}, queryParams: { b: "2", a: "1" }, headers: {}, body: undefined },
+      ),
+    ).toBe(true);
+    expect(sameInputs({ pathParams: {}, queryParams: {}, headers: {} }, { pathParams: {}, queryParams: {}, headers: {}, body: "x" })).toBe(false);
   });
 });

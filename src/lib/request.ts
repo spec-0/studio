@@ -80,7 +80,18 @@ export const appFetch = (async (
   input: RequestInfo | URL,
   init?: RequestInit & { transport?: Transport },
 ) => {
-  if (!inTauri) return window.fetch(input as never, init as never);
+  if (!inTauri) {
+    // The browser preview: turn a planned body into something fetch can send,
+    // or a JSON body goes out as "[object Object]".
+    const body = toPlanBody(init?.body);
+    const browserBody =
+      body?.kind === "text"
+        ? body.text
+        : body?.kind === "form"
+          ? new URLSearchParams(body.fields)
+          : (init?.body as BodyInit | null | undefined);
+    return window.fetch(input as never, { ...init, body: browserBody } as never);
+  }
 
   const url = typeof input === "string" ? input : input.toString();
   const headers: Record<string, string> = {};

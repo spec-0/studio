@@ -458,3 +458,71 @@ export function resolveTarget(
         : { error: "No local mock is running for this API. Pick another target." };
   }
 }
+
+// ── from the editor ───────────────────────────────────────────────────────────
+
+/** What a step keeps from the operation editor's fields. */
+export interface StepInputs {
+  pathParams: Record<string, string>;
+  queryParams: Record<string, string>;
+  headers: Record<string, string>;
+  body?: BodyInput;
+}
+
+/**
+ * The editor's values as a step stores them.
+ *
+ * Empty fields are left out, so a collection file only lists what someone
+ * filled in, unless the step already had them (emptied on purpose). A body that is empty, or a form whose values
+ * are all empty, is no body.
+ */
+export function inputsFromEditor(
+  op: OperationSpec,
+  values: { pathParams: Record<string, string>; queryParams: Record<string, string>; headerParams: Record<string, string>; body: BodyInput },
+  previous?: StepInputs,
+): StepInputs {
+  const had = (where: string, name: string) => {
+    const bag = where === "path" ? previous?.pathParams : where === "query" ? previous?.queryParams : previous?.headers;
+    return Boolean(bag && name in bag);
+  };
+  // Opening a step must not change it: an empty field the step didn't have
+  // stays out, so a parameter the spec has since added is still reported.
+  const keep = (where: string, bag: Record<string, string>) =>
+    Object.fromEntries(Object.entries(bag).filter(([name, value]) => value !== "" || had(where, name)));
+  let body: BodyInput | undefined;
+  if (op.requestBody) {
+    const raw = values.body;
+    if (typeof raw === "string") body = raw.trim() ? raw : undefined;
+    else if (raw.kind === "form") {
+      const fields = raw.fields.filter((f) => f.key.trim());
+      body = fields.some((f) => f.value !== "") ? { kind: "form", fields } : undefined;
+    } else {
+      const parts = raw.parts.filter((p) => p.name.trim());
+      body = parts.some((p) => p.path || (p.value ?? "") !== "") ? { kind: "multipart", parts } : undefined;
+    }
+  }
+  return {
+    pathParams: keep("path", values.pathParams),
+    queryParams: keep("query", values.queryParams),
+    headers: keep("header", values.headerParams),
+    ...(body !== undefined ? { body } : {}),
+  };
+}
+
+function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value as object)
+      .sort()
+      .filter((key) => (value as Record<string, unknown>)[key] !== undefined)
+      .map((key) => `${JSON.stringify(key)}:${stable((value as Record<string, unknown>)[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/** Whether a step already holds these inputs, ignoring key order. */
+export function sameInputs(step: StepInputs, inputs: StepInputs): boolean {
+  const pick = (s: StepInputs) => ({ p: s.pathParams, q: s.queryParams, h: s.headers, b: s.body });
+  return stable(pick(step)) === stable(pick(inputs));
+}

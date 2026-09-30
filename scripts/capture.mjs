@@ -9,8 +9,18 @@
  *   node scripts/capture.mjs <spec-file> <out-dir>
  *
  * The limit-reached shot needs a second spec: SECOND_SPEC, or `<spec>-2.yaml`
- * next to the first.
+ * next to the first. `node scripts/capture.mjs scripts/fixtures/payments.yaml
+ * <out-dir>` works as it is.
+ *
+ * The last part builds a collection across two specs (the sample Orders API
+ * and scripts/fixtures/payments.yaml) by right-clicking operations, runs it
+ * against a fake server answered here, and shows a step made stale by a new
+ * version of the payments spec.
  */
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 
 const CHROME =
@@ -19,6 +29,17 @@ const URL = process.env.STUDIO_URL ?? "http://localhost:5174";
 const [specPath, outDir] = process.argv.slice(2);
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// For the collection at the end: its fake servers' order, and what they were sent.
+var collectionCalls = [];
+var ORDER = {
+  id: "3f1c0b8e-5d2a-4c1e-9b7f-2a6d8e4c1b90",
+  status: "pending",
+  customer: { id: "cus_19", email: "ada@example.com" },
+  lineItems: [{ sku: "abc", quantity: 2, unitPrice: { amount: 1999, currency: "EUR" } }],
+  total: { amount: 3998, currency: "EUR" },
+};
+
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
@@ -491,6 +512,7 @@ const answer = (method, path) => {
 };
 await page.setRequestInterception(true);
 page.on("request", (request) => {
+  if (answerCollectionServer(request)) return;
   if (!request.url().startsWith(FAKE_API)) return void request.continue();
   const cors = {
     "Access-Control-Allow-Origin": "*",
@@ -663,6 +685,276 @@ await must(clickTab(".settings-tab", "Network"), "the Network section");
 await wait(400);
 await page.screenshot({ path: `${outDir}/30-min-width-settings-light.png` });
 console.log("30-min-width-settings-light");
+
+// ── Collections ───────────────────────────────────────────────────────────────
+// A three-step flow across two specs: create an order (Orders API, the sample),
+// get it back from staging using the new order's id, then pay for it (Payments
+// API, scripts/fixtures/payments.yaml). The fake servers below answer; the
+// payment comes back with the amount as a string, so that step fails its check.
+
+await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+const HERE = dirname(fileURLToPath(import.meta.url));
+const PAYMENTS = join(HERE, "fixtures/payments.yaml");
+
+const goLibrary = async () => {
+  await must(clickTab(".nav-tab", "APIs"), "the APIs tab");
+  await wait(300);
+  await page.evaluate(() => document.querySelector('[aria-label="Back to all APIs"]')?.click());
+  await wait(400);
+};
+const openApi = async (title) => {
+  await goLibrary();
+  await must(clickByText(".api-title", title), `the ${title} card`);
+  await page.waitForSelector(".sidebar .row", { timeout: 15000 });
+  await wait(500);
+};
+/** The sidebar row for an operation. */
+const operationRow = async (method, path) => {
+  const handle = await page.evaluateHandle(
+    (m, p) =>
+      [...document.querySelectorAll(".sidebar .row")].find(
+        (row) => row.querySelector(".method")?.textContent?.trim() === m && row.querySelector(".path")?.textContent === p,
+      ),
+    method,
+    path,
+  );
+  const element = handle.asElement();
+  if (!element) throw new Error(`No ${method} ${path} in the sidebar`);
+  return element;
+};
+const menuItem = (text) =>
+  page.evaluateHandle(
+    (needle) => [...document.querySelectorAll(".context-menu .menu-item")].find((el) => el.textContent?.trim().startsWith(needle)),
+    text,
+  );
+const addToCollection = async (method, path, collection, shot) => {
+  const row = await operationRow(method, path);
+  await row.click({ button: "right" });
+  await page.waitForSelector(".context-menu", { timeout: 5000 });
+  const add = (await menuItem("Add to collection")).asElement();
+  await add.hover();
+  await page.waitForSelector(".context-menu.submenu", { timeout: 5000 });
+  await wait(250);
+  if (shot) {
+    await page.screenshot({ path: `${outDir}/${shot}.png` });
+    console.log(shot);
+  }
+  const target = (await menuItem(collection)).asElement();
+  if (!target) {
+    const offered = await page.evaluate(() => [...document.querySelectorAll(".context-menu.submenu .menu-item")].map((el) => el.textContent));
+    throw new Error(`No "${collection}" in the Add to collection menu: ${offered.join(" | ")}`);
+  }
+  await target.click();
+  await wait(500);
+};
+/** Set a field the way typing would, for fields holding text puppeteer can't easily clear. */
+const setField = (selector, value) =>
+  page.evaluate(
+    (sel, text) => {
+      const field = document.querySelector(sel);
+      const proto = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      field.focus();
+      Object.getOwnPropertyDescriptor(proto, "value").set.call(field, text);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    selector,
+    value,
+  ).then(() => wait(100)).then(() => page.evaluate((sel) => document.querySelector(sel)?.blur(), selector));
+/** Choose an option in the step's "Send to" picker, by the start of its value. */
+const sendStepTo = (prefix) =>
+  page.evaluate((wanted) => {
+    const select = [...document.querySelectorAll(".step-field select")].find((s) =>
+      [...s.options].some((o) => o.textContent.includes("(first server)")),
+    );
+    const value = [...select.options].find((o) => o.value.startsWith(wanted)).value;
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }, prefix);
+const selectStep = async (n) => {
+  await page.evaluate((i) => document.querySelectorAll(".step-row")[i]?.click(), n - 1);
+  await wait(400);
+};
+
+// The Payments API joins the library.
+await goLibrary();
+const upload = await page.$('input[type="file"]');
+await upload.uploadFile(PAYMENTS);
+await page.waitForSelector(".sidebar .row", { timeout: 15000 });
+await wait(500);
+
+// Step 1: POST /orders, open in the editor, then right-click it → New collection….
+await openApi(SAMPLE);
+await (await operationRow("POST", "/orders")).click();
+await wait(500);
+await addToCollection("POST", "/orders", "New collection", "40-add-to-collection-menu-light");
+await page.waitForSelector(".collection-title", { timeout: 5000 });
+await setField(".collection-title", "Checkout");
+await wait(300);
+
+// Step 2: GET /orders/{orderId}, from the same API.
+await openApi(SAMPLE);
+await addToCollection("GET", "/orders/{orderId}", "Checkout");
+await page.waitForSelector(".toast", { timeout: 5000 });
+await page.screenshot({ path: `${outDir}/41-added-toast-light.png` });
+console.log("41-added-toast-light");
+
+// Step 3: POST /payments, from the other spec.
+await openApi("Payments API");
+await addToCollection("POST", "/payments", "Checkout");
+
+await must(clickTab(".nav-tab", "Collections"), "the Collections tab");
+await page.waitForSelector(".step-row", { timeout: 5000 });
+await wait(400);
+const stepCount = await page.evaluate(() => document.querySelectorAll(".step-row").length);
+if (stepCount !== 3) throw new Error(`Expected 3 steps, found ${stepCount}`);
+
+// Step 1 was added aimed at whatever the address bar held (a custom URL left
+// by an earlier shot); send it to the spec's first server instead.
+await selectStep(1);
+await sendStepTo("");
+await wait(200);
+
+// Step 2 goes to staging and takes the new order's id, picked from step 1's declared response.
+await selectStep(2);
+await sendStepTo("server:https://staging");
+await wait(300);
+const orderIdField = await page.evaluateHandle(() =>
+  [...document.querySelectorAll(".step-operation .field")]
+    .find((f) => f.querySelector(".field-name")?.textContent?.startsWith("orderId"))
+    ?.querySelector("input"),
+);
+await orderIdField.asElement().click({ clickCount: 3 });
+await clickByText(".value-picker-toggle", "Use a value from an earlier step");
+await page.waitForSelector(".value-pick", { timeout: 5000 });
+await page.evaluate(() =>
+  [...document.querySelectorAll(".value-pick")].find((b) => b.querySelector(".mono")?.textContent === "body.id")?.click(),
+);
+await wait(400);
+const picked = await orderIdField.evaluate((el) => el.value);
+if (picked !== "{{steps.createOrder.body.id}}") throw new Error(`Picking a value put "${picked}" in orderId`);
+await page.screenshot({ path: `${outDir}/42-value-picker-light.png` });
+console.log("42-value-picker-light");
+
+// Step 3's body refers to step 1 too.
+await selectStep(3);
+await setField(
+  ".step-operation textarea.editor",
+  '{\n  "orderId": "{{steps.createOrder.body.id}}",\n  "amount": {{steps.createOrder.body.total}}\n}',
+);
+await wait(300);
+await selectStep(1);
+await page.screenshot({ path: `${outDir}/43-collection-detail-light.png` });
+console.log("43-collection-detail-light");
+
+// Run it.
+await clickByText(".collection-head .btn.primary", "Run");
+await page.waitForFunction(() => document.querySelector(".collection-meta")?.textContent?.includes("Last run"), {
+  timeout: 15000,
+});
+await wait(600);
+const verdicts = await page.evaluate(() =>
+  [...document.querySelectorAll(".step-row .run-dot")].map((dot) => [...dot.classList].find((c) => c !== "run-dot")),
+);
+if (verdicts.join(",") !== "pass,pass,fail") throw new Error(`Expected pass,pass,fail, got ${verdicts.join(",")}`);
+const orderCall = collectionCalls.find((c) => c.method === "GET");
+if (!orderCall || orderCall.url !== `https://staging.api.example.com/v1/orders/${ORDER.id}`) {
+  throw new Error(`Step 2 didn't use step 1's id: ${orderCall?.url}`);
+}
+const paymentCall = collectionCalls.find((c) => c.url.startsWith("https://payments.invalid"));
+if (JSON.parse(paymentCall?.body ?? "{}").orderId !== ORDER.id) throw new Error("Step 3 didn't use step 1's id");
+console.log("collection run: pass, pass, fail; references resolved");
+await page.screenshot({ path: `${outDir}/44-run-results-light.png` });
+console.log("44-run-results-light");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/44-run-results-dark.png` });
+console.log("44-run-results-dark");
+
+// A value in step 1's response, clicked: use it in a later step.
+await selectStep(1);
+await must(clickTab(".step-tabs .tab", "Response"), "the Response tab");
+await wait(300);
+await page.evaluate(() => document.querySelector(".json-tree .json-value")?.click());
+await page.waitForSelector(".context-menu", { timeout: 5000 });
+await (await menuItem("Use in a later step")).asElement().hover();
+await page.waitForSelector(".context-menu.submenu", { timeout: 5000 });
+await wait(250);
+await page.screenshot({ path: `${outDir}/45-use-value-menu-dark.png` });
+console.log("45-use-value-menu-dark");
+await page.keyboard.press("Escape");
+await page.keyboard.press("Escape");
+await wait(200);
+
+// The run is one entry in History.
+await must(clickTab(".nav-tab", "History"), "the History tab");
+await page.waitForSelector(".run-row", { timeout: 5000 });
+await page.click(".run-row");
+await wait(300);
+await page.evaluate(() => document.querySelector(".history-row.nested")?.click());
+await wait(500);
+await page.screenshot({ path: `${outDir}/46-history-run-dark.png` });
+console.log("46-history-run-dark");
+
+// A new version of the payments spec requires a header step 3 doesn't send.
+const v2Dir = join(tmpdir(), "studio-capture-v2");
+mkdirSync(v2Dir, { recursive: true });
+writeFileSync(join(v2Dir, "payments.yaml"), readFileSync(join(HERE, "fixtures/payments-2.yaml"), "utf8"));
+await goLibrary();
+await (await page.$('input[type="file"]')).uploadFile(join(v2Dir, "payments.yaml"));
+await page.waitForSelector(".sidebar .row", { timeout: 15000 });
+await must(clickTab(".nav-tab", "Collections"), "the Collections tab");
+await page.waitForSelector(".step-row", { timeout: 5000 });
+await selectStep(3);
+await must(clickTab(".step-tabs .tab", "Request"), "the Request tab");
+await page.waitForSelector(".step-marker.warn", { timeout: 5000 }).catch(async (error) => {
+  await page.screenshot({ path: `${outDir}/debug-stale.png` });
+  throw error;
+});
+await wait(400);
+await page.screenshot({ path: `${outDir}/47-stale-step-dark.png` });
+console.log("47-stale-step-dark");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/47-stale-step-light.png` });
+console.log("47-stale-step-light");
+
+// A second collection, so the list is a list.
+await page.click('[aria-label="New collection"]');
+await page.waitForSelector(".collection-title", { timeout: 5000 });
+await setField(".collection-title", "Smoke tests");
+await wait(300);
+await page.screenshot({ path: `${outDir}/48-collections-list-light.png` });
+console.log("48-collections-list-light");
+await toggleTheme();
+await page.screenshot({ path: `${outDir}/48-collections-list-dark.png` });
+console.log("48-collections-list-dark");
+
+function answerCollectionServer(request) {
+  const url = new globalThis.URL(request.url());
+  if (!["api.example.com", "staging.api.example.com", "payments.invalid"].includes(url.hostname)) return false;
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  };
+  if (request.method() === "OPTIONS") {
+    void request.respond({ status: 204, headers: cors });
+    return true;
+  }
+  collectionCalls.push({ method: request.method(), url: request.url(), body: request.postData() });
+  const reply = (status, body) =>
+    void request.respond({ status, headers: cors, contentType: "application/json", body: JSON.stringify(body) });
+  if (url.hostname === "payments.invalid" && request.method() === "POST" && url.pathname === "/v1/payments") {
+    const sent = JSON.parse(request.postData() ?? "{}");
+    // The amount comes back as a string: drift the check should catch.
+    reply(201, { id: "pay_7Hq2", orderId: sent.orderId, status: "captured", amount: { amount: "39.98", currency: "EUR" } });
+  } else if (request.method() === "POST" && url.pathname === "/v1/orders") {
+    reply(201, ORDER);
+  } else if (request.method() === "GET" && url.pathname === `/v1/orders/${ORDER.id}`) {
+    reply(200, { ...ORDER, status: "paid" });
+  } else {
+    reply(404, { title: "Not found", status: 404 });
+  }
+  return true;
+}
 
 console.log("page errors:", errors.length);
 for (const error of errors.slice(0, 5)) console.log("  ", error);

@@ -20,6 +20,7 @@ describe("topTabOf", () => {
     expect(topTabOf("history")).toBe("history");
     expect(topTabOf("mocks")).toBe("mocks");
     expect(topTabOf("mcp")).toBe("mcp");
+    expect(topTabOf("collections")).toBe("collections");
   });
 
   it("selects no tab on the Settings page", () => {

@@ -11,16 +11,18 @@ export type Route =
   | "library"
   | "api"
   | "scratch"
+  | "collections"
   | "history"
   | "mocks"
   | "mcp"
   | "settings";
 
 /** The text tabs on the left of the top bar. */
-export type TopTab = "apis" | "history" | "mocks" | "mcp";
+export type TopTab = "apis" | "collections" | "history" | "mocks" | "mcp";
 
 export const TOP_TABS: ReadonlyArray<{ id: TopTab; label: string }> = [
   { id: "apis", label: "APIs" },
+  { id: "collections", label: "Collections" },
   { id: "history", label: "History" },
   { id: "mocks", label: "Mocks" },
   { id: "mcp", label: "MCP" },
@@ -56,7 +58,7 @@ export function isApisRoute(route: Route): boolean {
 /** Which top-bar tab is selected on a screen. Settings belongs to none of them. */
 export function topTabOf(route: Route): TopTab | null {
   if (isApisRoute(route)) return "apis";
-  if (route === "history" || route === "mocks" || route === "mcp") return route;
+  if (route === "collections" || route === "history" || route === "mocks" || route === "mcp") return route;
   return null;
 }
 
