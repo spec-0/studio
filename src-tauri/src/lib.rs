@@ -2,6 +2,7 @@ mod cookies;
 mod deep_link;
 mod git;
 mod http;
+mod local_mock;
 mod mcp;
 mod menu;
 mod oauth;
@@ -19,6 +20,7 @@ mod updates;
 ///  - **Sign-in** needs a loopback socket, which a webview cannot hold.
 ///  - **Secrets** go to the OS credential store, which only native code can reach.
 ///  - **The local MCP server** (off unless the user starts it) needs a socket too.
+///  - **Local mocks** (off unless the user starts one) need one socket each.
 ///
 /// `spec0://` links are received here and handed to the web view (see `deep_link`).
 pub fn run() {
@@ -69,6 +71,10 @@ pub fn run() {
             mcp::mcp_stop,
             mcp::mcp_status,
             mcp::mcp_respond,
+            local_mock::local_mock_start,
+            local_mock::local_mock_stop,
+            local_mock::local_mock_list,
+            local_mock::local_mock_respond,
             deep_link::deep_link_take,
         ])
         .run(tauri::generate_context!())

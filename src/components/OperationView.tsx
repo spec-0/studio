@@ -91,7 +91,7 @@ export function OperationView({
     setPathParams(prefill?.pathParams ?? seed("path"));
     setQueryParams(prefill?.queryParams ?? seed("query"));
     setHeaderParams(prefill?.headers ?? seed("header"));
-    setBody(prefill?.body ?? (op.requestBody ? exampleBody(spec.doc, op.requestBody.schema) : ""));
+    setBody(prefill?.body ?? (op.requestBody ? exampleBody(spec.doc, op.requestBody.schema, op.requestBody.media) : ""));
     // Seed form fields and multipart parts from the names the schema declares, so
     // an upload endpoint opens with its parts already listed.
     const declared = bodyFieldNames(spec.doc, op.requestBody?.schema);

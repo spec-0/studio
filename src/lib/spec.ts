@@ -37,7 +37,8 @@ export interface OperationSpec {
   tag: string;
   deprecated: boolean;
   parameters: ParamSpec[];
-  requestBody?: { required: boolean; contentType: string; schema?: Json };
+  /** `media` is the chosen media type object as written, for its `example`/`examples`. */
+  requestBody?: { required: boolean; contentType: string; schema?: Json; media?: Json };
   responses: ResponseSpec[];
   security?: string[];
 }
@@ -228,14 +229,14 @@ export function typeLabel(doc: Json, schema: Json | undefined): string {
   return schema.type ?? "object";
 }
 
-function pickContent(content: Json | undefined): { contentType: string; schema?: Json } | undefined {
+function pickContent(content: Json | undefined): { contentType: string; schema?: Json; media?: Json } | undefined {
   if (!content) return undefined;
   // JSON first where it's offered, since that's what the generated example
   // targets — but an endpoint that only takes multipart must report multipart,
   // or the editor offers a JSON box for a file upload.
   const preferred = Object.keys(content).find((k) => k.includes("json")) ?? Object.keys(content)[0];
   if (!preferred) return undefined;
-  return { contentType: preferred, schema: content[preferred]?.schema };
+  return { contentType: preferred, schema: content[preferred]?.schema, media: content[preferred] };
 }
 
 /** Which editor a declared content type calls for. */
@@ -344,6 +345,7 @@ export function parseSpec(text: string, sourceName: string, documentUrl?: string
               required: Boolean(bodyDef?.required),
               contentType: bodyContent.contentType,
               schema: bodyContent.schema,
+              media: bodyContent.media,
             }
           : undefined,
         responses,

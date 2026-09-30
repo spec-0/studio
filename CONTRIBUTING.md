@@ -66,13 +66,14 @@ the plugin back.
 
 ## How the code is organised
 
-- **Rust does seven things**: outbound HTTP (`http.rs`), the local listener used
+- **Rust does eight things**: outbound HTTP (`http.rs`), the local listener used
   during OAuth sign-in (`oauth.rs`, because a web view can't open a socket), file
   reading and writing (`storage.rs`), the OS credential store (`secrets.rs`,
   because only native code can reach it), checking for and installing updates
   (`updates.rs`, with the menu in `menu.rs`), the local MCP server's socket
-  (`mcp.rs`, for the same reason as sign-in), and receiving `spec0://` links
-  from the OS (`deep_link.rs`). Everything else is React.
+  (`mcp.rs`, for the same reason as sign-in), the sockets of local mocks
+  (`local_mock.rs`, likewise), and receiving `spec0://` links from the OS
+  (`deep_link.rs`). Everything else is React.
 - **Secrets go through narrow commands.** The web view passes an environment id
   and a variable name; Rust builds the credential store entry under one fixed
   service name. There is no command that reads an arbitrary keychain item.
@@ -276,6 +277,28 @@ no bug in the interface can make a secret come back. Tool definitions live in
 `src/lib/mcp-tools.json`, read by both sides. Don't add a tool that repeats what
 the remote Spec0 MCP server already offers for the whole organisation; this one
 is for what only Studio knows.
+
+**A local mock listens only after the user starts it, and only for this
+computer.** Each mock is one API on its own port on `127.0.0.1` (4010 upwards,
+remembered per API), so the spec's paths work unchanged under
+`http://127.0.0.1:<port>`; one shared port with a prefix per API would make
+every frontend rewrite its base path. There is no "start with Studio" setting
+and no MCP tool that starts one: a listening socket is something the user turns
+on by hand. It refuses any `Host` that isn't a loopback name (DNS rebinding) and
+any browser `Origin` other than `http(s)://localhost`, `127.0.0.1` or `[::1]`
+on any port, `null` included. That refusal covers simple requests as well as
+preflights, because a GET needs no preflight and would otherwise let any
+website probe the mock and read what it serves. Pages on localhost get CORS
+headers, since frontend developers are who the mock is for. There is no auth:
+it's local, and a token would stop the frontend from simply pointing at it.
+
+Rust owns the socket, those checks and CORS preflights. Every other request goes
+to the web view as a `studio://local-mock-request` event and is answered by
+`src/lib/localMock.ts`, which matches the path, picks the response and builds
+the body with the same `example.ts` rules as the request editor, so what Studio
+pre-fills and what the mock returns can't drift apart. That logic is plain
+TypeScript and tested without a socket; Rust only frames what comes back, and
+drops any header that could break the framing or widen CORS.
 
 **A `spec0://` link is a suggestion, never an instruction.** Any web page can
 trigger one, so Studio asks before it downloads anything, and shows the host

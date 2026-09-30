@@ -215,6 +215,9 @@ servers you point it at.
 - **The local MCP server exists only when you turn it on.** It listens on this
   computer only (`127.0.0.1`), answers only requests that carry its token, turns
   away web pages, and stops when Studio quits. It never shares secret values.
+- **A local mock listens only when you start it, and only on this computer.**
+  It uses `127.0.0.1`, answers web pages only when they are served from
+  `localhost`, and stops when you stop it or quit Studio.
 
 > [!WARNING]
 > If the credential store can't be reached (mostly on Linux without a running,
@@ -230,6 +233,44 @@ pull their specs, use hosted mock servers as request targets, and publish a
 local spec to your organisation. The Mocks tab lists your organisation's hosted
 mock servers. Sign in and out in Settings, under Account & Spec0. Signing out
 returns Studio to local-only use, and nothing is lost.
+
+## Local mocks
+
+Start a mock of any API in your library on this computer. It needs no account
+and no network, and answers every operation in the spec.
+
+**Starting one.** Press **Local mock** on an API's card, in the bar of an open
+API, or in the **Mocks** tab under *On this computer*. The mock gets its own
+address, starting at `http://127.0.0.1:4010`; if that port is taken, the next
+free one up to 4099. An API keeps its port the next time you start it. Several
+APIs can run at once. While a mock runs it is offered as a target in the
+address bar (*Local mock · 127.0.0.1:4010*), and a green dot shows on the API
+and on the Mocks tab. Nothing starts by itself, and every mock stops when Studio
+quits.
+
+**What it answers.** The operation is found from the method and path, with or
+without the spec's base path (both `/orders` and `/v1/orders` work for a server
+of `https://api.example.com/v1`). It answers with the lowest 2xx response the
+spec declares. The body is the spec's example for that response if it has one,
+then the schema's example, then a value built from the schema the same way
+Studio fills in request bodies (property examples, defaults, enums, formats).
+The `Content-Type` is the one in the spec.
+
+- Ask for a different response with `Prefer: code=404`, `X-Mock-Status: 404` or
+  `?__status=404`, and for a named example with `Prefer: example=name`.
+- An unknown path gets a `404` listing the closest operations; a method the path
+  doesn't take gets a `405` with an `Allow` header.
+- A request that doesn't match the spec (a missing required parameter, a wrong
+  type, a body that doesn't fit the schema) still gets an answer, with the
+  problems listed in the `X-Spec0-Mock-Warnings` header. In the Mocks tab you
+  can ask for a `400` instead.
+
+**Web pages.** A frontend running on `localhost` or `127.0.0.1` (any port) can
+call a local mock from the browser: preflight requests are answered and the
+responses carry CORS headers. Requests from any other website are refused, so a
+page you have open can't read your specs through the mock.
+
+**Hosted mocks** are still there for sharing a mock with your team.
 
 ## Local MCP server
 
@@ -273,6 +314,8 @@ server runs only while Studio is open.
   If your network inspects encrypted traffic with a private certificate
   authority, the check may fail. Download new versions from the releases page
   instead.
+- **A local mock answers from examples, not state.** A `POST` doesn't change what
+  the next `GET` returns, and XML responses are sent as JSON.
 - **Some example values are placeholders.** When a field has no example, no
   format and an unfamiliar name, Studio fills in something like `"string"`,
   which you'll want to replace.

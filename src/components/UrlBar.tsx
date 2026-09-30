@@ -114,7 +114,7 @@ export function UrlBar({
         >
           {targets.map((target) => (
             <option key={target.url} value={target.url}>
-              {target.kind === "mock" ? "◆ " : target.kind === "env" ? "● " : ""}
+              {target.kind === "mock" ? "◆ " : target.kind === "local-mock" ? "◇ " : target.kind === "env" ? "● " : ""}
               {target.label}
             </option>
           ))}
@@ -143,6 +143,7 @@ export function UrlBar({
           {op.path}
         </span>
         {isMock && <span className="tag mock">mock</span>}
+        {resolvedTarget?.kind === "local-mock" && <span className="tag mock">local mock</span>}
         {unverified && (
           <button
             className="tag unverified"

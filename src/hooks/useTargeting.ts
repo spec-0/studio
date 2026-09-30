@@ -4,10 +4,12 @@ import { interpolate } from "../lib/env";
 import type { LibraryEntry } from "../lib/library";
 import type { ParsedSpec } from "../lib/spec";
 import { DEFAULT_API_URL, absoluteMockUrl, type Session } from "../lib/spec0";
+import { localMockLabel, localMockUrl as localMockUrlFor } from "../lib/localMockServer";
 import { environmentSkew, mockIsBehind } from "../lib/sync";
 import {
   buildTargets,
   environmentFor,
+  withLocalMock,
   isTargetingMock,
   mockCredentials,
 } from "../lib/targets";
@@ -26,6 +28,7 @@ export function useTargeting({
   server,
   vars,
   connection,
+  localMockPort = null,
 }: {
   session: Session | null;
   current: LibraryEntry | null;
@@ -33,6 +36,8 @@ export function useTargeting({
   server: string;
   vars: Record<string, string>;
   connection: ConnectionSettings;
+  /** The port of this API's local mock, while one runs. */
+  localMockPort?: number | null;
 }) {
   /**
    * Resolve on read, not just on import: entries added before mock URLs were
@@ -64,9 +69,15 @@ export function useTargeting({
   );
 
   /** What the address bar can point at — see `buildTargets`. */
+  const localMockUrl = localMockPort ? localMockUrlFor(localMockPort) : null;
   const targets = useMemo(
-    () => buildTargets(spec?.servers ?? [], mockUrl, current?.environments ?? []),
-    [spec, mockUrl, current?.environments],
+    () =>
+      withLocalMock(
+        buildTargets(spec?.servers ?? [], mockUrl, current?.environments ?? []),
+        localMockUrl,
+        localMockPort ? localMockLabel(localMockPort) : "",
+      ),
+    [spec, mockUrl, current?.environments, localMockUrl, localMockPort],
   );
 
   /** The platform environment currently being targeted, if any. */
@@ -88,6 +99,7 @@ export function useTargeting({
   );
 
   return {
+    localMockUrl,
     mockUrl,
     mock,
     mockBehind,

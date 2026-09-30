@@ -42,6 +42,7 @@ import { useDocumentFacts } from "./hooks/useDocumentFacts";
 import { useEnvironments } from "./hooks/useEnvironments";
 import { useHistoryRecords } from "./hooks/useHistoryRecords";
 import { useLibrary } from "./hooks/useLibrary";
+import { useLocalMocks, useLocalMocksFollowLibrary } from "./hooks/useLocalMocks";
 import { targetOf, useMockJourney } from "./hooks/useMockJourney";
 import { journeyAvailable } from "./lib/mockJourney";
 import { useMockKey } from "./hooks/useMockKey";
@@ -145,8 +146,11 @@ export default function App() {
   const { oauthToken, oauthBusy, oauthError, setOauthError, acquireToken, usableToken, clearToken } =
     useOAuth(current, envFile.activeId, vars, connection);
 
+  const localMocks = useLocalMocks();
+  const localMockPort = current ? localMocks.running[current.id] ?? null : null;
+
   const { mockUrl, mock, mockBehind, unverifiedTarget, targetingMock, targets, envVersionSkew } =
-    useTargeting({ session, current, spec, server, vars, connection });
+    useTargeting({ session, current, spec, server, vars, connection, localMockPort });
 
   const { runResults, runningOp, runScope, runOperations, cancelRun } = useBulkRun({
     spec,
@@ -225,6 +229,7 @@ export default function App() {
     doRefreshMock,
     saveMockKey,
   } = useLibrary({ session, requests, current, setCurrent, applySpec, closeApi });
+  useLocalMocksFollowLibrary(entries, localMocks);
 
   const {
     showPublish,
@@ -454,6 +459,7 @@ export default function App() {
         onOpenAccount={() => nav.openSettings("account")}
         settingsOpen={route === "settings"}
         onOpenSettings={() => nav.openSettings()}
+        localMocks={localMocks.count}
       />
 
       {onApi && (
@@ -468,6 +474,17 @@ export default function App() {
               ? {
                   has: Boolean(current.mockUrl),
                   onOpen: () => journey.start(entries.find((entry) => entry.id === current.id) ?? current),
+                }
+              : null
+          }
+          localMock={
+            current && localMocks.available
+              ? {
+                  port: localMockPort,
+                  busy: localMocks.busy === current.id,
+                  error: localMocks.error?.id === current.id ? localMocks.error.message : null,
+                  onStart: () => void localMocks.start(current),
+                  onStop: () => void localMocks.stop(current.id),
                 }
               : null
           }
@@ -548,9 +565,24 @@ export default function App() {
             keys={mocks.keys}
             onLoadKey={mocks.loadKey}
             onRegenerateKey={(id) => void mocks.regenerateKey(id)}
+            local={{
+              available: localMocks.available,
+              entries,
+              running: localMocks.running,
+              busy: localMocks.busy,
+              error: localMocks.error,
+              invalid: localMocks.invalid,
+              onInvalid: localMocks.setInvalid,
+              onStart: (entry) => void localMocks.start(entry),
+              onStop: (id) => void localMocks.stop(id),
+            }}
           />
           <StatusBar
-            summary={session ? `Mocks · ${session.orgName}` : "Mocks · sign in to see hosted mocks"}
+            summary={
+              "Mocks · " +
+              (localMocks.count ? `${localMocks.count} running on this computer · ` : "") +
+              (session ? `hosted in ${session.orgName}` : "sign in to see hosted mocks")
+            }
             envName={activeEnv?.name}
             result={null}
           />
@@ -638,6 +670,17 @@ export default function App() {
           onApplyUpdate={(entry) => void applyUpdate(entry)}
           onRefreshMock={session ? (entry) => void doRefreshMock(entry) : undefined}
           onMock={journey.start}
+          localMock={
+            localMocks.available
+              ? {
+                  running: localMocks.running,
+                  busy: localMocks.busy,
+                  error: localMocks.error,
+                  onStart: (entry) => void localMocks.start(entry),
+                  onStop: (id) => void localMocks.stop(id),
+                }
+              : undefined
+          }
           checking={checking}
           syncReport={syncReport}
           onDismissReport={() => setSyncReport(null)}
