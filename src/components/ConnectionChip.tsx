@@ -12,9 +12,8 @@ interface Props {
  *
  * Studio runs either **local**, where everything works with no account and no
  * network, or **signed in**, which adds the organisation's catalog, remote
- * specs and hosted mocks. Before this, the only way to tell was to open a
- * dialog and look, which made a capability difference invisible until it
- * surprised you.
+ * specs and hosted mocks. Showing it all the time keeps that capability
+ * difference visible instead of hidden in a dialog.
  *
  * This is a status indicator, not a prompt. It never changes size, animates,
  * or asks for anything. It states where you are and is a way into Settings if

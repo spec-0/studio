@@ -1,10 +1,10 @@
 /**
  * Reading a recorded request back.
  *
- * History stores the URL that went out, not the values that built it. Copying
- * an entry restored headers and body but left every path and query field empty, so
- * clicking `GET /accounts/{accountId}` showed a blank `accountId` beside the
- * 200 it had returned — which reads as the app losing the record.
+ * History stores the URL that went out, not the values that built it, so path
+ * and query values have to be read back from that URL. Otherwise a copied
+ * `GET /accounts/{accountId}` shows a blank `accountId` beside the 200 it
+ * returned, which reads as the app losing the record.
  */
 
 import { describe, expect, it } from "vitest";

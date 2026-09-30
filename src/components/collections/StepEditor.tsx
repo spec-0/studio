@@ -107,7 +107,7 @@ export function StepEditor({
   );
   const localMockDown = step.target?.kind === "local-mock" && !localMock?.port;
 
-  // ── fields filled from earlier steps ───────────────────────────────────────
+  // Fields filled from earlier steps
   /**
    * A field whose whole value is a link shows the link, not `{{steps.…}}`; any
    * other field keeps its input, with a button to link it instead.
@@ -179,7 +179,7 @@ export function StepEditor({
     </div>
   );
 
-  // ── the operation editor's values → the step ───────────────────────────────
+  // The operation editor's values → the step
   const stepRef = useRef(step);
   stepRef.current = step;
   const onValuesChange = useCallback(

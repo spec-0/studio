@@ -19,7 +19,7 @@ import { bodyModeFor, deref, type OperationSpec, type ParsedSpec } from "./spec"
  * matches, and working out where a step's request goes.
  */
 
-// ── finding the API ───────────────────────────────────────────────────────────
+// Finding the API
 
 const normalise = (path: string) => path.replace(/\\/g, "/").replace(/\/+$/, "");
 const baseName = (path: string) => normalise(path).split("/").pop() ?? path;
@@ -28,7 +28,7 @@ const baseName = (path: string) => normalise(path).split("/").pop() ?? path;
  * The library entry a collection's API refers to, or null.
  *
  * Tried in order of certainty: the same source; the same Spec0 API; and, for a
- * file, the same file name *and* the same title — a file added to the library
+ * file, the same file name *and* the same title, since a file added to the library
  * by dragging it in has no full path to compare. A title on its own is never
  * enough: two unrelated specs can share one, and a step silently checked
  * against the wrong spec is worse than one that says it can't find its spec.
@@ -86,7 +86,7 @@ export function apiKeyFor(collection: Collection, entry: LibraryEntry): { key: s
   return { key, added: true };
 }
 
-// ── finding the operation ─────────────────────────────────────────────────────
+// Finding the operation
 
 export interface FoundOperation {
   op: OperationSpec;
@@ -108,7 +108,7 @@ export function findOperation(
   return byPath ? { op: byPath, byPath: true } : null;
 }
 
-// ── is the step still right? ──────────────────────────────────────────────────
+// Is the step still right?
 
 export type StepLink =
   | { kind: "ok"; entry: LibraryEntry; spec: ParsedSpec; op: OperationSpec }
@@ -238,7 +238,7 @@ export function linkStep(
     : { kind: "ok", entry, spec, op: found.op };
 }
 
-// ── making steps ──────────────────────────────────────────────────────────────
+// Making steps
 
 /** Values a new step starts from; missing ones are generated from the schema. */
 export interface StepValues {
@@ -386,7 +386,7 @@ export function removeStep(collection: Collection, index: number): Collection {
   return { ...collection, steps, apis };
 }
 
-// ── where a step's request goes ───────────────────────────────────────────────
+// Where a step's request goes
 
 export interface TargetOption {
   target: StepTarget;
@@ -448,8 +448,8 @@ export function describeTarget(target: StepTarget | undefined, spec: ParsedSpec 
 /**
  * The base URL a step's request goes to, or why there isn't one.
  *
- * `localMockUrl` is for a mock running on this machine; until Studio can run
- * one it is never given, and a step aimed there says so plainly.
+ * `localMockUrl` is the address of this API's local mock while it runs; when
+ * it isn't given, a step aimed there says the mock isn't running.
  */
 export function resolveTarget(
   target: StepTarget | undefined,
@@ -476,7 +476,7 @@ export function resolveTarget(
   }
 }
 
-// ── from the editor ───────────────────────────────────────────────────────────
+// From the editor
 
 /** What a step keeps from the operation editor's fields. */
 export interface StepInputs {
@@ -490,8 +490,8 @@ export interface StepInputs {
  * The editor's values as a step stores them.
  *
  * Empty fields are left out, so a collection file only lists what someone
- * filled in, unless the step already had them (emptied on purpose). A body that is empty, or a form whose values
- * are all empty, is no body.
+ * filled in, unless the step already had them (emptied on purpose). A body
+ * that is empty, or a form whose values are all empty, is no body.
  */
 export function inputsFromEditor(
   op: OperationSpec,

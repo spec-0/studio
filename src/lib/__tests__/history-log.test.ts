@@ -2,7 +2,7 @@
  * History as a read-only log.
  *
  * A recorded request must say what happened *then*: the check result stored at
- * the time, whether the spec has changed since, and — only when asked — what
+ * the time, whether the spec has changed since, and (only when asked) what
  * the current spec makes of it. These cover the pieces that make that honest.
  */
 
@@ -77,8 +77,8 @@ describe("the shared status lookup", () => {
     expect(declaredResponse(responses, 200)?.status).toBe("200");
   });
 
-  // The copy that re-checked history had lost this step, so a response the live
-  // check matched against `2XX` came back from history as "no schema".
+  // Re-checking from history needs this step too, or a response the live check
+  // matched against `2XX` reads back from history as "no schema".
   it("falls back to the range", () => {
     expect(declaredResponse(responses, 201)?.status).toBe("2XX");
   });
@@ -142,8 +142,8 @@ describe("storing the check result at record time", () => {
 });
 
 describe("older entries", () => {
-  // Entries written before this change have none of the new fields. They must
-  // still load and show what they do have.
+  // Older entries have none of these fields. They must still load and show
+  // what they do have.
   it("show the verdict alone, without pretending there were no findings", () => {
     const check = recordedCheck(entry({ validation: "mismatch" }));
     expect(check?.status).toBe("mismatch");

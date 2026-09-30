@@ -268,7 +268,7 @@ describe("the resolver's links", () => {
   });
 });
 
-// ── logs ──────────────────────────────────────────────────────────────────────
+// Logs
 
 async function logOf(answers: Record<string, Answer>, options: Parameters<typeof run>[1] = {}, id = "run_1"): Promise<RunLog> {
   const { events } = await run(answers, options);
@@ -412,7 +412,7 @@ describe("keeping past runs", () => {
   });
 });
 
-// ── secrets ───────────────────────────────────────────────────────────────────
+// Secrets
 
 describe("secret values never reach a run log", () => {
   const withSecret = () =>

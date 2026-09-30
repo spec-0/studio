@@ -21,7 +21,7 @@ interface Props {
   onSelectOperation: (op: OperationSpec) => void;
   selectedSchema: string | null;
   onSelectSchema: (name: string) => void;
-  /** This API's recorded requests only — the full log is its own view. */
+  /** This API's recorded requests only; the full log is its own view. */
   history: HistoryEntry[];
   /** The recorded request open in the work area, if any. */
   selectedRecord: string | null;
@@ -35,7 +35,7 @@ interface Props {
   unsent?: ReadonlySet<string>;
 }
 
-/** Loose subsequence match — "gtusr" finds "GET /users". */
+/** Loose subsequence match: "gtusr" finds "GET /users". */
 function fuzzy(haystack: string, needle: string): boolean {
   if (!needle) return true;
   const h = haystack.toLowerCase();
@@ -206,7 +206,7 @@ export function Sidebar({
             />
             {history.length === 0 && (
               <div className="group-label">
-                Nothing sent to this API yet — history stays on this machine
+                Nothing sent to this API yet. History stays on this machine
               </div>
             )}
             <button className="btn history-more" onClick={onOpenAllHistory}>

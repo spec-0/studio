@@ -26,7 +26,7 @@ describe("canPublish", () => {
   });
 
   // Studio has no editor, so a spec0-sourced document is byte-identical to what
-  // the platform holds — the button would be a claim that isn't true.
+  // the platform holds, so the button would claim something that isn't true.
   it("allows a spec opened from a URL: Studio holds its full text", () => {
     expect(canPublish({ kind: "url", ref: "https://example.com/o.yaml" })).toBe(true);
     expect(whyNotPublishable({ kind: "url", ref: "https://example.com/o.yaml" })).toBeNull();

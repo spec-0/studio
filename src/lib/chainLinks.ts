@@ -23,7 +23,7 @@ import { bodyModeFor, deref, typeLabel, type Json, type OperationSpec } from "./
  * work and why. No React, no IO.
  */
 
-// ── where a link goes ─────────────────────────────────────────────────────────
+// Where a link goes
 
 /**
  * The field a link fills.
@@ -132,7 +132,7 @@ export function sameTarget(a: LinkTarget, b: LinkTarget): boolean {
   return targetId(a) === targetId(b);
 }
 
-// ── JSON bodies with references in them ───────────────────────────────────────
+// JSON bodies with references in them
 
 /** What a body with references in it holds, once read as JSON. */
 export type JsonBodyScan =
@@ -322,7 +322,7 @@ function isRefValue(value: unknown): value is { reference: string; bare: boolean
   );
 }
 
-// ── reading links out of steps ────────────────────────────────────────────────
+// Reading links out of steps
 
 /** A body's JSON state, for saying why body fields can't be linked. */
 export function bodyProblem(step: CollectionStep): string | null {
@@ -392,7 +392,7 @@ export function dependentsOf(collection: Collection, index: number): ChainLink[]
   return collectionLinks(collection).filter((link) => link.source.step === key && link.targetIndex !== index);
 }
 
-// ── writing links ─────────────────────────────────────────────────────────────
+// Writing links
 
 function withStep(collection: Collection, index: number, change: (step: CollectionStep) => CollectionStep): Collection {
   const step = collection.steps[index];
@@ -568,7 +568,7 @@ export function editLink(
   return setLink(cleared, next.targetIndex, next.target, next.source, { bare: next.bare });
 }
 
-// ── is it going to work? ──────────────────────────────────────────────────────
+// Is it going to work?
 
 /** What is known about a step's response, to check a link against. */
 export interface SourceFacts {
@@ -724,7 +724,7 @@ export function passedValue(
   return recorded.find((r) => r.source === source && r.target === where && r.value !== undefined)?.value;
 }
 
-// ── fields a link can fill ────────────────────────────────────────────────────
+// Fields a link can fill
 
 export interface LinkableField {
   target: LinkTarget;
@@ -897,7 +897,7 @@ export function bodyExampleAt(example: unknown, path: PathSegment[]): unknown {
   return here.found ? here.value : null;
 }
 
-// ── everything at once, for the chain view ────────────────────────────────────
+// Everything at once, for the chain view
 
 export interface LinkView extends ChainLink {
   /** Unique within the collection, for keys and highlighting. */

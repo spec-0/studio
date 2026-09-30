@@ -24,7 +24,7 @@ describe("hasUpdate", () => {
 
   it("detects a republish under the same version tag", () => {
     // The case a version-only check would miss, and the one a developer most
-    // wants to know about — same tag, new content.
+    // wants to know about: same tag, new content.
     expect(hasUpdate({ version: "1.5.0", syncedAt: "2026-08-01T09:00:00Z" }, upstream)).toBe(true);
   });
 

@@ -42,7 +42,7 @@ export async function saveCollections(collections: readonly Collection[]): Promi
   );
 }
 
-// ── a linked file ─────────────────────────────────────────────────────────────
+// A linked file
 
 export type DiskState =
   /** The file is as Studio last saw it. */
@@ -82,7 +82,7 @@ export function keepMine(collection: Collection, diskText: string): Collection {
   return { ...collection, file: { ...collection.file, syncedHash: textHash(diskText), dirty: true } };
 }
 
-// ── IO ────────────────────────────────────────────────────────────────────────
+// IO
 
 /** Read a linked file. Null when it can't be read. */
 export async function readCollectionFile(path: string): Promise<string | null> {

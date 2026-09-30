@@ -172,7 +172,7 @@ describe("migrating from the plaintext file", () => {
     expect(file.map).toBeNull();
   });
 
-  it("is idempotent — a second run over a finished migration changes nothing", async () => {
+  it("is idempotent: a second run over a finished migration changes nothing", async () => {
     const vault = new FakeVault();
     const file = new FakeFile({ ...legacy });
     await createSecrets(vault, file).load(envs());

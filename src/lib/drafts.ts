@@ -147,7 +147,7 @@ export function forgetApi(file: DraftFile, apiId: string): DraftFile {
   return { ...file, operations, auth };
 }
 
-// ── auth ──────────────────────────────────────────────────────────────────────
+// Auth
 
 const REFERENCE = /\{\{\s*[\w.-]+\s*\}\}/;
 
@@ -192,7 +192,7 @@ export function setAuthDraft(file: DraftFile, apiId: string, auth: AuthState | n
   return { ...file, auth: { ...file.auth, [apiId]: next } };
 }
 
-// ── on disk ───────────────────────────────────────────────────────────────────
+// On disk
 
 function redactValues(values: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(values).map(([k, v]) => [k, redact(v)]));

@@ -128,7 +128,7 @@ export function maskToken(text: string, token: string): string {
   return text.split(token).join(masked);
 }
 
-// ── answering tool calls ─────────────────────────────────────────────────────
+// Answering tool calls
 
 const deps: ToolDeps = {
   loadLibrary: library.loadLibrary,

@@ -22,8 +22,8 @@ interface Props {
 /**
  * Network settings: certificate trust, proxy, timeout, redirects, cookies.
  *
- * Grouped into one section because they answer a single question — "why can't
- * this thing reach my server" — and someone debugging that shouldn't have to
+ * Grouped into one section because they answer a single question ("why can't
+ * this thing reach my server?"), and someone debugging that shouldn't have to
  * guess which of four places to look.
  */
 export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
@@ -77,7 +77,7 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
             <h3>Certificates</h3>
             <p className="field-meta">
               Internal services often sit behind a private CA. Adding its bundle keeps verification
-              on. Skipping verification turns it off for that host only — never globally, and the
+              on. Skipping verification turns it off for that host only, never globally, and the
               address bar says so on every request that uses it.
             </p>
 
@@ -149,7 +149,7 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
               </div>
               <input
                 value={draft.proxy.url ?? ""}
-                placeholder="http://proxy.corp:3128 — blank to use the environment"
+                placeholder="http://proxy.corp:3128 (blank to use the environment)"
                 disabled={draft.proxy.disabled}
                 onChange={(event) =>
                   commit({ ...draft, proxy: { ...draft.proxy, url: event.target.value } })
@@ -220,7 +220,7 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
                 Cookies · {jar.title}
               </h3>
               <p className="field-meta">
-                Kept per API, so a session from one never reaches another. Not written to disk — they
+                Kept per API, so a session from one never reaches another. Not written to disk: they
                 last as long as the app is open.
               </p>
               {cookies.length === 0 ? (
@@ -266,7 +266,7 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
                 Cookies
               </h3>
               <p className="field-meta">
-                Kept per API, so a session from one never reaches another. Not written to disk — they
+                Kept per API, so a session from one never reaches another. Not written to disk: they
                 last as long as the app is open. Open an API to see and clear its cookies.
               </p>
             </section>

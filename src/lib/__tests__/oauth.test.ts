@@ -90,7 +90,7 @@ describe("PKCE", () => {
   });
 
   it("produces the S256 challenge from the RFC's own test vector", async () => {
-    // RFC 7636 appendix B — if this drifts, every authorization-code exchange
+    // RFC 7636 appendix B. If this drifts, every authorization-code exchange
     // fails at the server with a message that won't say why.
     const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
     expect(await createChallenge(verifier)).toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
@@ -155,7 +155,7 @@ describe("the client secret never becomes a per-API secret store", () => {
     const serialised = JSON.stringify(stored);
 
     // What gets written to library.json is this object. If a real secret ever
-    // ends up in `clientSecretRef`, it lands in the index — which is the exact
+    // ends up in `clientSecretRef`, it lands in the index, which is the exact
     // thing the secret-store rule forbids, and this test is what should fail first.
     expect(serialised).not.toContain("shh-this-is-the-secret");
     expect(stored.clientSecretRef.startsWith("{{")).toBe(true);

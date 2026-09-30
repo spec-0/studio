@@ -19,7 +19,7 @@ import {
  * the mock and how to authenticate to it, which platform environment is aimed
  * at and whether it runs the spec's version, and whether TLS is verified there.
  *
- * Pure derivation — no state of its own.
+ * Pure derivation, with no state of its own.
  */
 export function useTargeting({
   session,
@@ -62,13 +62,13 @@ export function useTargeting({
     [mockUrl, current?.mockApiKey, session],
   );
 
-  /** True while the address bar is aimed at the mock — drives the key prompt. */
+  /** True while the address bar is aimed at the mock. Drives the key prompt. */
   const targetingMock = useMemo(
     () => isTargetingMock(interpolate(server, vars), mockUrl),
     [server, vars, mockUrl],
   );
 
-  /** What the address bar can point at — see `buildTargets`. */
+  /** What the address bar can point at. See `buildTargets`. */
   const localMockUrl = localMockPort ? localMockUrlFor(localMockPort) : null;
   const targets = useMemo(
     () =>

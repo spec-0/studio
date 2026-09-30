@@ -2,8 +2,8 @@
  * Guard tests for the document view.
  *
  * These read source rather than render it. Both rules they protect are
- * structural — "this view never calls the platform" and "the renderer is handed
- * text, not a URL" — and a rendering test would assert on the absence of a
+ * structural ("this view never calls the platform" and "the renderer is handed
+ * text, not a URL"), and a rendering test would assert on the absence of a
  * network call, which passes just as happily when the code has been rewritten
  * to make one lazily. Reading the import graph is the thing that actually fails
  * when the rule breaks.
@@ -55,17 +55,15 @@ describe("the renderer", () => {
     expect(SCALAR).not.toMatch(/url:\s*/);
   });
 
-  // Scalar's request client would go out from the webview — with an Origin
-  // header, which is the one thing Studio's HTTP layer exists to avoid — and
-  // would bypass environments, auth, certificate trust and history.
+  // Scalar's request client would go out from the webview with an Origin
+  // header (the one thing Studio's HTTP layer exists to avoid) and would bypass environments, auth, certificate trust and history.
   it("keeps Scalar's own request client switched off", () => {
     expect(SCALAR).toMatch(/hideTestRequestButton:\s*true/);
   });
 
-  // Found by running it, not by reading the docs: Scalar calls api.scalar.com on
-  // mount — its Ask-AI agent from module scope, plus telemetry, which defaults
-  // to on. Studio's subject matter is private APIs, so opening a spec must not
-  // produce a third-party request. The flags are half of the fix; the build-time
+  // Scalar calls api.scalar.com on mount: its Ask-AI agent from module scope,
+  // plus telemetry, which defaults to on. Studio's subject matter is private
+  // APIs, so opening a spec must not produce a third-party request. The flags are half of the fix; the build-time
   // stub is the half that survives an upgrade.
   it("switches off every path that reaches Scalar's servers", () => {
     expect(SCALAR).toMatch(/telemetry:\s*false/);
@@ -76,7 +74,7 @@ describe("the renderer", () => {
   });
 
   it("does not ship the agent-chat module at all", () => {
-    // Configuration could not stop it — the request goes out when the chunk
+    // Configuration can't stop it: the request goes out when the chunk
     // loads. So the module is aliased away in vite.config.ts and the alias is
     // load-bearing, not an optimisation.
     const vite = readFileSync(resolve(here, "../../../vite.config.ts"), "utf8");
@@ -85,9 +83,9 @@ describe("the renderer", () => {
   });
 
   it("does not let Scalar fetch its own fonts", () => {
-    // Measured: 14 requests to fonts.scalar.com on mount. Studio bundles Geist
-    // and JetBrains Mono, so the remote faces are a third-party request made
-    // because someone opened a document.
+    // Scalar loads its fonts from fonts.scalar.com on mount. Studio bundles
+    // Geist and JetBrains Mono, so the remote faces would be a third-party
+    // request made because someone opened a document.
     expect(SCALAR).toMatch(/withDefaultFonts:\s*false/);
   });
 
@@ -119,7 +117,7 @@ describe("the tabs", () => {
 describe("the webview's content security policy", () => {
   // A spec's markdown can reference a remote image, and rendering it tells the
   // spec's author who opened their document, from where, and when. For a client
-  // whose subject is private APIs that is a disclosure, not a nicety — and the
+  // whose subject is private APIs that is a disclosure, not a nicety. The
   // policy is the defence that holds regardless of what the renderer decides to
   // do next, which a list of vendor flags does not.
   const conf = JSON.parse(readFileSync(resolve(here, "../../../src-tauri/tauri.conf.json"), "utf8"));

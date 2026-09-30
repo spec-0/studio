@@ -10,9 +10,9 @@
  * `latest.json` never points at newer bytes.
  *
  * Platform keys follow what the updater looks up: `{os}-{arch}-{installer}`
- * first, then `{os}-{arch}`. A `.deb` install needs its own `-deb` key — without
+ * first, then `{os}-{arch}`. A `.deb` install needs its own `-deb` key. Without
  * it the updater would fall back to `linux-x86_64` and try to install the
- * AppImage with dpkg — so a missing `.deb` signature fails the run.
+ * AppImage with dpkg, so a missing `.deb` signature fails the run.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

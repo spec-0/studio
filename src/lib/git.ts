@@ -4,8 +4,7 @@
  * **This describes the document on disk, never a deployment.** A branch name
  * sitting next to an API is one short step from being read as "this is what
  * production is running", which Studio has no way to know: deployments are
- * facts a platform *reports*, never ones a client
- * inferred. So the summary always says what it is about ("the file"), and the
+ * facts a platform *reports*, never ones a client infers. So the summary always says what it is about ("the file"), and the
  * dirty flag exists precisely so a commit id is never shown as if it described
  * bytes that have since been edited.
  *
@@ -48,7 +47,7 @@ interface RawGitInfo {
  * Only a `file:` source can have a repository behind it.
  *
  * A URL or spec0 import has provenance too, but it is the platform's version
- * history — a different fact, already shown elsewhere, and conflating the two
+ * history: a different fact, already shown elsewhere. Conflating the two
  * would be the "where is this deployed" mistake in another form.
  */
 export function canHaveGitInfo(source: ApiSource | undefined): boolean {
@@ -83,12 +82,12 @@ export function refLabel(info: GitInfo): string {
 /**
  * The sentence shown on hover.
  *
- * Says "this file" on purpose — see the note at the top of this module.
+ * Says "this file" on purpose. See the note at the top of this module.
  */
 export function describeGit(info: GitInfo): string {
   const when = relativeTime(info.committedAt);
   const where = info.branch ? `on ${info.branch}` : "with HEAD detached";
-  const commit = [info.sha, info.subject].filter(Boolean).join(" — ");
+  const commit = [info.sha, info.subject].filter(Boolean).join(" · ");
   const base = `This file is in ${info.root} ${where}. Last commit ${commit}${
     when ? ` (${when})` : ""
   }.`;

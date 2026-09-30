@@ -1,10 +1,10 @@
 /**
- * The rendered API reference — the same renderer `app.spec0.io` uses.
+ * The rendered API reference, using the same renderer as `app.spec0.io`.
  *
  * Loaded through `React.lazy` from {@link DocumentView} and nowhere else: this
  * module pulls in Scalar, which is by a wide margin the largest thing Studio
  * depends on. Keeping it behind a dynamic import means opening a spec, browsing
- * operations and firing a request — everything the app is actually for — never
+ * operations and firing a request (everything the app is actually for) never
  * pay for a renderer the session may not open.
  *
  * The web dashboard and the public registry each keep their own copy of this
@@ -16,7 +16,7 @@
  * browser and the wrong one here, for two independent reasons: it would fire
  * from the webview and so would carry an `Origin` header, which is exactly what
  * Studio's whole HTTP layer exists to avoid; and it would bypass environments,
- * auth schemes, per-host certificate trust and history — a second request path
+ * auth schemes, per-host certificate trust and history: a second request path
  * with none of the properties that make the first one worth having. Requests go
  * through Studio. This tab reads.
  */
@@ -26,7 +26,7 @@ import { ApiReferenceReact, type ApiReferenceConfiguration } from "@scalar/api-r
 import "@scalar/api-reference-react/style.css";
 
 interface Props {
-  /** The document as imported — the same text the Raw tab shows. */
+  /** The document as imported: the same text the Raw tab shows. */
   text: string;
   dark: boolean;
 }
@@ -35,7 +35,7 @@ interface Props {
 // in styles.css are the design system's; a hex here would be a second source of
 // truth that drifts the first time the palette moves.
 //
-// The last rule hides Scalar's "Powered by Scalar" sidebar promo — no config
+// The last rule hides Scalar's "Powered by Scalar" sidebar promo. No config
 // flag exists, a maintainer sanctions removing it via CSS, and the package is
 // MIT. Targeted by the stable scalar.com href rather than Scalar's
 // churn-prone utility classes, and asserted by a test so a refactor can't drop
@@ -73,9 +73,8 @@ export { BRAND_CSS };
 /**
  * Nothing in this tab is allowed to reach the network.
  *
- * Found by running it: out of the box Scalar calls `api.scalar.com` on mount —
- * its Ask-AI agent fetches `/vector/registry/curated`, and telemetry defaults to
- * on. For a client whose entire subject matter is **internal, private** APIs,
+ * Out of the box Scalar calls `api.scalar.com` on mount: its Ask-AI agent
+ * fetches `/vector/registry/curated`, and telemetry defaults to on. For a client whose entire subject matter is **internal, private** APIs,
  * quietly shipping a request to a third party the moment someone opens a spec is
  * not a defensible default, whoever the third party is.
  *
@@ -83,8 +82,8 @@ export { BRAND_CSS };
  * and it is the part that actually holds: flags describe the features that exist
  * in the pinned version, and an upgrade that adds one more phone-home would sail
  * past a list of flags. A renderer handed the whole document has no legitimate
- * reason to fetch anything, so the honest configuration is "no network at all"
- * — and rejecting reads to Scalar as ordinary offline, which is a state it
+ * reason to fetch anything, so the honest configuration is "no network at all",
+ * and rejecting reads to Scalar as ordinary offline, which is a state it
  * already knows how to render.
  */
 const refuseNetwork = (async (input: string | URL | Request) => {
@@ -104,9 +103,9 @@ export default function ScalarReference({ text, dark }: Props) {
       hideDarkModeToggle: true,
       hideTestRequestButton: true,
       // Scalar's search is a registry search against api.scalar.com, not a
-      // search of this document — the sidebar already filters what's here.
+      // search of this document. The sidebar already filters what's here.
       hideSearch: true,
-      // Scalar's own product toolbar — Configure / Share / Deploy. It defaults
+      // Scalar's own product toolbar (Configure / Share / Deploy). It defaults
       // to showing on localhost, and a Tauri webview *is* localhost, so this
       // would otherwise ship: another vendor's product surface inside ours,
       // offering actions Studio can't perform.

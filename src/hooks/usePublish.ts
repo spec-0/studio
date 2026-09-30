@@ -41,7 +41,7 @@ export function usePublish(
         setTeams([]);
         // Not fatal: publishing without a team is legal and lands the API in
         // the org's "Unassigned APIs" team.
-        setTeamsError("Couldn't list teams — you can still publish as unassigned.");
+        setTeamsError("Couldn't list teams. You can still publish as unassigned.");
       });
   }, [session]);
 

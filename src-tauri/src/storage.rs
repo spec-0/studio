@@ -31,7 +31,7 @@ fn store_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-/// Reject anything that isn't a plain file name — `name` comes from the frontend.
+/// Reject anything that isn't a plain file name, since `name` comes from the frontend.
 fn store_path(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
     if name.is_empty() || name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err(format!("invalid store name: {name}"));

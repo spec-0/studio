@@ -5,14 +5,14 @@ import { redact } from "./redact";
 /**
  * Run every operation in a tag and report which responses match the spec.
  *
- * The question a developer actually has before a release is *"does any of this
- * still match the contract?"* — and answering it meant clicking through every
- * operation by hand.
+ * The question a developer has before a release is *"does any of this still
+ * match the contract?"*, and without this, answering it means clicking through
+ * every operation by hand.
  *
  * **Why this is different from a collection runner.** Postman's needs
  * hand-written assertions: someone writes `pm.expect(...)` per request, and the
  * suite is only as good as the effort spent on it and rots as the API moves.
- * Here the assertions come *free from the schema* — Studio already validates a
+ * Here the assertions come *free from the schema*: Studio already validates a
  * response against the declared schema for the status actually returned,
  * including undeclared-field drift. Running that across a tag is a conformance
  * check nobody had to write, and it stays correct as the spec changes because it
@@ -30,8 +30,8 @@ export interface RunOptions {
   /**
    * Include methods that change state.
    *
-   * Off by default. Not paternalism about the target — a caller who can reach an
-   * endpoint could reach it without us — but "run all" is a bulk action where the
+   * Off by default. Not paternalism about the target (a caller who can reach an
+   * endpoint could reach it without us), but "run all" is a bulk action where the
    * user didn't choose each request individually, which is a different thing from
    * deliberately firing one DELETE.
    */
@@ -68,7 +68,7 @@ export interface RunResult {
  * Decide what can run, and why anything can't.
  *
  * **Required parameters are resolved from the environment by name, never
- * invented.** Studio generates plausible examples elsewhere — that's right for a
+ * invented.** Studio generates plausible examples elsewhere. That's right for a
  * form a human is about to review, and wrong here: an invented `{orderId}`
  * produces a confident 404 that means nothing, and a page of those is worse than
  * a page of honest skips. A row saying "skipped: no value for orderId" tells you
@@ -111,11 +111,11 @@ export function planRun(
 /** A sentence a person can act on. */
 export function describeSkip(skip: SkipReason): string {
   if (skip.kind === "mutating") {
-    return `${skip.method} changes state — enable mutating methods to include it`;
+    return `${skip.method} changes state; enable mutating methods to include it`;
   }
   if (skip.kind === "deprecated") return "deprecated";
   const names = skip.names.map((name) => `{{${name}}}`).join(", ");
-  return `no value for ${names} — set ${skip.names.length > 1 ? "them" : "it"} in the active environment`;
+  return `no value for ${names}; set ${skip.names.length > 1 ? "them" : "it"} in the active environment`;
 }
 
 export interface RunSummary {
@@ -153,7 +153,7 @@ export function describeSummary(summary: RunSummary): string {
  * A report that can be pasted into a PR or an issue.
  *
  * Markdown rather than JSON because the destination is a human reading a review,
- * and **skips are listed rather than dropped** — a report that silently omits
+ * and **skips are listed rather than dropped**: a report that silently omits
  * what it didn't run reads as "all clear" when it isn't.
  */
 export function toMarkdown(
@@ -162,7 +162,7 @@ export function toMarkdown(
 ): string {
   const summary = summarise(results);
   const lines = [
-    `## ${context.title} — conformance run`,
+    `## ${context.title}: conformance run`,
     "",
     `**Scope:** ${context.scope} · **Target:** \`${context.target}\``,
     "",
@@ -193,7 +193,7 @@ export function toMarkdown(
             : result.verdict === "no_schema"
               ? "no schema declared for this status"
               : "matches the declared schema";
-    const status = result.status ? `${result.status}${result.ms ? ` · ${result.ms}ms` : ""}` : "—";
+    const status = result.status ? `${result.status}${result.ms ? ` · ${result.ms}ms` : ""}` : "–";
     lines.push(
       `| ${glyph} | \`${result.operation.method} ${result.operation.path}\` | ${status} | ${detail} |`,
     );
@@ -205,18 +205,18 @@ export function toMarkdown(
     for (const result of mismatches) {
       lines.push(`**\`${result.operation.method} ${result.operation.path}\`**`, "");
       for (const finding of result.validation?.findings ?? []) {
-        lines.push(`- \`${finding.path || "(root)"}\` — ${finding.message}`);
+        lines.push(`- \`${finding.path || "(root)"}\`: ${finding.message}`);
       }
       lines.push("");
     }
   }
 
-  // Meant to be pasted into a PR, so no secret value may survive into it — an
+  // Meant to be pasted into a PR, so no secret value may survive into it: an
   // error message can quote a URL with an API key in its query.
   return redact(lines.join("\n"));
 }
 
-/** Which parameters an operation needs before it can run — for the pre-run summary. */
+/** Which parameters an operation needs before it can run, for the pre-run summary. */
 export function requiredParamNames(operation: OperationSpec): string[] {
   return operation.parameters
     .filter((param: ParamSpec) => param.in === "path" || param.required)

@@ -1,15 +1,15 @@
 /*
- * spec0 Studio — styling.
+ * spec0 Studio styling.
  *
  * Tokens are lifted verbatim from the spec0 design system (its
  * 12-step colour ramps): warm off-white surfaces, pure-gray neutrals, one
- * accent — brand violet #5B4CF5. Typeface discipline follows the design system:
+ * accent (brand violet #5B4CF5). Typeface discipline follows the design system:
  * Geist for UI, JetBrains Mono for every path, method, status, ID and timing.
  * Both are bundled via @fontsource-variable, so the app never fetches a font.
  *
- * The aesthetic direction is not open here — it is settled:
- * no gradients, one accent per region, dark code wells in both themes,
- * restraint over flash. Craft goes into typography, rhythm and motion instead.
+ * The visual style is settled: no gradients, one accent per region, dark code
+ * wells in both themes, restraint over flash. Craft goes into typography,
+ * rhythm and motion instead.
  */
 
 :root {
@@ -49,7 +49,7 @@
   --s5: 24px;
   --s6: 32px;
 
-  /* Depth. Restrained on purpose — this is an instrument, not a landing page. */
+  /* Depth. Restrained on purpose: this is an instrument, not a landing page. */
   --shadow-1: 0 1px 2px hsl(0 0% 0% / 0.05);
   --shadow-2: 0 4px 16px hsl(0 0% 0% / 0.08);
   --shadow-3: 0 24px 64px hsl(0 0% 0% / 0.22);
@@ -124,7 +124,7 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
 }
 ::-webkit-scrollbar-track { background: transparent; }
 
-/* ─── Frame ───────────────────────────────────────────────────────────────── */
+/* Frame */
 
 .app { display: flex; flex-direction: column; height: 100%; }
 
@@ -162,7 +162,7 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
   margin: 0 2px;
 }
 
-/* ─── Brand ───────────────────────────────────────────────────────────────── */
+/* Brand */
 
 .brand { display: flex; align-items: baseline; gap: 7px; color: hsl(var(--ink)); }
 .brand svg { display: block; align-self: center; }
@@ -173,7 +173,7 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
   letter-spacing: 0.01em;
 }
 
-/* ─── Icon buttons ────────────────────────────────────────────────────────── */
+/* Icon buttons */
 
 .icon-btn {
   display: grid;
@@ -230,7 +230,7 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
   overflow: hidden;
 }
 
-/* Request left, response right — the split a developer expects. */
+/* Request left, response right: the split a developer expects. */
 .split { flex: 1; display: flex; min-height: 0; }
 
 .pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
@@ -255,7 +255,7 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
   color: hsl(var(--ink-3));
 }
 
-/* ─── Controls ────────────────────────────────────────────────────────────── */
+/* Controls */
 
 .tabs { display: flex; padding: 8px 8px 0; gap: 2px; }
 
@@ -306,7 +306,7 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
   padding: 0 3px;
 }
 
-/* ─── Operation list ──────────────────────────────────────────────────────── */
+/* Operation list */
 
 .list { flex: 1; overflow-y: auto; padding: 4px 0 12px; }
 
@@ -371,7 +371,7 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
   color: hsl(var(--ink-3));
 }
 
-/* ─── Operation detail ────────────────────────────────────────────────────── */
+/* Operation detail */
 
 .op-head {
   padding: 13px 18px 11px;
@@ -423,7 +423,7 @@ pre.code {
   word-break: break-word;
 }
 
-/* ─── Address bar ─────────────────────────────────────────────────────────── */
+/* Address bar */
 
 .urlbar {
   display: flex;
@@ -473,7 +473,7 @@ pre.code {
   flex: 1;
   min-width: 120px;
 }
-/* The path belongs to the operation, not the user — shown, not editable. */
+/* The path belongs to the operation, not the user: shown, not editable. */
 .url-field .url-path {
   display: flex;
   align-items: center;
@@ -502,7 +502,7 @@ pre.code {
 }
 .urlbar-note.resolved { color: hsl(var(--ink-3)); }
 
-/* ─── Inspector ───────────────────────────────────────────────────────────── */
+/* Inspector */
 
 .insp-head {
   display: flex;
@@ -572,7 +572,7 @@ pre.code {
   color: hsl(var(--ink-2));
 }
 
-/* ─── Schema detail + graph ───────────────────────────────────────────────── */
+/* Schema detail + graph */
 
 .schema-head { padding: 16px 20px 12px; border-bottom: 1px solid hsl(var(--border)); }
 .schema-title { font-family: var(--font-mono); font-size: 16px; font-weight: 600; }
@@ -601,8 +601,8 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 .graph-wrap { flex: 1; min-height: 0; min-width: 0; position: relative; }
 
 /* Theme @spec0/schema-graph. The package reads --sg-* with its own light
-   defaults, so this mapping is the whole integration — without it the canvas
-   renders white cards on a dark shell, which is how it looked before. */
+   defaults, so this mapping is the whole integration. Without it the canvas
+   renders white cards on a dark shell. */
 .graph-wrap {
   --sg-canvas: hsl(var(--bg));
   --sg-node-bg: hsl(var(--surface));
@@ -614,7 +614,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   --sg-accent-ring: hsl(var(--primary) / 0.22);
   --sg-panel-bg: hsl(var(--surface));
 }
-/* React Flow's own chrome — controls and the dotted background — is themed
+/* React Flow's own chrome (controls and the dotted background) is themed
    separately; it doesn't read the package's tokens. */
 .graph-wrap .react-flow__controls-button {
   background: hsl(var(--surface));
@@ -628,7 +628,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 /* The graph keeps everything the detail panel isn't using. */
 .split.graph-split { align-items: stretch; }
 
-/* Drag handle. A 5px hit area with a 1px visual line — thin enough to read as a
+/* Drag handle. A 5px hit area with a 1px visual line: thin enough to read as a
    divider, wide enough to actually grab. */
 .resizer {
   flex: 0 0 5px;
@@ -679,7 +679,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 .chip.link { cursor: pointer; }
 .chip.link:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
 
-/* ─── Empty state ─────────────────────────────────────────────────────────── */
+/* Empty state */
 
 .empty {
   flex: 1;
@@ -713,7 +713,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   text-align: left;
 }
 
-/* ─── Send bar ────────────────────────────────────────────────────────────── */
+/* Send bar */
 
 .server-field { position: relative; flex: 1; display: flex; align-items: center; }
 .server-field input { font-family: var(--font-mono); font-size: 12px; padding-right: 58px; }
@@ -771,7 +771,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   font-size: 11.5px;
 }
 .scope-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px; }
-.scope-grid /* Run results. The dot is the whole verdict at a glance — a table of 40 rows is
+.scope-grid /* Run results. The dot is the whole verdict at a glance: a table of 40 rows is
    only useful if the eye can find the bad ones without reading. */
 .run-dot {
   display: inline-block;
@@ -827,7 +827,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   white-space: nowrap;
 }
 
-/* Run results. The dot is the whole verdict at a glance — a table of 40 rows is
+/* Run results. The dot is the whole verdict at a glance: a table of 40 rows is
    only useful if the eye can find the bad ones without reading. */
 .run-dot {
   display: inline-block;
@@ -880,7 +880,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   border-radius: var(--radius);
 }
 
-/* A platform environment is a real place the API runs — named, not classified, so
+/* A platform environment is a real place the API runs: named, not classified, so
    it gets the org's own label rather than a badge we invented. */
 .tag.env { color: hsl(var(--primary)); border-color: hsl(var(--primary) / 0.45); }
 .tag.ok { color: hsl(var(--success)); }
@@ -892,7 +892,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   padding: 4px 6px;
 }
 
-/* ─── Dialogs ─────────────────────────────────────────────────────────────── */
+/* Dialogs */
 
 .scrim {
   position: fixed;
@@ -941,7 +941,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 .env-detail .field-label { flex: 0 0 110px; }
 .env-detail table.fields input { padding: 3px 6px; font-size: 11.5px; }
 
-/* ─── Library (home) ──────────────────────────────────────────────────────── */
+/* Library (home) */
 
 .library {
   flex: 1;
@@ -1023,7 +1023,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 .tag.src-spec0 { color: hsl(var(--primary)); }
 .tag.src-sample { color: hsl(var(--ink-3)); }
 
-/* ─── API switcher ────────────────────────────────────────────────────────── */
+/* API switcher */
 
 .api-switch {
   display: flex;
@@ -1068,7 +1068,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 }
 .palette-foot .spacer { flex: 1; }
 
-/* ─── Library polish ──────────────────────────────────────────────────────── */
+/* Library polish */
 
 .empty-brand { margin-bottom: 14px; color: hsl(var(--ink)); }
 
@@ -1087,17 +1087,13 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 .icon-btn.danger:hover { color: hsl(var(--danger)); }
 .btn svg { flex: none; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
- * Craft pass.
- *
- * The aesthetic direction is not open here — it is settled:
- * spec0 tokens, no gradients, one accent per region, restraint over flash. So
- * this is precision rather than personality: real typefaces, a consistent
- * motion curve, and just enough depth to separate planes. Everything below is
- * additive polish over the structural rules above.
- * ────────────────────────────────────────────────────────────────────────── */
+/*
+ * Finishing layer. The visual style is settled (spec0 tokens, no gradients, one
+ * accent per region), so this adds typefaces, one motion curve and just enough
+ * depth to separate planes, on top of the structural rules above.
+ */
 
-/* Motion — one curve, one duration, applied only where state actually changes.
+/* Motion: one curve, one duration, applied only where state actually changes.
    Honour the OS setting; a request client shouldn't fight accessibility prefs. */
 .btn, .icon-btn, .row, .tab, .api-card, input, textarea, select, .url-field, .api-switch {
   transition:
@@ -1111,7 +1107,7 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
-/* Focus is a first-class state, not an afterthought — this is a keyboard tool. */
+/* Focus is a first-class state, not an afterthought: this is a keyboard tool. */
 :focus-visible {
   outline: 2px solid hsl(var(--primary));
   outline-offset: 1px;
@@ -1129,7 +1125,7 @@ input:focus, textarea:focus { outline: none; }
 .row:hover { background: hsl(var(--surface-hover)); }
 .row[aria-selected="true"] { box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.16); }
 
-/* Library cards lift very slightly — enough to read as pickable. */
+/* Library cards lift very slightly, enough to read as pickable. */
 .api-card:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
 .api-card:active { transform: translateY(0); }
 
@@ -1179,7 +1175,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .btn.primary:active { transform: translateY(1px); }
 .btn.send:not(:disabled) { box-shadow: 0 1px 2px hsl(var(--primary) / 0.4); }
 
-/* Errors have to be readable and copyable — a diagnostic you can't paste to
+/* Errors have to be readable and copyable: a diagnostic you can't paste to
    someone is only half a diagnostic. */
 .error-box { user-select: text; }
 .error-head {
@@ -1201,11 +1197,11 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   margin: 0;
 }
 
-/* ─── Catalog rows + target selector ──────────────────────────────────────── */
+/* Catalog rows + target selector */
 
 .row-lead { flex: none; color: hsl(var(--ink-3)); align-self: center; }
 
-/* Team APIs are listed but not openable — the public API has no endpoint to
+/* Team APIs are listed but not openable, because the public API has no endpoint to
    download their specs. Show that plainly rather than letting a click do nothing. */
 .row.disabled { cursor: not-allowed; opacity: 0.62; }
 .row.disabled:hover { background: transparent; }
@@ -1221,7 +1217,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 }
 
 /* An inline "create a mock" affordance on a catalog row. The row itself is a
-   button, so this is a span with a button role — nesting buttons is invalid. */
+   button, so this is a span with a button role (nesting buttons is invalid). */
 .tag.add-mock {
   cursor: pointer;
   color: hsl(var(--ink-3));
@@ -1264,9 +1260,9 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .save-target { margin-right: 5px; align-self: center; }
 .save-target:hover { color: hsl(var(--primary)); }
 
-/* ─── Connection state ────────────────────────────────────────────────────── */
+/* Connection state */
 
-/* Status, not a prompt — fixed size, no animation, never asks. */
+/* Status, not a prompt: fixed size, no animation, never asks. */
 .conn-chip {
   display: inline-flex;
   align-items: center;
@@ -1317,7 +1313,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 }
 .api-card.scratch:hover .api-title { color: hsl(var(--ink)); }
 
-/* The scratch screen's method picker — the address bar's target select, minus
+/* The scratch screen's method picker: the address bar's target select, minus
    the width allowance a URL needs. */
 .method-select {
   width: auto;
@@ -1332,7 +1328,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .api-switch.static { cursor: default; background: none; }
 .api-switch.static:hover { background: none; }
 
-/* ─── Spec updates ────────────────────────────────────────────────────────── */
+/* Spec updates */
 
 .update-pill {
   display: inline-flex;
@@ -1349,7 +1345,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 }
 .update-pill:hover { background: hsl(var(--primary) / 0.16); }
 
-/* A behind mock is a caution, not an invitation — same shape, warmer colour, so
+/* A behind mock is a caution, not an invitation: same shape, warmer colour, so
    the two pills on one card read as different kinds of news at a glance. */
 .update-pill.mock {
   border-color: hsl(var(--warning) / 0.45);
@@ -1373,7 +1369,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .sync-report ul { margin: 0; padding-left: 17px; }
 .sync-report li { font-size: 11.5px; color: hsl(var(--ink-2)); line-height: 1.7; }
 
-/* ─── Document view ────────────────────────────────────────────────── */
+/* Document view */
 
 .doc { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 
@@ -1444,7 +1440,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 }
 .dark .doc-raw-scroll { background: hsl(60 8% 3%); }
 
-/* Fixed line height — the windowing maths depends on it. Keep LINE_HEIGHT in
+/* Fixed line height, because the windowing maths depends on it. Keep LINE_HEIGHT in
    DocumentView.tsx in step with this value. */
 .doc-line {
   display: flex;
@@ -1485,7 +1481,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .doc-reference { flex: 1; min-height: 0; overflow: auto; }
 
 /* The document's own action sits with the document's own facts, not in the
-   renderer — Scalar's toolbar is a vendor surface and moves on upgrade. */
+   renderer: Scalar's toolbar is a vendor surface and moves on upgrade. */
 .doc-actions { margin-left: auto; display: flex; align-items: center; gap: var(--s2); }
 .doc-tabs { margin-left: var(--s3); }
 .publish-why {
@@ -1504,7 +1500,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
  * Has to read as a page in a log, never as the request editor: a different
  * surface (the editor sits on --bg, a record on --surface), a dashed rule where
  * the address bar would be, a "Recorded request · read-only" kicker, and no
- * inputs anywhere. The only accent is the one action — copying it into a new
+ * inputs anywhere. The only accent is the one action: copying it into a new
  * request.
  */
 .record {
@@ -1695,7 +1691,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 }
 .copied-note-close:hover { color: hsl(var(--ink)); }
 
-/* ─── Local MCP server panel ──────────────────────────────────────────────── */
+/* Local MCP server panel */
 
 .mcp-panel { display: flex; flex-direction: column; gap: var(--s2); font-size: 12px; }
 .mcp-lede { margin: 0 0 var(--s1); color: hsl(var(--ink-2)); }
@@ -1740,7 +1736,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .mcp-tool-title { color: hsl(var(--ink-2)); }
 .mcp-privacy { margin: var(--s3) 0 0; }
 
-/* ─── Navigation ──────────────────────────────────────────────────────────── */
+/* Navigation */
 
 /* The app's sections, as text tabs in the top bar. The tab fills the bar's
    height so its underline sits on the bar's bottom edge. */
@@ -1769,8 +1765,8 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 }
 .nav-tab:focus-visible { outline-offset: -4px; }
 
-/* Settings: a quiet icon; a small dot when certificate checks are off
-   somewhere, which used to show on the Connection button. */
+/* Settings: a quiet icon, with a small dot when certificate checks are off
+   somewhere. */
 .settings-btn { position: relative; }
 .settings-btn.warn-dot::after {
   content: "";
@@ -1838,7 +1834,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   .segment { padding: 3px 9px; }
 }
 
-/* ─── Pages: Settings, Mocks, MCP ─────────────────────────────────────────── */
+/* Pages: Settings, Mocks, MCP */
 
 .settings { background: hsl(var(--bg)); }
 .settings-nav {
@@ -1946,7 +1942,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .mocks-table td.mock-api { white-space: nowrap; }
 .mocks-table td.mock-actions { width: 36px; text-align: right; }
 
-/* ─── Create a mock server ────────────────────────────────────────────────── */
+/* Create a mock server */
 
 .sr-only {
   position: absolute;
@@ -2086,7 +2082,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
    the pointer when a result appears above them. */
 .scrim.journey-scrim { align-items: start; padding-top: min(12vh, 96px); }
 
-/* ─── spec0:// links ──────────────────────────────────────────────────────── */
+/* spec0:// links */
 
 /* The host is what the user is agreeing to download from, so it is the largest
    thing in the dialog; the full address is below it, cut to one line. */
@@ -2127,7 +2123,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   box-shadow: 0 8px 24px hsl(0 0% 0% / 0.2);
 }
 
-/* ─── Local mocks ─────────────────────────────────────────────────────────── */
+/* Local mocks */
 
 .mocks-section-head { display: flex; align-items: flex-end; gap: 12px; margin: 22px 0 12px; }
 .mocks-section-head h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
@@ -2183,7 +2179,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .api-card .local-mock-live { position: relative; z-index: 1; }
 .nav-tab .live-dot { margin-left: 6px; width: 6px; height: 6px; }
 
-/* ─── Context menus ───────────────────────────────────────────────────────── */
+/* Context menus */
 
 .context-menu {
   position: fixed;
@@ -2238,7 +2234,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   animation: rise 200ms var(--ease);
 }
 
-/* ─── Collections ─────────────────────────────────────────────────────────── */
+/* Collections */
 
 .run-dot.pass { background: hsl(var(--success)); }
 .run-dot.fail { background: hsl(var(--danger)); }
@@ -2446,7 +2442,7 @@ table.fields .json-value { color: inherit; text-align: left; }
 .step-banner { align-items: center; }
 .step-banner .spacer { flex: 1; }
 
-/* ─── Request tabs ────────────────────────────────────────────────────────── */
+/* Request tabs */
 
 /* The open requests, across APIs, under the API bar. */
 .request-tabs {
@@ -2548,7 +2544,7 @@ table.fields .json-value { color: inherit; text-align: left; }
 /* A response brought back from earlier in the session says so, above everything else. */
 .restored-note { margin-bottom: 10px; }
 
-/* ─── Collection run log ──────────────────────────────────────────────────── */
+/* Collection run log */
 
 .collection-panes { margin-left: 0; }
 .runlog { display: flex; flex: 1; min-width: 0; min-height: 0; }
@@ -2646,7 +2642,7 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
   .runlog-details { margin-left: 18px; grid-template-columns: 100px minmax(0, 1fr); }
 }
 
-/* ─── App console ─────────────────────────────────────────────────────────── */
+/* App console */
 
 .statusbar-console {
   display: inline-flex;
@@ -2723,7 +2719,7 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
   .console-search { width: 120px; }
 }
 
-/* ─── Naming, confirming ──────────────────────────────────────────────────── */
+/* Naming, confirming */
 
 .modal.name-dialog { width: min(420px, 100%); }
 .name-field { display: grid; gap: 4px; }
@@ -2764,7 +2760,7 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
 }
 .segment-alert { width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--danger)); }
 
-/* ─── Links between steps ─────────────────────────────────────────────────── */
+/* Links between steps */
 
 /* A field that can take a value from an earlier step: its input and a link button. */
 .linkable { display: grid; gap: 4px; min-width: 0; flex: 1; }
@@ -2885,7 +2881,7 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
 .link-summary svg { color: hsl(var(--primary)); flex: none; }
 .link-summary .mono { font-size: 11.5px; }
 
-/* ─── The chain view ──────────────────────────────────────────────────────── */
+/* The chain view */
 
 .collection-body.chain-body { display: block; overflow-y: auto; }
 .chain-view { padding: 14px 16px 32px; max-width: 980px; }

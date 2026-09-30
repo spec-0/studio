@@ -5,7 +5,7 @@ import { isMac } from "../lib/platform";
 import { isConsoleShortcut, tabShortcutFor, type TabShortcut } from "../lib/shortcuts";
 
 export interface ShortcutActions {
-  /** ⌘/Ctrl+Enter — sends the request on screen; see `sendTargetFor`. */
+  /** ⌘/Ctrl+Enter sends the request on screen; see `sendTargetFor`. */
   send: () => void;
   /** ⌘/Ctrl+O */
   openAdd: () => void;
@@ -30,7 +30,7 @@ export interface ShortcutActions {
    * tabs; ⌘/Ctrl+W closes the current one. See `tabShortcutFor`.
    */
   requestTab: (action: TabShortcut) => void;
-  /** ⌘⇧Y / Ctrl+Shift+Y — the app console; see `isConsoleShortcut`. */
+  /** ⌘⇧Y / Ctrl+Shift+Y opens the app console; see `isConsoleShortcut`. */
   toggleConsole: () => void;
 }
 

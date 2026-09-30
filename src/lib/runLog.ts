@@ -46,7 +46,7 @@ export interface RunLogStore {
 
 export const EMPTY_RUN_LOGS: RunLogStore = { version: 1, runs: {} };
 
-// ── building a log from events ────────────────────────────────────────────────
+// Building a log from events
 
 /** A log for a run that has just started. */
 export function startLog(id: string, collection: { id: string; name: string }, environment: string | null, at: string): RunLog {
@@ -67,7 +67,7 @@ export function appendEvent(log: RunLog, event: RunEvent): RunLog {
   return next;
 }
 
-// ── keeping them ──────────────────────────────────────────────────────────────
+// Keeping them
 
 const size = (value: unknown) => JSON.stringify(value).length;
 
@@ -149,7 +149,7 @@ export async function saveRunLogs(store: RunLogStore): Promise<void> {
   await writeStore(RUN_LOG_STORE, store);
 }
 
-// ── reading one ───────────────────────────────────────────────────────────────
+// Reading one
 
 export type SchemaResult = Extract<StepDetail, { type: "schema_check" }>;
 export type StatusCheck = Extract<StepDetail, { type: "status_check" }>;
@@ -383,7 +383,7 @@ export function runLogFileName(log: RunLog, extension: "json" | "txt"): string {
   return `${name}-${stamp}.spec0-run.${extension}`;
 }
 
-// ── exporting ─────────────────────────────────────────────────────────────────
+// Exporting
 
 const EXPORT_SUFFIX = /\.spec0-run\.(json|txt)$/i;
 

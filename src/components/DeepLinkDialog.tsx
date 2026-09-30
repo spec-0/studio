@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import type { DeepLinks } from "../hooks/useDeepLinks";
 
 /**
- * "Open an API from the web?" — shown when a `spec0://open` link arrives.
+ * "Open an API from the web?", shown when a `spec0://open` link arrives.
  *
  * A web page can trigger the link without the user expecting Studio to act, so
  * this asks first and names the host the spec would come from. Every value here

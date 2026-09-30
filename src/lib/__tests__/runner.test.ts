@@ -73,7 +73,7 @@ describe("planRun", () => {
     expect(planned.find((p) => p.operation.method === "DELETE")!.skip).toBeNull();
   });
 
-  it("skips — never invents — an operation whose path parameter has no value", () => {
+  it("skips, never invents, an operation whose path parameter has no value", () => {
     // A fabricated {orderId} produces a confident 404 that means nothing. A page
     // of those is worse than a page of honest skips: one looks like a finding.
     const planned = planRun(spec.operations, {}, { includeMutating: false });
@@ -98,7 +98,7 @@ describe("planRun", () => {
 
   it("reports the mutating skip ahead of missing parameters", () => {
     // Both are true for DELETE /orders/{orderId} with no orderId. "This changes
-    // state" is the more useful thing to say first — supplying the id wouldn't
+    // state" is the more useful thing to say first: supplying the id wouldn't
     // make it run.
     const planned = planRun(spec.operations, {}, { includeMutating: false });
     const del = planned.find((p) => p.operation.method === "DELETE")!;
@@ -182,7 +182,7 @@ describe("toMarkdown", () => {
       context,
     );
     expect(report).toContain("### Differences");
-    expect(report).toContain("`data.extra` — not declared");
+    expect(report).toContain("`data.extra`: not declared");
   });
 
   it("names the target, so a pasted report says what it ran against", () => {

@@ -36,9 +36,8 @@ interface Props {
  *
  * Deliberately not the request editor: nothing here is an input, there is no
  * Send, and the only way to run it again is "Copy to a new request", which
- * opens an editor that says it's new. Showing a record in the live editors made
- * a response from three weeks ago look like one from three seconds ago; this
- * view exists so that can't happen.
+ * opens an editor that says it's new. In the live editors, a response from
+ * three weeks ago would look like one from three seconds ago.
  */
 export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClose, onAddToCollection }: Props) {
   const [showing, setShowing] = useState<"recorded" | "current">("recorded");
@@ -193,7 +192,7 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
               <pre className="code">{entry.body}</pre>
               {entry.bodyKind && entry.bodyKind !== "text" && (
                 <div className="field-meta" style={{ marginTop: 4 }}>
-                  A summary of the {entry.bodyKind === "form" ? "form" : "multipart"} body — file
+                  A summary of the {entry.bodyKind === "form" ? "form" : "multipart"} body. File
                   contents aren&apos;t recorded.
                 </div>
               )}
@@ -353,7 +352,7 @@ function CheckResult({
       <div className="verdict warn">
         <span className="glyph">⚠</span>
         <span>
-          Response didn&apos;t match the spec — {result.findings.length}{" "}
+          Response didn&apos;t match the spec: {result.findings.length}{" "}
           {result.findings.length === 1 ? "difference" : "differences"}.
         </span>
       </div>
@@ -406,7 +405,7 @@ function HeaderTable({ title, headers }: { title: string; headers: Record<string
 
 /**
  * The line an editor shows after "Copy to a new request". Dismissable, because
- * what it describes is genuinely new — unlike a recorded request, nothing here
+ * what it describes is genuinely new. Unlike a recorded request, nothing here
  * can be mistaken for something that already happened.
  */
 export function CopiedNote({ at, onDismiss }: { at: string; onDismiss: () => void }) {

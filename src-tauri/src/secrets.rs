@@ -37,7 +37,7 @@ static INDEX_LOCK: Mutex<()> = Mutex::new(());
 /// What went wrong, in a shape the frontend can act on.
 ///
 /// `unavailable` means the store itself can't be reached (no keyring running,
-/// locked, access denied) — the frontend falls back to the local file for the
+/// locked, access denied), and the frontend falls back to the local file for the
 /// session. Anything else is a problem with one value, such as one too long for
 /// Windows Credential Manager, and only that value falls back.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -141,7 +141,7 @@ impl Vault for OsVault {
     }
 }
 
-// ── index ────────────────────────────────────────────────────────────────────
+// Index
 
 fn read_index(path: &Path) -> BTreeSet<String> {
     fs::read_to_string(path)
@@ -166,13 +166,13 @@ fn update_index(path: &Path, change: impl FnOnce(&mut BTreeSet<String>) -> bool)
     Ok(())
 }
 
-// ── the operations, independent of Tauri ─────────────────────────────────────
+// The operations, independent of Tauri
 
 pub fn get(vault: &dyn Vault, env_id: &str, name: &str) -> Result<Option<String>, SecretError> {
     vault.get(&account(env_id, name)?)
 }
 
-/// Index first, then the value — see the module docs for why that order.
+/// Index first, then the value. See the module docs for why that order.
 pub fn set(vault: &dyn Vault, index: &Path, env_id: &str, name: &str, value: &str) -> Result<(), SecretError> {
     let account = account(env_id, name)?;
     update_index(index, |set| set.insert(account.clone()))?;
@@ -228,7 +228,7 @@ pub fn probe(vault: &dyn Vault) -> Backend {
     }
 }
 
-// ── Tauri commands ───────────────────────────────────────────────────────────
+// Tauri commands
 //
 // All async and run off the main thread: a credential store may block on a
 // prompt (an unlock dialog on Linux, an access prompt on macOS), and that must

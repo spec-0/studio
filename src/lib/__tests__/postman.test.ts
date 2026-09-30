@@ -54,7 +54,7 @@ function single(request: Record<string, unknown>, extra: Record<string, unknown>
 const only = (data: Record<string, unknown>, library: ImportLibrary = full): CollectionStep =>
   importPostman(data, library).collection.steps[0];
 
-// ── detection ─────────────────────────────────────────────────────────────────
+// Detection
 
 describe("what kind of file it is", () => {
   it("recognises Postman v2.1 and v2.0", () => {
@@ -90,7 +90,7 @@ describe("what kind of file it is", () => {
   });
 });
 
-// ── the checkout fixture, end to end ──────────────────────────────────────────
+// The checkout fixture, end to end
 
 describe("importing a Postman collection", () => {
   const { collection, environment, summary } = importPostman(fixture("checkout.postman_collection.json").data, full);
@@ -290,7 +290,7 @@ describe("the v2.0 fixture", () => {
   });
 });
 
-// ── linking rules ─────────────────────────────────────────────────────────────
+// Linking rules
 
 describe("linking", () => {
   it("links by path when the host is a variable with no value, and keeps the variable as the target", () => {
@@ -377,7 +377,7 @@ describe("linking", () => {
   });
 });
 
-// ── scripts ───────────────────────────────────────────────────────────────────
+// Scripts
 
 describe("reading test scripts", () => {
   it("finds the status a script checks", () => {
@@ -457,7 +457,7 @@ describe("reading test scripts", () => {
   });
 });
 
-// ── secrets ───────────────────────────────────────────────────────────────────
+// Secrets
 
 describe("secrets", () => {
   it("knows a secret-looking name", () => {

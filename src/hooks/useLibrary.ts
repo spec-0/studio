@@ -72,7 +72,7 @@ export function useLibrary({
    * Rebuild the mock against the spec we now hold.
    *
    * The platform keeps the mock's id, URL and API key, so nothing stored here has
-   * to change — only the version it serves, which is what clears the skew warning.
+   * to change, only the version it serves, which is what clears the skew warning.
    */
   const doRefreshMock = useCallback(async (target?: LibraryEntry) => {
     const entry = target ?? current;
@@ -117,7 +117,7 @@ export function useLibrary({
     return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, reload);
   }, [setCurrent]);
 
-  // ── opening ──────────────────────────────────────────────────────────────────
+  // Opening
 
   /** Parse, add to the library, and open it. Every entry point funnels through here. */
   const ingest = useCallback(
@@ -160,7 +160,7 @@ export function useLibrary({
    *
    * Fire-and-forget on open: the API is already usable without it, so a platform that
    * is slow, unreachable or predates the endpoint must not delay or fail the open. A
-   * failure leaves the cached list in place — last known targets beat none.
+   * failure leaves the cached list in place: last known targets beat none.
    *
    * Replaces rather than merges, so an environment retired upstream stops being
    * offered here. That matters more than it sounds: a hostname that was staging last
@@ -225,12 +225,12 @@ export function useLibrary({
     [openSpec, syncEnvironments],
   );
 
-  // ── updates ──────────────────────────────────────────────────────────────────
+  // Updates
 
   /**
    * Ask the catalog what it holds and mark anything newer than our copy.
    *
-   * One `listTeamApis` call covers the whole library — the list already carries
+   * One `listTeamApis` call covers the whole library, since the list already carries
    * `version` and `updatedAt`. Detection is passive: it marks, it never applies.
    * The spec you're testing against must not change under you mid-session.
    */
@@ -242,7 +242,7 @@ export function useLibrary({
       const marks = updateMarks(entries, upstream, new Date().toISOString());
       setEntries(await library.setUpdates(marks));
     } catch {
-      // A failed check is not worth interrupting anyone for — the badge simply
+      // A failed check is not worth interrupting anyone for. The badge simply
       // doesn't appear, and Refresh is still there.
     } finally {
       setChecking(false);
@@ -322,7 +322,7 @@ export function useLibrary({
 
   /**
    * Fetch a spec from `url` and add it to the library. Not for showing a page to
-   * the user — that is `openInBrowser` in `lib/store`.
+   * the user; that is `openInBrowser` in `lib/store`.
    */
   const addFromUrl = useCallback(
     async (url: string) => {
@@ -337,7 +337,7 @@ export function useLibrary({
       } catch (error) {
         setLoadError(
           `${url}: ${error instanceof Error ? error.message : String(error)}${
-            inTauri ? "" : " — in the browser preview this is usually CORS."
+            inTauri ? "" : ". In the browser preview this is usually CORS."
           }`,
         );
       } finally {

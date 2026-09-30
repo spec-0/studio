@@ -14,7 +14,7 @@ interface Props {
   entries: HistoryEntry[];
   /** Open with this entry selected, e.g. when arriving from an API's own list. */
   initialId?: string | null;
-  /** Start filtered to one API — an {@link apiKey}. */
+  /** Start filtered to one API (an {@link apiKey}). */
   initialApi?: string;
   /** The current spec for an entry's API, or null if it isn't in the library. */
   specFor: (entry: HistoryEntry) => Promise<ParsedSpec | null>;
@@ -28,8 +28,8 @@ interface Props {
  * Every recorded request, across all APIs and the scratch pad, in one list.
  *
  * The list is the log; the right-hand side reads one entry. Filters are the few
- * questions people actually ask of a log — which API, did it fail, did it
- * drift, was it a mock — plus text search.
+ * questions people actually ask of a log (which API, did it fail, did it
+ * drift, was it a mock), plus text search.
  */
 export function HistoryView({
   entries,
@@ -137,7 +137,7 @@ export function HistoryView({
             showApi
           />
           {entries.length === 0 && (
-            <div className="group-label">Nothing sent yet — history stays on this machine</div>
+            <div className="group-label">Nothing sent yet. History stays on this machine.</div>
           )}
           {entries.length > 0 && shown.length === 0 && (
             <div className="group-label">Nothing matches these filters</div>

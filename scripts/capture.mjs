@@ -101,7 +101,7 @@ const clickByText = (selector, text) =>
 await page.screenshot({ path: `${outDir}/01-library-empty.png` });
 console.log("01-library-empty");
 
-// Sample API — first-run should be a demo, not a dead end.
+// Sample API: the first run should be a demo, not a dead end.
 await clickByText(".btn", "Try a sample API");
 await page.waitForSelector(".sidebar", { timeout: 15000 });
 await wait(900);
@@ -163,7 +163,7 @@ console.log("03c-schemas");
 await must(clickTab(".segment", "Operations"), "the Operations tab");
 await wait(400);
 
-// Back to the library — the way out that didn't exist before.
+// Back to the library.
 await clickLabel("Back to all APIs");
 await wait(600);
 await page.screenshot({ path: `${outDir}/04-library-one.png` });
@@ -204,7 +204,7 @@ await toggleTheme();
 await page.screenshot({ path: `${outDir}/08-light.png` });
 console.log("08-light");
 
-// The scratch pad — reachable from the library, and honest about having no spec.
+// The scratch pad: reachable from the library, and honest about having no spec.
 await clickLabel("Back to all APIs");
 await wait(600);
 await clickByText(".api-card.scratch", "Scratch");
@@ -218,7 +218,7 @@ await wait(600);
 await page.screenshot({ path: `${outDir}/09-scratch.png` });
 console.log("09-scratch");
 
-// History — a read-only log. Seeded directly so the shots don't depend on a
+// History, a read-only log. Seeded directly so the shots don't depend on a
 // network: a mix of APIs, mock and real, drift, a scratch call, an entry whose
 // operation has since been removed, and one written before check results were
 // stored (no findings, no API id).
@@ -779,7 +779,7 @@ await wait(400);
 await page.screenshot({ path: `${outDir}/30-min-width-settings-light.png` });
 console.log("30-min-width-settings-light");
 
-// ── Collections ───────────────────────────────────────────────────────────────
+// Collections
 // A three-step flow across two specs: create an order (Orders API, the sample),
 // get it back from staging using the new order's id, then pay for it (Payments
 // API, scripts/fixtures/payments.yaml). The fake servers below answer; the
@@ -1452,7 +1452,7 @@ console.log("48-collections-list-dark");
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
 }
 
-// ── Importing a Postman collection ───────────────────────────────────────────
+// Importing a Postman collection
 const POSTMAN = join(HERE, "../src/lib/__tests__/fixtures/postman/checkout.postman_collection.json");
 await must(clickTab(".nav-tab", "Collections"), "the Collections tab");
 await wait(300);

@@ -4,7 +4,7 @@
 //! `{appUrl}/cli-auth?state=…&redirect_uri=http://127.0.0.1:<port>/callback`,
 //! and wait for the browser to come back with `token`, `org`, `org_name`.
 //!
-//! This has to live in Rust — a webview cannot listen on a socket.
+//! This has to live in Rust, because a webview cannot listen on a socket.
 
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
@@ -72,7 +72,7 @@ fn listen(
     expected_state: Option<String>,
 ) -> Result<HashMap<String, String>, String> {
     let listener = TcpListener::bind(("127.0.0.1", port))
-        .map_err(|error| format!("could not listen on 127.0.0.1:{port} — {error}"))?;
+        .map_err(|error| format!("could not listen on 127.0.0.1:{port}: {error}"))?;
     listener
         .set_nonblocking(true)
         .map_err(|error| error.to_string())?;

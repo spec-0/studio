@@ -43,8 +43,8 @@ export function useOAuth(
   /**
    * Obtain a token, by whichever grant is configured.
    *
-   * Both grants end the same way — a token in the cache keyed by API and
-   * environment — so the caller doesn't branch on which one ran.
+   * Both grants end the same way (a token in the cache keyed by API and
+   * environment), so the caller doesn't branch on which one ran.
    */
   const acquireToken = useCallback(
     async (config: OAuthConfig) => {
@@ -63,7 +63,7 @@ export function useOAuth(
           const port = 8127;
           const redirectUri = `http://127.0.0.1:${port}/callback`;
 
-          // Reuses the loopback listener built for spec0 sign-in — a webview
+          // Reuses the loopback listener built for spec0 sign-in: a webview
           // can't hold a socket, and this is the same shape of handshake.
           const waiting = awaitOAuthCallback(port, 180);
           await openInBrowser(buildAuthorizeUrl(config, challenge, state, redirectUri));
@@ -71,7 +71,7 @@ export function useOAuth(
 
           if (params.state !== state) {
             // A mismatched state means the response didn't come from the
-            // request we made — refusing is the whole point of sending it.
+            // request we made. Refusing is the whole point of sending it.
             throw new Error("The authorization response didn't match this request. Try again.");
           }
           if (params.error) {

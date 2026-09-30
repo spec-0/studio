@@ -55,8 +55,8 @@ describe("describeGit", () => {
     expect(text).toContain("add the cancel endpoint");
   });
 
-  // Without this the commit id would be describing bytes that have since
-  // changed — a confidently wrong provenance claim.
+  // Otherwise the commit id would describe bytes that have since changed,
+  // which is a confidently wrong provenance claim.
   it("says the commit does not describe the file when the file is modified", () => {
     const text = describeGit({ ...INFO, dirty: true });
     expect(text).toContain("uncommitted changes");

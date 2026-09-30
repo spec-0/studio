@@ -3,24 +3,21 @@ import { deref, type Json } from "./spec";
 
 /**
  * Validate a live response against the schema the spec declares for its status
- * code — drift detection at the single-request level.
+ * code: drift detection at the single-request level.
  *
  * Two passes, because they answer different questions:
  *  - The schema validator catches what the schema forbids (missing required,
  *    wrong type).
- *  - A manual walk catches what the schema never mentioned — undeclared fields.
+ *  - A manual walk catches what the schema never mentioned: undeclared fields.
  *    Specs almost never set `additionalProperties: false`, so a validator stays
  *    silent on exactly the drift a developer most wants to see.
  *
- * **The validator must not compile schemas to JavaScript.** Ajv was the obvious
- * choice and shipped here first, but it builds validators with `new Function`,
- * which the webview's content security policy forbids — so every response came
- * back `Couldn't validate` with a wall of CSP text where the schema check should
- * have been. Relaxing the policy to `unsafe-eval` would have fixed it in one
- * line and been the wrong trade: the schemas fed to this function come from
- * whatever document was opened, so that combination hands a code generator
- * attacker-controllable input. This validator interprets the schema instead of
- * compiling it, so there is nothing to eval. `test/validate.test.ts` asserts the
+ * **The validator must not compile schemas to JavaScript.** Validators such as
+ * Ajv build code with `new Function`, which the webview's content security
+ * policy forbids. Allowing `unsafe-eval` would be the wrong trade: the schemas
+ * come from whatever document was opened, so it would hand a code generator
+ * attacker-controllable input. This validator interprets the schema instead,
+ * so there is nothing to eval. `src/lib/__tests__/validate.test.ts` asserts the
  * dependency stays that way.
  */
 
@@ -87,7 +84,7 @@ function findExtraFields(
   }
   if (typeof data !== "object") return;
 
-  // Compositions contribute properties from every branch — collect them all
+  // Compositions contribute properties from every branch. Collect them all
   // before deciding a field is undeclared, or `allOf` produces false positives.
   const declared = new Map<string, Json>();
   const collect = (node: Json | undefined, d = 0) => {
@@ -101,7 +98,7 @@ function findExtraFields(
   collect(s);
 
   const open = s.additionalProperties !== undefined && s.additionalProperties !== false;
-  if (declared.size === 0 && !s.properties) return; // free-form object — nothing to compare against
+  if (declared.size === 0 && !s.properties) return; // free-form object: nothing to compare against
 
   for (const [key, value] of Object.entries(data as Json)) {
     const child = declared.get(key);
@@ -163,7 +160,7 @@ function describe(error: OutputUnit): Finding {
 
   if (error.keyword === "required") {
     // The property name is inside the message rather than a structured field,
-    // so it is read back out — and if the wording ever changes, the generic
+    // so it is read back out. If the wording ever changes, the generic
     // message below is still true rather than wrong.
     const missing = /"([^"]+)"/.exec(error.error)?.[1];
     return missing
@@ -189,7 +186,7 @@ function describe(error: OutputUnit): Finding {
   return { kind: "other", path, message: `${error.keyword}: ${error.error}` };
 }
 
-/** First line of an error, capped — never a whole stack or policy dump. */
+/** First line of an error, capped: never a whole stack or policy dump. */
 function brief(error: unknown, limit = 160): string {
   const raw = (error instanceof Error ? error.message : String(error)).trim();
   const firstLine = raw.split("\n")[0];
@@ -220,13 +217,13 @@ export function validateResponse(
       components: sanitize({ schemas: doc.components?.schemas ?? {} }),
     };
 
-    // `shortCircuit: false` — every failure is wanted, not just the first, or a
+    // `shortCircuit: false`: every failure is wanted, not just the first, or a
     // response with three problems reports one and looks nearly correct.
     const result = new Validator(wrapped, "2020-12", false).validate(body);
 
     const specific = result.errors.filter((e) => !WRAPPER_KEYWORDS.has(e.keyword));
     // Composition keywords are wrappers when a branch failed underneath them and
-    // the whole story when none did — so they are only dropped if something more
+    // the whole story when none did, so they are only dropped if something more
     // specific survived. An invalid response must never report zero findings.
     const reported = specific.length ? specific : result.errors;
 
@@ -244,10 +241,8 @@ export function validateResponse(
 
     return { status: unique.length ? "mismatch" : "ok", findings: unique.slice(0, 40) };
   } catch (error) {
-    // Kept short on purpose. This used to interpolate the raw error, and when
-    // the CSP blocked Ajv's `new Function` the browser's several-hundred-character
-    // policy dump landed in the response pane where the schema check belongs.
-    // Whatever goes wrong next, the pane stays readable.
+    // Kept short on purpose: a raw error (a CSP violation, say) can be hundreds
+    // of characters and would bury the response pane.
     return { status: "error", findings: [], note: `Couldn't validate: ${brief(error)}` };
   }
 }

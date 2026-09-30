@@ -15,7 +15,7 @@ interface Props {
   error: string | null;
   onRefresh: () => void;
   onSignIn: () => void;
-  /** Start "Create a mock server" — it asks which API. */
+  /** Start "Create a mock server"; it asks which API. */
   onCreate: () => void;
   keys: Record<string, MockKeyState>;
   onLoadKey: (mockServerId: string) => Promise<string | null>;
@@ -156,7 +156,7 @@ export function MocksView({
                     {mock.name && <div className="field-meta">{mock.name}</div>}
                   </td>
                   <td className="name mock-url">{mock.url}</td>
-                  <td className="meta">{mock.specVersion ?? "—"}</td>
+                  <td className="meta">{mock.specVersion ?? "–"}</td>
                   <td className="mock-key">
                     {mock.mockServerId ? (
                       <KeyCell
@@ -184,7 +184,7 @@ export function MocksView({
                         }}
                       />
                     ) : (
-                      <span className="meta">—</span>
+                      <span className="meta">–</span>
                     )}
                   </td>
                   <td className="mock-actions">

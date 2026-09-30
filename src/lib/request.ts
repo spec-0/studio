@@ -8,7 +8,7 @@ import { logRequest } from "./appConsole";
  * Request execution.
  *
  * Inside Tauri this goes through our own reqwest command (`src-tauri/src/http.rs`),
- * which sends no `Origin` — the hard advantage over every browser-based client.
+ * which sends no `Origin`: the hard advantage over every browser-based client.
  * Running `npm run dev` in a plain browser falls back to `window.fetch` so the UI
  * can be iterated on without a native rebuild; requests to third-party APIs will
  * hit CORS there, which is expected.
@@ -44,7 +44,7 @@ interface RustResponse {
 export const BINARY = Symbol("binary");
 
 /**
- * Transport options for one request — certificate trust, proxy, timeout,
+ * Transport options for one request: certificate trust, proxy, timeout,
  * redirects, and which cookie jar to use.
  *
  * Threaded through `appFetch` rather than set globally because trust is
@@ -56,24 +56,24 @@ export interface Transport {
   followRedirects?: boolean;
   tls?: { insecure?: boolean; caBundlePem?: string };
   proxy?: { url?: string; noProxy?: string; disabled?: boolean };
-  /** Cookie jar key — the library entry id. Omitted means no cookies at all. */
+  /** Cookie jar key: the library entry id. Omitted means no cookies at all. */
   jar?: string;
 }
 
 /** The redirect chain the last response followed, when there was one. */
 export const REDIRECTS = Symbol("redirects");
 
-/** Server timing, in ms, measured in Rust — attached to responses it produced. */
+/** Server timing, in ms, measured in Rust, attached to responses it produced. */
 export const SERVER_MS = Symbol("serverMs");
 
 /**
- * The one fetch everything goes through — platform calls and user API calls alike.
+ * The one fetch everything goes through, for platform calls and user API calls alike.
  *
  * Inside Tauri this is `reqwest` via our own command, **not** `tauri-plugin-http`.
  * The plugin attaches the webview's `Origin` to every request, which makes any
  * CORS-configured server reject a desktop client (spec0's own API answered
  * `403 Invalid CORS request`). We send exactly the headers asked for and no
- * origin, the same as the CLI does — that is what "no CORS" actually requires.
+ * origin, the same as the CLI does. That is what "no CORS" actually requires.
  *
  * The result is wrapped in a real `Response` so callers use the standard API.
  */
@@ -142,9 +142,8 @@ export const appFetch = (async (
 /**
  * `fetch`, plus the transport options only a desktop client can honour.
  *
- * Typed explicitly rather than `as typeof fetch` so `transport` survives — the
- * cast was erasing it, which is how a per-host trust decision would have
- * silently stopped reaching Rust.
+ * Typed explicitly rather than `as typeof fetch`, which would erase `transport`
+ * and silently stop per-host trust settings from reaching Rust.
  */
 type AppFetch = (
   input: RequestInfo | URL,
@@ -228,7 +227,7 @@ export interface ResponseResult {
   /**
    * Present when the payload isn't text.
    *
-   * `bodyText` is empty in that case rather than holding mangled bytes — an
+   * `bodyText` is empty in that case rather than holding mangled bytes; an
    * image rendered as replacement characters is worse than saying "this is an
    * image".
    */
@@ -260,7 +259,7 @@ export function buildPlan(
 
   const base = fill(server).replace(/\/$/, "");
   if (!/^https?:\/\//i.test(base)) {
-    throw new Error(`Base URL must start with http:// or https:// — got "${base || "(empty)"}"`);
+    throw new Error(`Base URL must start with http:// or https://, got "${base || "(empty)"}"`);
   }
   const url = new URL(base + path);
   for (const [key, value] of Object.entries(queryParams)) {
@@ -273,14 +272,14 @@ export function buildPlan(
   }
   const planBody = buildBody(op, body, fill);
   // Multipart's content type carries a generated boundary, so the HTTP client
-  // writes it — a value set here would be wrong. Form encoding likewise.
+  // writes it; a value set here would be wrong. Form encoding likewise.
   if (planBody?.kind === "text") {
     headers["Content-Type"] = op.requestBody?.contentType ?? "application/json";
   }
   headers["Accept"] = "application/json, */*";
 
   if (auth?.value) {
-    // Auth values interpolate too — `{{apiKey}}` from the active environment is
+    // Auth values interpolate too: `{{apiKey}}` from the active environment is
     // the whole point of marking a variable secret.
     const secret = fill(auth.value);
     if (auth.type === "oauth2") {
@@ -309,7 +308,7 @@ export function buildPlan(
       // mock we have nothing to send. Falling back to the platform session token
       // costs nothing if the backend doesn't accept it (401 either way) and works
       // the day it does. The caller is responsible for only setting `bearer` when
-      // the mock lives on the platform's own origin — see App.tsx.
+      // the mock lives on the platform's own origin (see App.tsx).
       headers["Authorization"] = `Bearer ${mock.bearer}`;
     }
   }
@@ -349,7 +348,7 @@ async function sendOnce(plan: RequestPlan, transport: Transport): Promise<Respon
     });
 
     const bodyText = await response.text();
-    // Prefer the timing Rust measured — it's the network round-trip without the
+    // Prefer the timing Rust measured: it's the network round-trip without the
     // IPC and JSON-parsing overhead sitting on either side of it.
     const measured = (response as unknown as Record<symbol, number>)[SERVER_MS];
     const ms = typeof measured === "number" ? measured : Math.round(performance.now() - started);
@@ -402,7 +401,7 @@ export type BodyInput =
 
 /**
  * Turn the editor's contents into a body, interpolating variables everywhere a
- * user could reasonably put one — field values and text parts included.
+ * user could reasonably put one, field values and text parts included.
  */
 function buildBody(
   op: OperationSpec,
@@ -436,7 +435,7 @@ function buildBody(
 /**
  * A readable rendering of a body, for history.
  *
- * File contents are never recorded — a 40MB upload must not end up in
+ * File contents are never recorded: a 40MB upload must not end up in
  * `history.json`, and a summary that says which file it was is more use when the
  * request is copied again than bytes we'd have to re-read anyway.
  */
@@ -482,7 +481,7 @@ export function toCurl(plan: RequestPlan): string {
  *
  * A short table rather than a mime database: this only has to produce a
  * plausible default that the user can change, and a wrong guess costs a
- * keystroke. Empty when unknown — better no extension than a misleading one.
+ * keystroke. Empty when unknown; better no extension than a misleading one.
  */
 export function extensionFor(contentType: string): string {
   const base = contentType.split(";")[0].trim().toLowerCase();

@@ -91,10 +91,8 @@ interface Props {
 /**
  * The home surface: the APIs you work with.
  *
- * This exists because opening a spec used to *be* the application — one document,
- * no way back, no way to hold two at once. An engineer works across several APIs
- * in a week, so the app's root has to be the set of them, not whichever one was
- * opened last.
+ * An engineer works across several APIs in a week, so the app's root is the set
+ * of them, not whichever one was opened last.
  */
 export function Library({
   entries,
@@ -139,7 +137,7 @@ export function Library({
         <h1>Your OpenAPI spec, explorable.</h1>
         <p>
           Browse operations and schemas as a real structure. Fire requests against your API or a
-          mock. No account, no workspace — just the spec.
+          mock. No account, no workspace, just the spec.
         </p>
         <div className="drop">Drop an OpenAPI file here, or {shortcut("O")} to add one</div>
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
@@ -214,7 +212,7 @@ export function Library({
       {error && <LoadError error={error} style={{ marginTop: 0 }} />}
 
       <div className="library-grid">
-        {/* Pinned, unnamed, and outside `entries` — so "there is only ever one, and
+        {/* Pinned, unnamed, and outside `entries`, so "there is only ever one, and
             you can't delete it" is structural rather than a rule someone has to
             remember. */}
         {!filter.trim() && (
@@ -225,7 +223,7 @@ export function Library({
               </span>
             </div>
             <p className="meta">
-              One ad-hoc request — method, URL, headers, body. No spec, so nothing is generated or
+              One ad-hoc request: method, URL, headers, body. No spec, so nothing is generated or
               checked.
             </p>
             <div className="api-card-foot">

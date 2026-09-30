@@ -90,7 +90,7 @@ describe("diffSpecs", () => {
   });
 
   it("says nothing about a base URL that was never declared", () => {
-    // A URL the user typed was always custom — a sync doesn't change that.
+    // A URL the user typed was always custom; a sync doesn't change that.
     const before = spec(["https://a"], { "/a": GET });
     const after = spec(["https://b"], { "/a": GET });
     const impact = diffSpecs(before, after, {
@@ -155,7 +155,7 @@ describe("mockIsBehind", () => {
 
   it("prefers the reported version over the timestamp heuristic", () => {
     // The heuristic says "something changed since the mock was attached", which is
-    // true after any sync — including one that changed nothing relevant. A reported
+    // true after any sync, including one that changed nothing relevant. A reported
     // version is a fact and must win.
     expect(
       mockIsBehind({
@@ -249,16 +249,16 @@ describe("describeMockRefresh", () => {
         customVariantsDropped: ["a", "b", "c", "d"],
       }),
     ).toEqual([
-      "Rebuilt against 1.2.0 — same URL and key",
+      "Rebuilt against 1.2.0. Same URL and key",
       "2 custom response variant(s) carried over",
-      "4 custom variant(s) dropped — their operation is gone: a, b, c",
+      "4 custom variant(s) dropped (their operation is gone): a, b, c",
     ]);
   });
 
   it("says when nothing needed rebuilding", () => {
     expect(describeMockRefresh({ refreshed: false })).toEqual(["Already serving the current spec"]);
     expect(describeMockRefresh({ refreshed: true })).toEqual([
-      "Rebuilt against the current spec — same URL and key",
+      "Rebuilt against the current spec. Same URL and key",
     ]);
   });
 });

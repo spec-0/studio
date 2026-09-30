@@ -6,28 +6,28 @@ import { inTauri } from "./request";
  * Persistence.
  *
  * Inside Tauri these are narrow Rust commands writing plain JSON into the app's
- * config directory — inspectable and portable: plain files, not a database.
- * In the browser preview they fall back to localStorage so
- * the UI can be worked on without a native rebuild.
+ * config directory: plain files, not a database, so they stay inspectable and
+ * portable. In the browser preview they fall back to localStorage so the UI can
+ * be worked on without a native rebuild.
  */
 
 export const STORE = {
   settings: "settings.json",
   environments: "environments.json",
   /**
-   * Secret values that couldn't go to the OS credential store — the fallback,
+   * Secret values that couldn't go to the OS credential store (the fallback),
    * and the file older versions kept every secret in. See `secrets.ts`.
    */
   secrets: "secrets.json",
   history: "history.json",
   session: "session.json",
   library: "library.json",
-  /** The scratch pad's contents — a text buffer, not a saved request. */
+  /** The scratch pad's contents: a text buffer, not a saved request. */
   scratch: "scratch.json",
   /** How we reach hosts: certificate trust, proxy, timeout, redirects. */
   connection: "connection.json",
   /**
-   * Acquired OAuth tokens — cache, not configuration.
+   * Acquired OAuth tokens. A cache, not configuration.
    *
    * Kept out of `library.json` deliberately: an access token is a credential, so
    * it belongs with the other uncommitted machine-managed state, never in the
@@ -121,7 +121,7 @@ export async function pickCertificate(): Promise<{ name: string; text: string } 
   return { name: fileName(picked), text };
 }
 
-/** Pick any file, for a multipart part. Only its path travels — Rust reads it. */
+/** Pick any file, for a multipart part. Only its path travels; Rust reads it. */
 export async function pickAnyFile(): Promise<{ path: string; name: string } | null> {
   if (!inTauri) return null;
   const { open } = await import("@tauri-apps/plugin-dialog");
@@ -144,7 +144,7 @@ export async function saveResponseTo(from: string, to: string): Promise<void> {
 }
 
 /**
- * Open `url` in the user's default browser. Not for loading a spec — that is
+ * Open `url` in the user's default browser. Not for loading a spec; that is
  * `addFromUrl` in `useLibrary`.
  */
 export async function openInBrowser(url: string): Promise<void> {

@@ -29,7 +29,7 @@ use std::process::Command;
 const MAX_DEPTH: usize = 64;
 
 /// Real git binaries, in preference order. On macOS `/usr/bin/git` is
-/// deliberately absent — see the module note about the CLT prompt.
+/// deliberately absent; see the module note about the CLT prompt.
 #[cfg(target_os = "macos")]
 const GIT_CANDIDATES: &[&str] = &[
     "/opt/homebrew/bin/git",
@@ -55,7 +55,7 @@ pub struct GitInfo {
     pub sha: String,
     /// First line of the commit message.
     pub subject: String,
-    /// Commit date, ISO-8601 — formatted for display on the frontend.
+    /// Commit date, ISO-8601. The frontend formats it for display.
     pub committed_at: String,
     /// True when *this file* differs from HEAD, so the commit above does not
     /// describe what was loaded.
@@ -69,7 +69,7 @@ pub struct GitInfo {
 /// Describe the git state of the working tree containing `path`.
 ///
 /// `Ok(None)` is the ordinary answer for "not in a repo" or "no git available".
-/// Both are normal conditions, not failures — the caller shows nothing.
+/// Both are normal conditions, not failures: the caller shows nothing.
 #[tauri::command]
 pub fn git_info(path: String) -> Result<Option<GitInfo>, String> {
     Ok(describe(Path::new(&path)))
@@ -152,7 +152,7 @@ fn git_on_path() -> Option<PathBuf> {
         .find(|candidate| candidate.is_file())
 }
 
-/// Elsewhere the fixed list is the whole answer — on macOS, searching `PATH`
+/// Elsewhere the fixed list is the whole answer. On macOS, searching `PATH`
 /// would find the `/usr/bin/git` shim.
 #[cfg(not(windows))]
 fn git_on_path() -> Option<PathBuf> {
@@ -171,7 +171,7 @@ fn run(git: &Path, root: &Path, args: &[&str]) -> Option<String> {
         .arg("-C")
         .arg(root)
         // Keep a slow or interactive credential helper from ever blocking the
-        // read — none of these commands should need one.
+        // read. None of these commands should need one.
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_OPTIONAL_LOCKS", "0")
         .args(args)

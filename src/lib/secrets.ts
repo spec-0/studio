@@ -11,8 +11,8 @@ import type { Environment } from "./env";
  * environment id and variable name; `environments.json` only records that a
  * variable is secret.
  *
- * **A local file when there isn't.** `secrets.json` is what older versions used
- * for every secret. It stays as the fallback, never as a second home:
+ * **A local file when there isn't.** `secrets.json` held every secret in older
+ * versions. It stays as the fallback, never as a second home:
  *
  *  - If the credential store can't be reached at all (Linux with no keyring
  *    running, a locked keyring, a headless session), the whole session uses the
@@ -57,7 +57,7 @@ export interface Vault {
   list(): Promise<SecretKey[]>;
 }
 
-/** Values keyed `<envId>:<varName>` — the format older versions wrote. */
+/** Values keyed `<envId>:<varName>`, the format older versions wrote. */
 export type SecretMap = Record<string, string>;
 
 export interface SecretFile {
@@ -98,7 +98,7 @@ export function secretKeys(environments: Environment[]): Set<string> {
   return keys;
 }
 
-/** Secret variables that have a value — what should be stored. */
+/** Secret variables that have a value: what should be stored. */
 export function secretValues(environments: Environment[]): Map<string, string> {
   const values = new Map<string, string>();
   for (const env of environments) {
@@ -179,8 +179,7 @@ export function createSecrets(vault: Vault | null, file: SecretFile): Secrets {
     for (const [key, value] of Object.entries(original)) {
       const parsed = parseSecretKey(key);
       if (!parsed || !wanted.has(key) || !value) {
-        // No secret variable refers to this any more — older versions rewrote
-        // the whole file on every save, so nothing could ever read it again.
+        // No secret variable refers to this, so nothing can ever read it again.
         delete remaining[key];
         await persist(remaining);
         continue;
@@ -207,7 +206,7 @@ export function createSecrets(vault: Vault | null, file: SecretFile): Secrets {
     const values = new Map<string, string>();
     for (const key of wanted) {
       if (key in remaining) {
-        // Still in the file because the store refused it — the file is current.
+        // Still in the file because the store refused it; the file is current.
         values.set(key, remaining[key]);
         continue;
       }
@@ -270,7 +269,7 @@ export function createSecrets(vault: Vault | null, file: SecretFile): Secrets {
 
     // Remove what no secret variable holds any more: a renamed or deleted
     // variable, a deleted environment, an unticked "secret" box, a cleared
-    // value — and anything a value in the file now supersedes.
+    // value, and anything a value in the file now supersedes.
     try {
       for (const stored of await vault.list()) {
         const key = secretKey(stored.envId, stored.name);
@@ -306,7 +305,7 @@ export function createSecrets(vault: Vault | null, file: SecretFile): Secrets {
   };
 }
 
-// ── the real boundaries ──────────────────────────────────────────────────────
+// The real boundaries
 
 export const tauriVault: Vault = {
   backend: () => invoke<SecretBackend>("secret_backend"),

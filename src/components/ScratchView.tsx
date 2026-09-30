@@ -11,7 +11,7 @@ interface Props {
   vars: Record<string, string>;
   sending: boolean;
   onSend: () => void;
-  /** Scratch calls only — the spec-driven log lives with its API. */
+  /** Scratch calls only. The spec-driven log lives with its API. */
   history: HistoryEntry[];
   /** Open a recorded scratch call, read-only. */
   onOpenRecord: (entry: HistoryEntry) => void;
@@ -26,7 +26,7 @@ interface Props {
 /**
  * The scratch pad's screen: method, URL, headers, body, send.
  *
- * Deliberately one screen with no persistence controls — no Save, no name, no
+ * Deliberately one screen with no persistence controls: no Save, no name, no
  * second tab. The absence is the design: every affordance for keeping a
  * request here is the first step toward a collection manager, and the answer to
  * "I want to keep this" is a spec, not a folder.
@@ -70,7 +70,7 @@ export function ScratchView({
           />
           {history.length === 0 && (
             <div className="group-label">
-              Nothing sent from here yet — history stays on this machine
+              Nothing sent from here yet. History stays on this machine
             </div>
           )}
         </div>
@@ -134,7 +134,7 @@ export function ScratchView({
                 <span className="op-summary-text">Scratch request</span>
               </div>
               <div className="meta">
-                No spec, so no generated body and no response check — one call, then gone.
+                No spec, so no generated body and no response check: one call, then gone.
               </div>
             </div>
 
@@ -156,7 +156,7 @@ export function ScratchView({
                     <div style={{ flex: 1, display: "flex", gap: 6 }}>
                       <input
                         value={row.value}
-                        placeholder="Value — {{vars}} work here"
+                        placeholder="Value ({{vars}} work here)"
                         onChange={(event) => setHeader(index, { value: event.target.value })}
                       />
                       <button
@@ -209,7 +209,7 @@ export function ScratchView({
               <div className="section">
                 <h3>One pad, on purpose</h3>
                 <div className="field-meta">
-                  There&apos;s no save, no name and no second request here — that would be a
+                  There&apos;s no save, no name and no second request here. That would be a
                   collection manager, and Studio is built around specs. Import the API and you get
                   generated bodies, response checks and the schema graph back.
                 </div>

@@ -47,7 +47,7 @@ describe("buildScratchPlan", () => {
     expect(buildScratchPlan(pad({ method: "POST", body: "plain words" })).headers["Content-Type"]).toBe(
       "text/plain",
     );
-    // A malformed JSON-looking body is not JSON — saying it is would make the
+    // A malformed JSON-looking body is not JSON. Saying it is would make the
     // server's rejection harder to read, not easier.
     expect(buildScratchPlan(pad({ method: "POST", body: "{oops" })).headers["Content-Type"]).toBe(
       "text/plain",

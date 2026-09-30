@@ -47,7 +47,7 @@ export function mockWarnings(headers: Record<string, string>): string[] {
   return value ? value.split(/;\s+/).map((part) => part.trim()).filter(Boolean) : [];
 }
 
-// ── building a step's request ─────────────────────────────────────────────────
+// Building a step's request
 
 export interface PlanContext {
   /** The operation the step points at; null for an unlinked request. */
@@ -154,7 +154,7 @@ export function planStep(
   return { plan, ...withLinks };
 }
 
-// ── pass or fail ──────────────────────────────────────────────────────────────
+// Pass or fail
 
 /**
  * Whether a step passed: a response came back with the status the step
@@ -190,9 +190,9 @@ export function verdictFor(
   return { verdict: "pass" };
 }
 
-// ── running in order ──────────────────────────────────────────────────────────
+// Running in order
 
-// ── what happened, as events ─────────────────────────────────────────────────
+// What happened, as events
 
 /** Where a step's request went. `url` is an unlinked request's own address. */
 export type TargetKind = "server" | "mock" | "local-mock" | "custom" | "url";
@@ -450,7 +450,7 @@ export function describeRun(summary: CollectionRunSummary): string {
   return `${parts.join(" · ")} · ${summary.ms} ms`;
 }
 
-// ── in history ────────────────────────────────────────────────────────────────
+// In history
 
 export type HistoryRow =
   | { kind: "entry"; entry: HistoryEntry }

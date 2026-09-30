@@ -66,7 +66,7 @@ get_operation or get_mock_server to get a URL, then call it yourself, for exampl
 search every API in the user's organisation, use the remote Spec0 MCP server; \
 get_connection_status gives its address.";
 
-// ── HTTP ─────────────────────────────────────────────────────────────────────
+// HTTP
 
 #[derive(Debug, Clone, Default)]
 pub struct HttpRequest {
@@ -229,7 +229,7 @@ fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack.windows(needle.len()).position(|window| window == needle)
 }
 
-// ── the checks ───────────────────────────────────────────────────────────────
+// The checks
 
 /// Only our own loopback address. A page on another site that rebinds its DNS
 /// to 127.0.0.1 still sends its own host name here, and is refused.
@@ -269,7 +269,7 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
-// ── JSON-RPC ─────────────────────────────────────────────────────────────────
+// JSON-RPC
 
 /// Runs the tools that aren't answered in Rust. The real one asks the web view.
 pub trait ToolHost: Send + Sync {
@@ -450,7 +450,7 @@ fn tool_error(message: &str) -> Value {
     tool_text(message, true)
 }
 
-// ── list_environments ────────────────────────────────────────────────────────
+// list_environments
 
 const ENVIRONMENTS_FILE: &str = "environments.json";
 
@@ -515,7 +515,7 @@ fn list_environments(config_dir: &Path) -> Value {
     tool_text(&serde_json::to_string_pretty(&summary).unwrap_or_default(), false)
 }
 
-// ── the server ───────────────────────────────────────────────────────────────
+// The server
 
 struct Running {
     port: u16,
@@ -756,7 +756,7 @@ mod tests {
         (response.status, body)
     }
 
-    // ── auth and origin ──────────────────────────────────────────────────────
+    // Auth and origin
 
     #[test]
     fn requests_without_the_right_token_are_rejected() {
@@ -843,7 +843,7 @@ mod tests {
         assert_eq!(handle(&request, &config(&dir), &FakeHost).status, 415);
     }
 
-    // ── JSON-RPC ─────────────────────────────────────────────────────────────
+    // JSON-RPC
 
     #[test]
     fn initialize_negotiates_a_version() {
@@ -966,7 +966,7 @@ mod tests {
         assert_eq!(rpc(&request, &dir).0, 200);
     }
 
-    // ── environments ─────────────────────────────────────────────────────────
+    // Environments
 
     #[test]
     fn list_environments_never_returns_secret_values() {
@@ -1016,7 +1016,7 @@ mod tests {
         assert_eq!(summary["activeEnvironment"], Value::Null);
     }
 
-    // ── HTTP parsing and the socket ─────────────────────────────────────────
+    // HTTP parsing and the socket
 
     #[test]
     fn reads_a_request_with_a_body() {

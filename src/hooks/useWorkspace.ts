@@ -50,8 +50,8 @@ export function useWorkspace(
   const [prefill, setPrefill] = useState<PrefillValues | null>(null);
   /**
    * The recorded request open in the work area, read-only, in place of the
-   * editor. A record is never loaded into the editors — that made a response
-   * from three weeks ago look exactly like one from three seconds ago.
+   * editor. A record is never loaded into the editors, where a response from
+   * three weeks ago would look exactly like one from three seconds ago.
    */
   const [record, setRecord] = useState<HistoryEntry | null>(null);
   /**
@@ -63,7 +63,7 @@ export function useWorkspace(
 
   const [server, setServer] = useState("");
 
-  /** Which document a recorded check ran against — computed once per spec, not per send. */
+  /** Which document a recorded check ran against. Computed once per spec, not per send. */
   const specFingerprint = useMemo(() => (spec ? fingerprint(spec.sourceText) : undefined), [spec]);
   const [auth, setAuth] = useState<AuthState | null>(null);
 
@@ -93,7 +93,7 @@ export function useWorkspace(
       setCurrent(entry);
       setRoute("api");
 
-      // Keep the bytes, not just the parse — the Raw tab shows the document
+      // Keep the bytes, not just the parse: the Raw tab shows the document
       // that was imported, and the Reference tab renders the same string, so
       // the two can never disagree about what the spec says.
       setDocText(text);

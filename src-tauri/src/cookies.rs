@@ -1,15 +1,13 @@
 //! A cookie jar for reqwest.
 //!
-//! `cookie_store` implements the hard part — domain and path matching, expiry,
-//! `Secure`/`HttpOnly`, public-suffix rules — and reqwest defines a two-method
+//! `cookie_store` implements the hard part (domain and path matching, expiry,
+//! `Secure`/`HttpOnly`, public-suffix rules) and reqwest defines a two-method
 //! trait for plugging a jar in. This module is the ~40 lines that join them.
 //!
-//! There is a crate that does exactly this (`reqwest_cookie_store`), and it was
-//! tried first. It pins a reqwest major version, so with reqwest 0.12 here and
-//! 0.13 there Cargo linked **two copies of reqwest** and the trait impl was for
-//! the wrong one. Owning these lines removes a version lockstep on a dependency
-//! whose whole content is below, and keeps the cookie semantics — the part
-//! genuinely worth not writing — in `cookie_store`.
+//! `reqwest_cookie_store` does the same, but it pins a reqwest version, and a
+//! mismatch links two copies of reqwest with the trait implemented for the
+//! wrong one. Owning these lines avoids that lockstep while the cookie
+//! semantics stay in `cookie_store`.
 
 use cookie_store::{CookieStore, RawCookie};
 use reqwest::header::HeaderValue;

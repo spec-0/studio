@@ -13,7 +13,7 @@ interface Props {
  * Drag handle for a side panel.
  *
  * Listeners are attached to the window rather than the handle so a fast drag
- * doesn't lose the pointer, and `user-select` is suppressed for the duration —
+ * doesn't lose the pointer, and `user-select` is suppressed for the duration;
  * without it a drag across the panel selects its text instead of resizing.
  */
 export function Resizer({ width, onChange, min = 240, max = 720, side = "right" }: Props) {
@@ -59,7 +59,7 @@ export function Resizer({ width, onChange, min = 240, max = 720, side = "right" 
         document.body.style.cursor = "col-resize";
       }}
       onKeyDown={(event) => {
-        // Keyboard-resizable too — this app is otherwise fully navigable without a mouse.
+        // Keyboard-resizable too: this app is otherwise fully navigable without a mouse.
         if (event.key === "ArrowLeft") onChange(Math.min(max, width + 24));
         if (event.key === "ArrowRight") onChange(Math.max(min, width - 24));
       }}

@@ -9,7 +9,7 @@ import {
 /**
  * Client environments: local sets of values for a testing scenario.
  *
- * They supply values, never destinations — see `lib/targets.ts` for where a
+ * They supply values, never destinations. See `lib/targets.ts` for where a
  * request goes.
  */
 export function useEnvironments() {
@@ -24,7 +24,7 @@ export function useEnvironments() {
     void saveEnvironments(next);
   }, []);
 
-  /** Keep an ad-hoc base URL as `baseUrl` in the active environment — see `withBaseUrl`. */
+  /** Keep an ad-hoc base URL as `baseUrl` in the active environment. See `withBaseUrl`. */
   const saveTarget = useCallback((url: string) => {
     setEnvFile((prev) => {
       const next = withBaseUrl(prev, url);

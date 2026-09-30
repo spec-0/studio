@@ -78,7 +78,7 @@ function keep(kept: Record<string, KeptResponse>, owner: string, pane: ResponseP
   const next = { ...kept };
   delete next[owner];
   // Only a finished answer is worth bringing back. A send still in flight goes
-  // to History only, as before.
+  // to History only.
   if (!pane.sending && (pane.result || pane.error)) {
     next[owner] = {
       result: pane.result,

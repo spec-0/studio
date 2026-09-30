@@ -98,7 +98,7 @@ export function ApiBar(props: Props) {
       <button
         className="api-switch"
         onClick={props.onSwitchApi}
-        title={`${name} — switch API (${shortcut("P")})`}
+        title={`${name}: switch API (${shortcut("P")})`}
         aria-label={`${name}. Switch API`}
       >
         <span className="spec-name">{props.title}</span>

@@ -26,7 +26,7 @@ describe("refreshMock", () => {
     const message = (error as Spec0Error).message;
     expect(message).toMatch(/no longer exists/);
     expect(message).toMatch(/Re-pull the API/);
-    // The old wording blamed the platform's version; a 404 no longer means that.
+    // A 404 means the mock is gone, not that the platform's version is too old.
     expect(message).not.toMatch(/release|doesn't support/i);
   });
 

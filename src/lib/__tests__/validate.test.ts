@@ -1,16 +1,10 @@
 /**
  * Response validation.
  *
- * These exist because the feature shipped broken and nothing noticed. The
- * webview's content security policy forbids `new Function`, Ajv compiles
- * schemas with exactly that, and so every response in the released build came
- * back `Couldn't validate` followed by several hundred characters of CSP text.
- * The claim "responses are checked against the contract" was false for two
- * weeks.
- *
- * A unit test would not have caught it on its own — Node has no CSP, so Ajv
- * compiles happily here. The guard at the bottom is the part that would have,
- * and it is the reason this file is worth more than its coverage number.
+ * The webview's content security policy forbids `new Function`, and validators
+ * such as Ajv compile schemas with it, so under the real policy every response
+ * would come back `Couldn't validate`. Node has no CSP, so a unit test alone
+ * can't see that. The dependency guard at the bottom of this file can.
  */
 
 import { readFileSync } from "node:fs";
@@ -101,7 +95,7 @@ describe("what the schema forbids", () => {
     expect(types[0].message).toContain("string");
   });
 
-  // The validator reports the whole chain — a bad field arrives as `type`, and
+  // The validator reports the whole chain: a bad field arrives as `type`, and
   // again as `properties`, and again as `$ref`. Reporting all three lists one
   // problem three times and buries the line that says what is wrong.
   it("reports one finding per problem, not one per schema layer", () => {
@@ -204,15 +198,14 @@ describe("a recursive schema", () => {
   });
 });
 
-describe("the guard that would have caught the shipped bug", () => {
+describe("the dependency guard for the CSP", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const pkg = JSON.parse(readFileSync(resolve(here, "../../../package.json"), "utf8"));
   const deps: Record<string, string> = { ...pkg.dependencies, ...pkg.devDependencies };
 
   // Ajv compiles schemas with `new Function`. Under the webview's CSP that
-  // throws, and validation fails for every response — while every test in this
-  // file still passes, because Node has no CSP. Depending on it again would
-  // reintroduce a bug the test suite cannot otherwise see.
+  // throws, and validation fails for every response, while every test in this
+  // file still passes because Node has no CSP.
   it("depends on no validator that compiles schemas to JavaScript", () => {
     for (const banned of ["ajv", "ajv-formats", "ajv-draft-04", "ajv-errors"]) {
       expect(deps, `${banned} needs eval; the webview's CSP forbids it`).not.toHaveProperty(banned);

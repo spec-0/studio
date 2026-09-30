@@ -1,6 +1,6 @@
 /**
  * The spec0 mark and wordmark, taken verbatim from the platform's
- * `spec0-logo.svg` / `icon.svg` — same paths, same violet (#5B4CF5).
+ * `spec0-logo.svg` / `icon.svg`: same paths, same violet (#5B4CF5).
  *
  * The one change: the `spec` letterforms are filled with `currentColor` rather
  * than a hardcoded white/black, so a single asset works in both themes. The `0`

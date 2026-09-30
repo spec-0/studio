@@ -18,7 +18,7 @@ interface Props {
 export function GraphView({ spec, focus, onFocus, panelWidth, onPanelWidth, onSelectOperation }: Props) {
   return (
     <div className="split graph-split">
-      {/* The canvas keeps every pixel the panel isn't using — the detail
+      {/* The canvas keeps every pixel the panel isn't using: the detail
           panel is a narrow, draggable, dismissible sidecar, not a second
           half of the screen. */}
       <div className="graph-wrap">

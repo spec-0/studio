@@ -25,12 +25,12 @@ const trimSlash = (url: string) => url.replace(/\/$/, "");
 /**
  * What the address bar can point at.
  *
- * Targets belong to the API — its declared servers, its hosted mock, the platform
- * environments it's deployed to — plus whatever the user types.
+ * Targets belong to the API (its declared servers, its hosted mock, the platform
+ * environments it's deployed to), plus whatever the user types.
  *
  * *Client* environments are deliberately absent: they supply values, not
  * destinations. A platform environment is the opposite thing with an
- * unfortunately similar name — an actual place the API runs, reported by spec0,
+ * unfortunately similar name: an actual place the API runs, reported by spec0,
  * so it belongs here and its variables do not.
  *
  * None of these is ever auto-selected. The initial value stays the spec's own
@@ -49,12 +49,12 @@ export function buildTargets(
       const parsed = new URL(url);
       label = parsed.host + (parsed.pathname === "/" ? "" : parsed.pathname);
     } catch {
-      /* a templated server URL — show it verbatim */
+      /* a templated server URL: show it verbatim */
     }
     list.push({ label, url, kind: "server" });
   }
   if (mockUrl) list.push({ label: "Mock server", url: mockUrl, kind: "mock" });
-  // Order is the platform's — its promotion order — and is preserved as received.
+  // Order is the platform's (its promotion order) and is preserved as received.
   for (const env of environments) {
     list.push({ label: env.name, url: env.url, kind: "env" });
   }
@@ -78,7 +78,7 @@ export function withLocalMock(targets: Target[], localMockUrl: string | null, la
  * The environment currently being targeted, if any.
  *
  * Matched on URL rather than tracked as separate state, so typing an environment's
- * URL by hand is recognised as that environment — which is what a developer means
+ * URL by hand is recognised as that environment, which is what a developer means
  * when they do it. `resolved` is the address bar with variables already filled in.
  */
 export function environmentFor<T extends EnvironmentTarget>(

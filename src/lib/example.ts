@@ -51,7 +51,7 @@ function fromFormat(format: string): unknown | undefined {
   }
 }
 
-/** Last-resort inference from the property's name — `email`, `createdAt`, `count`… */
+/** Last-resort inference from the property's name: `email`, `createdAt`, `count`… */
 function fromName(name: string, type: string | undefined): unknown | undefined {
   const n = name.toLowerCase();
   if (type && type !== "string" && type !== "integer" && type !== "number") return undefined;
@@ -94,7 +94,7 @@ function firstExample(doc: Json, examples: unknown): { found: boolean; value?: u
 function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
   if (!schema || ctx.depth > 6) return null;
 
-  // A `$ref` we're already inside — stop, or a recursive model never terminates.
+  // A `$ref` we're already inside: stop, or a recursive model never terminates.
   if (typeof schema.$ref === "string" && ctx.seen.has(schema.$ref)) return null;
   const seen = typeof schema.$ref === "string" ? new Set(ctx.seen).add(schema.$ref) : ctx.seen;
   const s = deref(ctx.doc, schema);
@@ -102,7 +102,7 @@ function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
 
   const next: Ctx = { ...ctx, seen, depth: ctx.depth + 1 };
 
-  // The spec told us what this looks like — always prefer it.
+  // The spec told us what this looks like, so always prefer it.
   if (s.example !== undefined) return s.example;
   const listed = firstExample(ctx.doc, s.examples);
   if (listed.found) return listed.value;

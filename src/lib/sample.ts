@@ -15,7 +15,7 @@ info:
   version: 1.4.0
   description: |
     A small, made-up commerce API bundled with spec0 Studio so there's something
-    to explore on a first run. Nothing here is real — point the base URL at your
+    to explore on a first run. Nothing here is real. Point the base URL at your
     own service, or open one of your specs.
 servers:
   - url: https://api.example.com/v1
@@ -184,7 +184,7 @@ components:
       type: object
       required: [amount, currency]
       properties:
-        amount: { type: integer, description: Minor units — 1999 is 19.99. }
+        amount: { type: integer, description: Minor units (1999 is 19.99). }
         currency: { type: string, enum: [USD, EUR, GBP] }
     Problem:
       type: object

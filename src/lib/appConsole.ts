@@ -85,7 +85,7 @@ export function entriesText(entries: readonly ConsoleEntry[]): string {
   return entries.map(entryText).join("\n");
 }
 
-// ── the session's log ─────────────────────────────────────────────────────────
+// The session's log
 
 export interface ConsoleState {
   entries: ConsoleEntry[];
@@ -152,7 +152,7 @@ export function resetConsole(): void {
   set({ entries: [], unseenErrors: 0, open: false, dropped: 0 });
 }
 
-// ── what gets logged ──────────────────────────────────────────────────────────
+// What gets logged
 
 /** A request Studio sent and what came back (or why nothing did). */
 export function logRequest(request: { method: string; url: string }, outcome: { status: number; ms: number } | { error: string }) {

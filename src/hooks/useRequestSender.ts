@@ -68,7 +68,7 @@ interface Options {
  *
  * Owns the response pane: the result, its schema check, the error, the curl
  * line. Spec requests and the scratch request write to it; recorded requests
- * never do — they are read in their own view.
+ * never do; they are read in their own view.
  *
  * The pane belongs to one request. Picking another operation, another API or
  * the scratch pad takes its answer off screen (it comes back, labelled, when
@@ -128,7 +128,7 @@ export function useRequestSender({
     setCopiedFrom(null);
     try {
       const { pathParams, queryParams, headerParams, body } = values.current;
-      // An OAuth "value" isn't typed by the user — it's the acquired token,
+      // An OAuth "value" isn't typed by the user. It's the acquired token,
       // resolved (and renewed if needed) at the moment of sending.
       const effectiveAuth =
         auth?.type === "oauth2" ? { ...auth, value: await usableToken() } : auth;
@@ -189,7 +189,7 @@ export function useRequestSender({
   /**
    * Write the held response body wherever the user asks.
    *
-   * A copy of the temp file Rust already wrote, not a second request — the bytes
+   * A copy of the temp file Rust already wrote, not a second request: the bytes
    * were kept precisely so saving them doesn't mean fetching them again.
    */
   const saveResponseBody = useCallback(async (contentType: string) => {

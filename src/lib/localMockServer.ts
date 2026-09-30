@@ -86,7 +86,7 @@ export async function stopLocalMock(id: string): Promise<void> {
   await invoke("local_mock_stop", { id });
 }
 
-// ── answering requests ───────────────────────────────────────────────────────
+// Answering requests
 
 interface RequestPayload extends MockRequest {
   call: number;

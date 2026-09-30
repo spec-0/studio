@@ -90,7 +90,7 @@ describe("migrating away from the baseUrl field", () => {
     expect("baseUrl" in migrated).toBe(false);
   });
 
-  it("is idempotent — a second load doesn't duplicate the variable", () => {
+  it("is idempotent: a second load doesn't duplicate the variable", () => {
     const once = migrateBaseUrl({ id: "e", name: "n", baseUrl: "http://a", variables: [] });
     const twice = migrateBaseUrl(once as never);
     expect(twice.variables.filter((v) => v.name === "baseUrl")).toHaveLength(1);
