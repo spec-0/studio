@@ -1,4 +1,5 @@
-import { dump, load } from "js-yaml";
+import { dump } from "js-yaml";
+import { loadYaml } from "./yaml";
 import { convertSwagger2, isSwagger2 } from "./swagger2";
 
 /**
@@ -141,7 +142,7 @@ export interface ReadDocument {
  */
 export function readDocument(text: string, documentUrl?: string): ReadDocument {
   const trimmed = text.trimStart();
-  const doc = trimmed.startsWith("{") ? JSON.parse(text) : (load(text) as Json);
+  const doc = trimmed.startsWith("{") ? JSON.parse(text) : (loadYaml(text) as Json);
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
     throw new Error("The OpenAPI document's root must be an object.");
   }

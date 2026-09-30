@@ -55,7 +55,7 @@ const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Keep Tab inside the dialog, close on Escape, and focus the first control of each step. */
-function useDialogFocus(ref: React.RefObject<HTMLDivElement>, onClose: () => void, key: string) {
+function useDialogFocus(ref: React.RefObject<HTMLDivElement | null>, onClose: () => void, key: string) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 

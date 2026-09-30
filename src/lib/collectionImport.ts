@@ -1,4 +1,4 @@
-import { load } from "js-yaml";
+import { loadYaml } from "./yaml";
 
 /**
  * What kind of collection a file holds, before Studio tries to read it.
@@ -23,7 +23,7 @@ function parse(text: string): unknown {
     // Not JSON; YAML is the other format anyone would hand us.
   }
   try {
-    return load(text);
+    return loadYaml(text);
   } catch {
     return undefined;
   }
