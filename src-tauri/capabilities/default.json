@@ -8,6 +8,7 @@
   "permissions": [
     "core:default",
     "dialog:allow-open",
+    "dialog:allow-save",
     {
       "comment": "Sign-in hands {appUrl}/cli-auth to the default browser. Listed as a bare permission this allows nothing \u2014 the scope has to be explicit, which is what produced 'Not allowed to open url'. Kept host-wide because appUrl is configurable (stage, self-hosted), and handing a URL to the user's own browser is a low-risk operation the user initiated.",
       "identifier": "opener:allow-open-url",

@@ -7,6 +7,8 @@
 //!    would defeat the app's purpose; the file picker *is* the consent step.
 //!  - `store_*` reads and writes only inside the app's own config directory.
 //!  - `cli_config` reads exactly one well-known file and nothing else.
+//!  - `write_collection` writes a collection file at a path the user chose in a
+//!    save dialog (or opened before), and only a file whose name says it is one.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -62,6 +64,33 @@ pub fn store_delete(app: tauri::AppHandle, name: String) -> Result<(), String> {
     }
 }
 
+/// What a collection file's name must end with. Anything else is refused, so
+/// this command can't be used to write, say, a shell profile.
+const COLLECTION_SUFFIXES: [&str; 2] = [".spec0-collection.yaml", ".spec0-collection.yml"];
+
+fn collection_path(path: &str) -> Result<PathBuf, String> {
+    let candidate = PathBuf::from(path);
+    let name = candidate
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if !candidate.is_absolute() {
+        return Err(format!("not an absolute path: {path}"));
+    }
+    if !COLLECTION_SUFFIXES.iter().any(|suffix| name.ends_with(suffix) && name.len() > suffix.len()) {
+        return Err(format!("only .spec0-collection.yaml files can be written: {path}"));
+    }
+    Ok(candidate)
+}
+
+/// Write a collection file the user saved to a folder.
+#[tauri::command]
+pub fn write_collection(path: String, contents: String) -> Result<(), String> {
+    let target = collection_path(&path)?;
+    fs::write(&target, contents).map_err(|error| format!("{path}: {error}"))
+}
+
 /// Where the store lives, so the UI can tell the user (environments are meant to be inspectable).
 #[tauri::command]
 pub fn store_location(app: tauri::AppHandle) -> Result<String, String> {
@@ -83,5 +112,32 @@ pub fn cli_config() -> Result<Option<String>, String> {
         Ok(contents) => Ok(Some(contents)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(error) => Err(format!("{}: {error}", path.display())),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn absolute(name: &str) -> String {
+        std::env::temp_dir().join(name).display().to_string()
+    }
+
+    #[test]
+    fn collection_files_only() {
+        assert!(collection_path(&absolute("checkout.spec0-collection.yaml")).is_ok());
+        assert!(collection_path(&absolute("Checkout.SPEC0-COLLECTION.YML")).is_ok());
+        assert!(collection_path(&absolute(".bashrc")).is_err());
+        assert!(collection_path(&absolute("orders.yaml")).is_err());
+        assert!(collection_path(&absolute(".spec0-collection.yaml")).is_err());
+        assert!(collection_path("relative.spec0-collection.yaml").is_err());
+    }
+
+    #[test]
+    fn writes_and_reads_back() {
+        let path = absolute(&format!("studio-test-{}.spec0-collection.yaml", std::process::id()));
+        write_collection(path.clone(), "version: 1\n".into()).unwrap();
+        assert_eq!(read_text(path.clone()).unwrap(), "version: 1\n");
+        let _ = fs::remove_file(path);
     }
 }

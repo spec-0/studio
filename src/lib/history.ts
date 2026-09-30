@@ -67,6 +67,20 @@ export interface HistoryEntry {
    * 40 indistinguishable rows in history would make the log worse, not better.
    */
   runId?: string;
+  /**
+   * Set when the request was a step of a collection run. History shows the run
+   * as one row, with its steps inside it.
+   */
+  collection?: {
+    id: string;
+    name: string;
+    /** The step's key. */
+    step: string;
+    /** Position in the collection, from 0, and how many steps it has. */
+    index: number;
+    total: number;
+    passed: boolean;
+  };
   statusText?: string;
   responseHeaders?: Record<string, string>;
   /**
