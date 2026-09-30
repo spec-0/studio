@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 #[derive(Deserialize, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TlsConfig {
-    /// PEM bundle to trust *in addition to* the system roots. The safe way to
+    /// PEM bundle to trust *in addition to* the built-in roots. The safe way to
     /// reach a host behind a private CA: verification still happens, against a
     /// root the user deliberately supplied.
     #[serde(default)]
@@ -176,6 +176,7 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
 
     // No default headers: notably no Origin, and no compression negotiation the
     // caller didn't ask for.
+    install_crypto_provider();
     let mut client = reqwest::Client::builder()
         .timeout(Duration::from_millis(request.timeout_ms.unwrap_or(30_000)));
 
@@ -199,17 +200,18 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
     }
 
     let tls = request.tls.unwrap_or_default();
+    let mut roots = built_in_roots().to_vec();
     if let Some(pem) = tls.ca_bundle_pem.as_deref().filter(|p| !p.trim().is_empty()) {
-        // Additive: the system roots still apply, so trusting a private CA
+        // Additive: the built-in roots still apply, so trusting a private CA
         // doesn't quietly stop the rest of the internet from being verified.
-        for certificate in reqwest::Certificate::from_pem_bundle(pem.as_bytes())
-            .map_err(|error| format!("that CA bundle isn't valid PEM: {error}"))?
-        {
-            client = client.add_root_certificate(certificate);
-        }
+        roots.extend(
+            reqwest::Certificate::from_pem_bundle(pem.as_bytes())
+                .map_err(|error| format!("that CA bundle isn't valid PEM: {error}"))?,
+        );
     }
+    client = client.tls_certs_only(roots);
     if tls.insecure {
-        client = client.danger_accept_invalid_certs(true);
+        client = client.tls_danger_accept_invalid_certs(true);
     }
 
     let proxy = request.proxy.unwrap_or_default();
@@ -224,10 +226,19 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
             }
         }
         client = client.proxy(configured);
+    } else {
+        // Otherwise the environment decides (HTTPS_PROXY / HTTP_PROXY /
+        // ALL_PROXY / NO_PROXY), like every other tool on the machine. Set
+        // explicitly because reqwest would also read the OS proxy settings.
+        let env = env_proxies(|name| std::env::var(name).ok())
+            .map_err(|error| format!("that proxy URL isn't usable: {error}"))?;
+        if env.is_empty() {
+            client = client.no_proxy();
+        }
+        for configured in env {
+            client = client.proxy(configured);
+        }
     }
-    // Otherwise reqwest's own environment detection applies, which already
-    // honours HTTPS_PROXY / HTTP_PROXY / NO_PROXY. Left alone deliberately: a
-    // developer expects this to behave like every other tool on the machine.
 
     if let Some(store) = request.jar.as_deref().map(jar_for) {
         client = client.cookie_provider(store);
@@ -291,6 +302,48 @@ pub async fn http_send(request: HttpRequest) -> Result<HttpResponse, String> {
         ms,
         redirects,
     })
+}
+
+/// rustls's crypto provider for the whole process. The updater installs the
+/// same one, so whichever runs first wins and nothing changes.
+fn install_crypto_provider() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+}
+
+/// Mozilla's root certificates, bundled, so trust is the same on every machine
+/// and doesn't depend on what the OS store holds. Parsed once.
+fn built_in_roots() -> &'static [reqwest::Certificate] {
+    static ROOTS: OnceLock<Vec<reqwest::Certificate>> = OnceLock::new();
+    ROOTS.get_or_init(|| {
+        webpki_root_certs::TLS_SERVER_ROOT_CERTS
+            .iter()
+            .filter_map(|der| reqwest::Certificate::from_der(der.as_ref()).ok())
+            .collect()
+    })
+}
+
+/// Proxies from the environment, in the order reqwest should try them: the
+/// scheme-specific ones before `ALL_PROXY`. Empty when none is set.
+///
+/// Uppercase names win over lowercase, empty values count as unset, and
+/// `HTTP_PROXY` is ignored when `REQUEST_METHOD` is set (the CGI "httpoxy"
+/// rule), matching what reqwest does with the environment itself.
+fn env_proxies(var: impl Fn(&str) -> Option<String>) -> Result<Vec<reqwest::Proxy>, reqwest::Error> {
+    let first = |names: [&str; 2]| names.iter().find_map(|name| var(name).filter(|v| !v.trim().is_empty()));
+    let bypass = || first(["NO_PROXY", "no_proxy"]).and_then(|list| reqwest::NoProxy::from_string(&list));
+    let mut proxies = Vec::new();
+    if let Some(url) = first(["HTTPS_PROXY", "https_proxy"]) {
+        proxies.push(reqwest::Proxy::https(url)?.no_proxy(bypass()));
+    }
+    if var("REQUEST_METHOD").is_none()
+        && let Some(url) = first(["HTTP_PROXY", "http_proxy"])
+    {
+        proxies.push(reqwest::Proxy::http(url)?.no_proxy(bypass()));
+    }
+    if let Some(url) = first(["ALL_PROXY", "all_proxy"]) {
+        proxies.push(reqwest::Proxy::all(url)?.no_proxy(bypass()));
+    }
+    Ok(proxies)
 }
 
 /// Inline preview cap. Above this an image is offered as a file rather than
@@ -687,5 +740,262 @@ mod tests {
         assert!(is_certificate_failure("self-signed certificate in chain"));
         assert!(!is_certificate_failure("dns error: failed to lookup address"));
         assert!(!is_certificate_failure("operation timed out"));
+    }
+
+    /// A plain request with no body, the shape most tests need.
+    fn get(url: String) -> HttpRequest {
+        HttpRequest {
+            method: "GET".into(),
+            url,
+            headers: HashMap::new(),
+            body: None,
+            timeout_ms: Some(5_000),
+            jar: None,
+            follow_redirects: None,
+            tls: None,
+            proxy: None,
+        }
+    }
+
+    /// Answer `responses.len()` connections in order, one request each, and
+    /// hand back what each request looked like.
+    fn serve(responses: Vec<Vec<u8>>) -> (u16, std::sync::mpsc::Receiver<String>) {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            for response in responses {
+                let Ok((mut stream, _)) = listener.accept() else { return };
+                stream.set_read_timeout(Some(Duration::from_millis(400))).ok();
+                let mut seen = Vec::new();
+                let mut buffer = [0u8; 8192];
+                while !seen.windows(4).any(|w| w == b"\r\n\r\n") {
+                    match stream.read(&mut buffer) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => seen.extend_from_slice(&buffer[..n]),
+                    }
+                }
+                stream.write_all(&response).ok();
+                let _ = tx.send(String::from_utf8_lossy(&seen).into_owned());
+            }
+        });
+        (port, rx)
+    }
+
+    fn response(status: &str, headers: &str, body: &[u8]) -> Vec<u8> {
+        let mut out = format!(
+            "HTTP/1.1 {status}\r\nConnection: close\r\nContent-Length: {}\r\n{headers}\r\n",
+            body.len()
+        )
+        .into_bytes();
+        out.extend_from_slice(body);
+        out
+    }
+
+    #[test]
+    fn no_origin_header_and_only_the_callers_headers() {
+        let (port, rx) = serve(vec![response("200 OK", "", b"")]);
+        let mut request = get(format!("http://127.0.0.1:{port}/plain"));
+        request.headers.insert("X-Trace".into(), "abc".into());
+        tauri::async_runtime::block_on(http_send(request)).unwrap();
+        let raw = rx.recv_timeout(Duration::from_secs(5)).unwrap().to_ascii_lowercase();
+        assert!(!raw.contains("\r\norigin:"), "got: {raw}");
+        assert!(!raw.contains("\r\nuser-agent:"), "got: {raw}");
+        assert!(raw.contains("\r\nx-trace: abc"), "got: {raw}");
+    }
+
+    #[test]
+    fn redirects_are_followed_and_each_hop_is_recorded() {
+        let (port, rx) = serve(vec![
+            response("302 Found", "Location: /second\r\n", b""),
+            response("301 Moved Permanently", "Location: /third\r\n", b""),
+            response("200 OK", "", b"done"),
+        ]);
+        let answer =
+            tauri::async_runtime::block_on(http_send(get(format!("http://127.0.0.1:{port}/first")))).unwrap();
+        assert_eq!(answer.status, 200);
+        assert_eq!(answer.body, "done");
+        assert_eq!(
+            answer.redirects,
+            vec![format!("http://127.0.0.1:{port}/second"), format!("http://127.0.0.1:{port}/third")]
+        );
+        assert_eq!(rx.iter().take(3).count(), 3);
+    }
+
+    #[test]
+    fn redirects_are_not_followed_when_turned_off() {
+        let (port, _rx) = serve(vec![response("302 Found", "Location: /elsewhere\r\n", b"")]);
+        let mut request = get(format!("http://127.0.0.1:{port}/first"));
+        request.follow_redirects = Some(false);
+        let answer = tauri::async_runtime::block_on(http_send(request)).unwrap();
+        assert_eq!(answer.status, 302);
+        assert!(answer.redirects.is_empty());
+    }
+
+    #[test]
+    fn a_gzip_response_is_decoded() {
+        // gzip of {"compressed":true}
+        let gzipped: &[u8] = &[
+            31, 139, 8, 0, 0, 0, 0, 0, 2, 255, 171, 86, 74, 206, 207, 45, 40, 74, 45, 46, 78, 77, 81, 178, 42, 41,
+            42, 77, 173, 5, 0, 241, 234, 57, 149, 19, 0, 0, 0,
+        ];
+        let (port, rx) = serve(vec![response(
+            "200 OK",
+            "Content-Type: application/json\r\nContent-Encoding: gzip\r\n",
+            gzipped,
+        )]);
+        let answer =
+            tauri::async_runtime::block_on(http_send(get(format!("http://127.0.0.1:{port}/data")))).unwrap();
+        assert_eq!(answer.body, r#"{"compressed":true}"#);
+        let raw = rx.recv_timeout(Duration::from_secs(5)).unwrap().to_ascii_lowercase();
+        assert!(raw.contains("accept-encoding: gzip,br"), "got: {raw}");
+    }
+
+    #[test]
+    fn an_explicit_proxy_carries_the_request() {
+        // The "proxy" is a plain server: a proxied request arrives in absolute form.
+        let (port, rx) = serve(vec![response("200 OK", "", b"via proxy")]);
+        let mut request = get("http://api.example.invalid/orders".into());
+        request.proxy = Some(ProxyConfig {
+            url: Some(format!("http://127.0.0.1:{port}")),
+            no_proxy: None,
+            disabled: false,
+        });
+        let answer = tauri::async_runtime::block_on(http_send(request)).unwrap();
+        assert_eq!(answer.body, "via proxy");
+        let raw = rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert!(raw.starts_with("GET http://api.example.invalid/orders HTTP/1.1"), "got: {raw}");
+    }
+
+    #[test]
+    fn a_no_proxy_entry_bypasses_the_explicit_proxy() {
+        let (target, rx) = serve(vec![response("200 OK", "", b"direct")]);
+        let mut request = get(format!("http://127.0.0.1:{target}/direct"));
+        request.proxy = Some(ProxyConfig {
+            // Nothing listens here; the request only succeeds by going direct.
+            url: Some("http://127.0.0.1:9".into()),
+            no_proxy: Some("127.0.0.1".into()),
+            disabled: false,
+        });
+        let answer = tauri::async_runtime::block_on(http_send(request)).unwrap();
+        assert_eq!(answer.body, "direct");
+        assert!(rx.recv_timeout(Duration::from_secs(5)).unwrap().starts_with("GET /direct"));
+    }
+
+    #[test]
+    fn environment_proxies_follow_the_usual_names_and_order() {
+        let env = |pairs: &'static [(&'static str, &'static str)]| {
+            move |name: &str| pairs.iter().find(|(key, _)| *key == name).map(|(_, value)| value.to_string())
+        };
+        assert!(env_proxies(env(&[])).unwrap().is_empty());
+        assert!(env_proxies(env(&[("HTTPS_PROXY", "  ")])).unwrap().is_empty());
+        assert_eq!(env_proxies(env(&[("https_proxy", "http://proxy:3128")])).unwrap().len(), 1);
+        assert_eq!(
+            env_proxies(env(&[
+                ("HTTPS_PROXY", "http://a:1"),
+                ("HTTP_PROXY", "http://b:2"),
+                ("ALL_PROXY", "http://c:3"),
+            ]))
+            .unwrap()
+            .len(),
+            3
+        );
+        // httpoxy: under CGI, HTTP_PROXY can be set by a request header.
+        assert!(env_proxies(env(&[("HTTP_PROXY", "http://b:2"), ("REQUEST_METHOD", "GET")])).unwrap().is_empty());
+        assert!(env_proxies(env(&[("HTTPS_PROXY", "http://[bad")])).is_err());
+    }
+
+    #[test]
+    fn the_built_in_roots_are_loaded() {
+        assert!(built_in_roots().len() > 100);
+    }
+
+    /// A TLS server for `127.0.0.1` with a certificate from a throwaway CA.
+    /// Returns the port and the CA as PEM.
+    fn tls_server(connections: usize) -> (u16, String) {
+        use rcgen::{BasicConstraints, CertificateParams, CertifiedIssuer, IsCa, KeyPair};
+        use std::io::{Read, Write};
+
+        let mut ca_params = CertificateParams::new(Vec::<String>::new()).unwrap();
+        ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+        let ca = CertifiedIssuer::self_signed(ca_params, KeyPair::generate().unwrap()).unwrap();
+        let leaf_key = KeyPair::generate().unwrap();
+        let leaf = CertificateParams::new(vec!["127.0.0.1".to_string()])
+            .unwrap()
+            .signed_by(&leaf_key, &ca)
+            .unwrap();
+
+        let config = rustls::ServerConfig::builder_with_provider(Arc::new(
+            rustls::crypto::ring::default_provider(),
+        ))
+        .with_safe_default_protocol_versions()
+        .unwrap()
+        .with_no_client_auth()
+        .with_single_cert(
+            vec![leaf.der().clone(), ca.der().clone()],
+            rustls::pki_types::PrivateKeyDer::Pkcs8(leaf_key.serialize_der().into()),
+        )
+        .unwrap();
+        let config = Arc::new(config);
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            for _ in 0..connections {
+                let Ok((tcp, _)) = listener.accept() else { return };
+                tcp.set_read_timeout(Some(Duration::from_secs(2))).ok();
+                let connection = rustls::ServerConnection::new(config.clone()).unwrap();
+                let mut stream = rustls::StreamOwned::new(connection, tcp);
+                let mut buffer = [0u8; 4096];
+                // A client that rejects the certificate ends the handshake here.
+                if stream.read(&mut buffer).is_ok() {
+                    let _ = stream.write_all(&response("200 OK", "", b"secure"));
+                    let _ = stream.flush();
+                }
+            }
+        });
+        (port, ca.pem())
+    }
+
+    #[test]
+    fn an_unknown_ca_is_rejected_with_the_certificate_hint() {
+        let (port, _ca) = tls_server(1);
+        let Err(error) = tauri::async_runtime::block_on(http_send(get(format!("https://127.0.0.1:{port}/"))))
+        else {
+            panic!("an unknown CA must be rejected")
+        };
+        assert!(is_certificate_failure(&error), "got: {error}");
+        assert!(error.contains("add its CA bundle"), "got: {error}");
+    }
+
+    #[test]
+    fn a_supplied_ca_bundle_is_trusted() {
+        let (port, ca) = tls_server(1);
+        let mut request = get(format!("https://127.0.0.1:{port}/"));
+        request.tls = Some(TlsConfig { ca_bundle_pem: Some(ca), insecure: false });
+        let answer = tauri::async_runtime::block_on(http_send(request)).unwrap();
+        assert_eq!(answer.body, "secure");
+    }
+
+    #[test]
+    fn insecure_skips_verification_for_that_request_only() {
+        let (port, _ca) = tls_server(2);
+        let mut request = get(format!("https://127.0.0.1:{port}/"));
+        request.tls = Some(TlsConfig { ca_bundle_pem: None, insecure: true });
+        let answer = tauri::async_runtime::block_on(http_send(request)).unwrap();
+        assert_eq!(answer.body, "secure");
+        // The next request, without the setting, verifies again.
+        assert!(tauri::async_runtime::block_on(http_send(get(format!("https://127.0.0.1:{port}/")))).is_err());
+    }
+
+    #[test]
+    fn an_invalid_ca_bundle_is_reported() {
+        let mut request = get("https://127.0.0.1:9/".into());
+        request.tls = Some(TlsConfig { ca_bundle_pem: Some("-----BEGIN CERTIFICATE-----\nnot base64\n-----END CERTIFICATE-----\n".into()), insecure: false });
+        let Err(error) = tauri::async_runtime::block_on(http_send(request)) else {
+            panic!("an invalid bundle must be reported")
+        };
+        assert!(error.starts_with("that CA bundle isn't valid PEM"), "got: {error}");
     }
 }

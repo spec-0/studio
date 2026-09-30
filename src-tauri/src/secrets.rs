@@ -1,7 +1,8 @@
 //! Secret environment values, kept in the operating system's credential store.
 //!
 //! macOS Keychain, Windows Credential Manager, or the Secret Service on Linux (a
-//! desktop keyring such as GNOME Keyring or KWallet), through the `keyring` crate.
+//! desktop keyring such as GNOME Keyring or KWallet), through `keyring-core` and
+//! one native store per platform.
 //!
 //! These are narrow commands on purpose. The webview names an environment id and
 //! a variable name; Rust builds the account from them under one fixed service
@@ -22,7 +23,8 @@ use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use keyring_core::{CredentialStore, Entry, Error};
+use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
 /// Every entry lives under this service name, which is also the app identifier.
@@ -55,12 +57,11 @@ impl SecretError {
     }
 }
 
-/// Map a `keyring` error to ours without ever formatting a stored value.
+/// Map a `keyring-core` error to ours without ever formatting a stored value.
 ///
-/// `BadEncoding` carries the raw bytes of the credential, so it is described,
-/// not printed.
-fn map_error(error: keyring::Error) -> SecretError {
-    use keyring::Error;
+/// `BadEncoding` and `BadDataFormat` carry the raw bytes of the credential, so
+/// they are described, not printed.
+fn map_error(error: Error) -> SecretError {
     match error {
         Error::NoStorageAccess(inner) => {
             SecretError::unavailable(format!("the credential store refused access: {inner}"))
@@ -68,7 +69,9 @@ fn map_error(error: keyring::Error) -> SecretError {
         Error::PlatformFailure(inner) => {
             SecretError::unavailable(format!("the credential store isn't working: {inner}"))
         }
+        Error::NoDefaultStore => SecretError::unavailable("the credential store isn't set up"),
         Error::BadEncoding(_) => SecretError::failed("a stored value isn't valid text"),
+        Error::BadDataFormat(..) => SecretError::failed("a stored value isn't in the expected format"),
         Error::TooLong(field, limit) => SecretError::failed(format!(
             "the {field} is longer than this credential store allows ({limit})"
         )),
@@ -111,34 +114,84 @@ pub trait Vault {
     fn delete(&self, account: &str) -> Result<(), SecretError>;
 }
 
-/// The real thing: whichever native store `keyring` was built with.
-pub struct OsVault;
+/// Entries in one credential store, under [`SERVICE`].
+pub struct StoreVault(Arc<CredentialStore>);
 
-impl OsVault {
-    fn entry(account: &str) -> Result<keyring::Entry, SecretError> {
-        keyring::Entry::new(SERVICE, account).map_err(map_error)
+impl StoreVault {
+    fn entry(&self, account: &str) -> Result<Entry, SecretError> {
+        self.0.build(SERVICE, account, None).map_err(map_error)
     }
 }
 
-impl Vault for OsVault {
+impl Vault for StoreVault {
     fn get(&self, account: &str) -> Result<Option<String>, SecretError> {
-        match Self::entry(account)?.get_password() {
+        match self.entry(account)?.get_password() {
             Ok(value) => Ok(Some(value)),
-            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(Error::NoEntry) => Ok(None),
             Err(error) => Err(map_error(error)),
         }
     }
 
     fn set(&self, account: &str, value: &str) -> Result<(), SecretError> {
-        Self::entry(account)?.set_password(value).map_err(map_error)
+        self.entry(account)?.set_password(value).map_err(map_error)
     }
 
     fn delete(&self, account: &str) -> Result<(), SecretError> {
-        match Self::entry(account)?.delete_credential() {
-            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        match self.entry(account)?.delete_credential() {
+            Ok(()) | Err(Error::NoEntry) => Ok(()),
             Err(error) => Err(map_error(error)),
         }
     }
+}
+
+/// The real thing: this platform's native store.
+pub struct OsVault;
+
+impl OsVault {
+    /// Opened on first use and kept. A store that can't be opened (no Secret
+    /// Service running yet, say) is tried again next time rather than
+    /// remembered as missing.
+    fn store() -> Result<StoreVault, SecretError> {
+        static STORE: Mutex<Option<Arc<CredentialStore>>> = Mutex::new(None);
+        let mut store = STORE.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        if store.is_none() {
+            *store = Some(native_store().map_err(map_error)?);
+        }
+        Ok(StoreVault(store.clone().expect("set above")))
+    }
+}
+
+impl Vault for OsVault {
+    fn get(&self, account: &str) -> Result<Option<String>, SecretError> {
+        Self::store()?.get(account)
+    }
+
+    fn set(&self, account: &str, value: &str) -> Result<(), SecretError> {
+        Self::store()?.set(account, value)
+    }
+
+    fn delete(&self, account: &str) -> Result<(), SecretError> {
+        Self::store()?.delete(account)
+    }
+}
+
+/// The login keychain, found by service and account as generic passwords.
+#[cfg(target_os = "macos")]
+fn native_store() -> keyring_core::Result<Arc<CredentialStore>> {
+    Ok(apple_native_keyring_store::keychain::Store::new()?)
+}
+
+/// Generic credentials named `{account}.{service}`, as keyring 3 wrote them.
+#[cfg(target_os = "windows")]
+fn native_store() -> keyring_core::Result<Arc<CredentialStore>> {
+    Ok(windows_native_keyring_store::Store::new()?)
+}
+
+/// Items in the default collection, found by their `service` and `username`
+/// attributes, which keyring 3 also set.
+#[cfg(target_os = "linux")]
+fn native_store() -> keyring_core::Result<Arc<CredentialStore>> {
+    Ok(dbus_secret_service_keyring_store::Store::new()?)
 }
 
 // Index
@@ -292,7 +345,7 @@ mod tests {
     use std::cell::RefCell;
     use std::collections::HashMap;
 
-    /// An in-memory store. `keyring`'s own mock gives every `Entry` a separate
+    /// An in-memory store. `keyring-core`'s mock gives every `Entry` a separate
     /// credential, so it can't show a value surviving from `set` to `get`.
     #[derive(Default)]
     struct MemoryVault {
@@ -406,27 +459,77 @@ mod tests {
     #[test]
     fn keyring_errors_map_without_leaking_values() {
         // BadEncoding carries the stored bytes; they must not reach the message.
-        let error = map_error(keyring::Error::BadEncoding(b"sk_live_secret".to_vec()));
+        let error = map_error(Error::BadEncoding(b"sk_live_secret".to_vec()));
         assert!(!error.message.contains("sk_live_secret"));
         assert!(!error.unavailable);
 
-        let error = map_error(keyring::Error::TooLong("password".into(), 2560));
+        // So does BadDataFormat, alongside the store's own error.
+        let error = map_error(Error::BadDataFormat(b"sk_live_secret".to_vec(), "bad padding".into()));
+        assert!(!error.message.contains("sk_live_secret"));
+        assert!(!error.unavailable);
+
+        let error = map_error(Error::TooLong("password".into(), 2560));
         assert!(!error.unavailable);
         assert!(error.message.contains("2560"));
 
-        let error = map_error(keyring::Error::NoStorageAccess("locked".into()));
+        let error = map_error(Error::NoStorageAccess("locked".into()));
+        assert!(error.unavailable);
+
+        let error = map_error(Error::NoDefaultStore);
         assert!(error.unavailable);
     }
 
     #[test]
-    fn os_vault_maps_keyring_behaviour() {
-        // Uses keyring's mock builder so this runs without a real keychain.
-        keyring::set_default_credential_builder(keyring::mock::default_credential_builder());
-        let vault = OsVault;
+    fn store_vault_maps_keyring_behaviour() {
+        // keyring-core's mock store, so this runs without a real keychain.
+        let vault = StoreVault(keyring_core::mock::Store::new().unwrap());
         // A missing entry is "nothing stored", not an error.
         assert_eq!(vault.get("env_1/token").unwrap(), None);
         // Deleting a missing entry is not an error either.
         vault.delete("env_1/token").unwrap();
         vault.set("env_1/token", "value").unwrap();
+    }
+
+    #[test]
+    fn store_vault_uses_the_fixed_service_and_the_account_as_is() {
+        // What makes values written by earlier versions findable: the entry is
+        // (SERVICE, "<env id>/<name>"), exactly as keyring 3 was given it.
+        let vault = StoreVault(keyring_core::mock::Store::new().unwrap());
+        let entry = vault.entry(&account("env_1", "token").unwrap()).unwrap();
+        assert_eq!(
+            entry.get_specifiers(),
+            Some((SERVICE.to_string(), "env_1/token".to_string()))
+        );
+    }
+
+    #[test]
+    fn store_vault_passes_store_errors_through_the_mapping() {
+        let vault = StoreVault(keyring_core::mock::Store::new().unwrap());
+        let entry = vault.entry("env_1/token").unwrap();
+        let mock: &keyring_core::mock::Cred = entry.as_any().downcast_ref().unwrap();
+        mock.set_error(Error::NoStorageAccess("locked".into()));
+        let error = entry.get_password().map_err(map_error).unwrap_err();
+        assert!(error.unavailable);
+    }
+
+    /// Against the real credential store, so ignored by default. Run with
+    /// `STUDIO_SECRET_TEST_ACCOUNT=env_<something>/<name> cargo test -- --ignored`
+    /// using a throwaway account. If the account already holds a value (one
+    /// written by an earlier version), it must be readable; the test then
+    /// overwrites it, reads it back and deletes it.
+    #[test]
+    #[ignore]
+    fn os_vault_round_trip_in_the_real_store() {
+        let account = std::env::var("STUDIO_SECRET_TEST_ACCOUNT")
+            .expect("set STUDIO_SECRET_TEST_ACCOUNT to a throwaway env_…/name");
+        assert!(account.starts_with("env_") && account.contains('/'));
+        let vault = OsVault;
+        if let Ok(expected) = std::env::var("STUDIO_SECRET_TEST_EXISTING") {
+            assert_eq!(vault.get(&account).unwrap().as_deref(), Some(expected.as_str()));
+        }
+        vault.set(&account, "written by this test").unwrap();
+        assert_eq!(vault.get(&account).unwrap().as_deref(), Some("written by this test"));
+        vault.delete(&account).unwrap();
+        assert_eq!(vault.get(&account).unwrap(), None);
     }
 }

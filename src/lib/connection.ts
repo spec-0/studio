@@ -25,7 +25,7 @@ export interface HostTrust {
    */
   insecure?: boolean;
   /**
-   * A private CA in PEM form, trusted *in addition to* the system roots.
+   * A private CA in PEM form, trusted *in addition to* the built-in roots.
    *
    * The safe path, and preferred: verification still happens, against a root the
    * user supplied. Stored as content rather than a path: the file dialog is the

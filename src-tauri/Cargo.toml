@@ -21,7 +21,11 @@ serde_json = "1"
 # reqwest directly rather than tauri-plugin-http: the plugin attaches the
 # webview's Origin to every request, which makes CORS-configured servers reject
 # a desktop client. See src/http.rs.
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "brotli", "charset", "http2", "cookies", "multipart"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "gzip", "brotli", "charset", "http2", "cookies", "multipart", "form"] }
+# TLS for reqwest: ring as the crypto provider (the updater installs the same
+# one) and Mozilla's root certificates, bundled. See src/http.rs.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+webpki-root-certs = "1"
 cookie_store = "0.22"
 url = "2"
 base64 = "0.23.1"
@@ -29,6 +33,9 @@ tauri-plugin-updater = "2"
 # `spec0://` links. Handled in Rust (src/deep_link.rs) and handed to the web view
 # through one narrow command, so the web view gets no deep-link permission.
 tauri-plugin-deep-link = "2"
+# Secret environment values go to the OS credential store (see src/secrets.rs):
+# keyring-core with one native store per platform, below.
+keyring-core = "1"
 
 # On Windows and Linux a link starts a second copy of the app; this forwards the
 # link to the copy already running instead. macOS delivers links to the running
@@ -36,19 +43,22 @@ tauri-plugin-deep-link = "2"
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
-# Secret environment values go to the OS credential store (see src/secrets.rs).
-# `keyring` needs one native backend per platform, so the features are gated by
-# target: a Linux build must not try to link the macOS Security framework.
+# The native credential store for each platform, gated by target so a Linux
+# build doesn't try to link the macOS Security framework.
 [target.'cfg(target_os = "macos")'.dependencies]
-keyring = { version = "3.6", features = ["apple-native"] }
+apple-native-keyring-store = { version = "1", features = ["keychain"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-keyring = { version = "3.6", features = ["windows-native"] }
+windows-native-keyring-store = "1"
 
 # Secret Service over D-Bus. `vendored` builds libdbus from source so the build
 # doesn't need libdbus-1-dev installed; `crypto-rust` avoids OpenSSL.
 [target.'cfg(target_os = "linux")'.dependencies]
-keyring = { version = "3.6", features = ["sync-secret-service", "crypto-rust", "vendored"] }
+dbus-secret-service-keyring-store = { version = "1", features = ["crypto-rust", "vendored"] }
+
+[dev-dependencies]
+# Certificates for the TLS tests in src/http.rs.
+rcgen = "0.14"
 
 [profile.release]
 codegen-units = 1
