@@ -58,7 +58,7 @@ jobs:
       updater: ${{ steps.updater.outputs.updater }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # A tag that disagrees with the manifest ships a version nobody chose, and
       # a published release is awkward to retract. Fail before anything is built.
@@ -137,9 +137,9 @@ jobs:
     timeout-minutes: 90
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -302,7 +302,7 @@ jobs:
           fi
           ls -la release
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: spec0-studio-macos
           path: release/*
@@ -317,9 +317,9 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -370,7 +370,7 @@ jobs:
           fi
           ls -la release
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: spec0-studio-linux
           path: release/*
@@ -385,9 +385,9 @@ jobs:
         shell: bash
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -428,7 +428,7 @@ jobs:
           fi
           ls -la release
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: spec0-studio-windows
           path: release/*
@@ -440,9 +440,9 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: assets
           pattern: spec0-studio-*
@@ -484,7 +484,7 @@ jobs:
           sha256sum * | tee ../SHA256SUMS.txt
           mv ../SHA256SUMS.txt .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-files
           path: assets/*
