@@ -20,6 +20,8 @@ If you build or use APIs, some of this may be familiar:
 - You already have an OpenAPI spec, and you still rebuild the same requests by
   hand in an API client, where they go out of date the next time the API changes.
 - The API and its spec drift apart, and nobody notices until a client breaks.
+- To understand the domain model behind an API, you scroll through hundreds of
+  lines of YAML and follow `$ref`s by hand to see how the schemas relate.
 - The frontend waits for the backend because there is nothing to call yet.
 - Testing a flow across services (create an order, pay for it, ship it) means
   copying ids from one response into the next request by hand.
@@ -31,8 +33,9 @@ If you build or use APIs, some of this may be familiar:
 **Spec0 Studio** starts from the spec instead. You open your OpenAPI spec (the
 YAML or JSON file that describes an API), Studio builds the requests from it, and
 each JSON response is checked against the schema the spec declares, so you notice
-when the API and its description drift apart. You can run a mock of any API on
-your computer, chain requests across specs into collections, and let your coding
+when the API and its description drift apart. You can see the schemas and how
+they relate as a graph, run a mock of any API on your computer, chain requests
+across specs into collections, and let your coding
 agent use the APIs in Studio through a local MCP server.
 
 Studio is free and open source (MIT) and works without an account. It's young,
