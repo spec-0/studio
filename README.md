@@ -15,10 +15,25 @@
   A desktop app for calling and testing APIs, built around your OpenAPI spec.
 </p>
 
-**Spec0 Studio** is for developers who already have an OpenAPI spec (the YAML or
-JSON file that describes an API). You open the spec, Studio builds the requests
-from it, and each JSON response is checked against the schema the spec declares,
-so you notice when the API and its description drift apart.
+If you build or use APIs, some of this may be familiar:
+
+- You already have an OpenAPI spec, and you still rebuild the same requests by
+  hand in an API client, where they go out of date the next time the API changes.
+- The API and its spec drift apart, and nobody notices until a client breaks.
+- The frontend waits for the backend because there is nothing to call yet.
+- Testing a flow across services (create an order, pay for it, ship it) means
+  copying ids from one response into the next request by hand.
+- Your coding agent writes the spec and the code, and you have no quick way to
+  look at either or check one against the other.
+- Your API client asks for an account and a cloud workspace, for APIs that
+  should not leave your machine.
+
+**Spec0 Studio** starts from the spec instead. You open your OpenAPI spec (the
+YAML or JSON file that describes an API), Studio builds the requests from it, and
+each JSON response is checked against the schema the spec declares, so you notice
+when the API and its description drift apart. You can run a mock of any API on
+your computer, chain requests across specs into collections, and let your coding
+agent use the APIs in Studio through a local MCP server.
 
 Studio is free and open source (MIT) and works without an account. It's young,
 and we'd like to hear what breaks.
