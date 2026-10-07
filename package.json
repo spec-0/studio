@@ -31,27 +31,27 @@
     "@cfworker/json-schema": "^4.1.1",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
-    "@scalar/api-reference-react": "^0.9.76",
+    "@scalar/api-reference-react": "^0.9.77",
     "@spec0/schema-graph": "^0.1.2",
-    "@tauri-apps/api": "^2.12.0",
-    "@tauri-apps/plugin-dialog": "^2.8.0",
+    "@tauri-apps/api": "^2.12.1",
+    "@tauri-apps/plugin-dialog": "^2.8.1",
     "@tauri-apps/plugin-fs": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2.7.0",
     "@xyflow/react": "^12.12.0",
     "js-yaml": "^5.4.2",
-    "lucide-react": "^1.49.0",
+    "lucide-react": "^1.52.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.12.0",
-    "@types/node": "^24.19.0",
+    "@tauri-apps/cli": "^2.12.1",
+    "@types/node": "^24.19.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "puppeteer-core": "^25.12.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.1",
-    "vitest": "^5.0.2"
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   }
 }
