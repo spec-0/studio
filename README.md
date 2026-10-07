@@ -15,28 +15,38 @@
   A desktop app for calling and testing APIs, built around your OpenAPI spec.
 </p>
 
-If you build or use APIs, some of this may be familiar:
+More and more API work is done by coding agents. An agent drafts the spec,
+writes the handlers and tests them, and a developer guides it and reviews the
+result, much as with code. That changes what an API tool needs to do:
 
-- You already have an OpenAPI spec, and you still rebuild the same requests by
-  hand in an API client, where they go out of date the next time the API changes.
-- The API and its spec drift apart, and nobody notices until a client breaks.
-- To understand the domain model behind an API, you scroll through hundreds of
-  lines of YAML and follow `$ref`s by hand to see how the schemas relate.
-- The frontend waits for the backend because there is nothing to call yet.
-- Testing a flow across services (create an order, pay for it, ship it) means
-  copying ids from one response into the next request by hand.
-- Your coding agent writes the spec and the code, and you have no quick way to
-  look at either or check one against the other.
-- Your API client asks for an account and a cloud workspace, for APIs that
-  should not leave your machine.
+- **The agent needs the same tools you have.** If the tool can only be used by
+  clicking, the agent falls back to `curl` and guesses at the API.
+- **Changes need a quick human review.** When an agent changes a spec, someone
+  has to see what changed and whether it still makes sense, without reading a
+  YAML diff line by line.
+- **You need a map of the domain, not just a list of endpoints.** Seeing the
+  schemas and how they relate is what lets a developer or an architect judge a
+  change.
+- **Tests have to keep up.** When the API changes with every prompt, building
+  and running a test has to be quicker than making the change.
+- **The spec stays the source of truth.** Requests, mocks and checks should come
+  from the spec that you and the agent both work on, so they change with it.
 
-**Spec0 Studio** starts from the spec instead. You open your OpenAPI spec (the
-YAML or JSON file that describes an API), Studio builds the requests from it, and
-each JSON response is checked against the schema the spec declares, so you notice
-when the API and its description drift apart. You can see the schemas and how
-they relate as a graph, run a mock of any API on your computer, chain requests
-across specs into collections, and let your coding
-agent use the APIs in Studio through a local MCP server.
+Most API clients are built around a person sending requests and keeping
+collections, and that works well when you do the work yourself. **Spec0 Studio**
+is built for working alongside agents:
+
+- **It starts from your OpenAPI spec.** Requests are built from it, and each JSON
+  response is checked against the schema the spec declares for its status code.
+- **Your agent works through Studio.** A local MCP server, on your computer only,
+  gives the agent the APIs open in Studio: their specs, operations, environments
+  and mocks. Letting the agent send requests and run collections through Studio,
+  with your approval, is the next step.
+- **You review in Studio.** The schemas are drawn as a graph, so you can follow
+  how the domain fits together. Collections chain steps across several specs and
+  show which values pass between them, and every run has a log.
+- **Testing is quick.** Run a mock of any API on your computer in one click, and
+  re-run a collection after every change.
 
 Studio is free and open source (MIT) and works without an account. It's young,
 and we'd like to hear what breaks.
