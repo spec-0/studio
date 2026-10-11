@@ -778,7 +778,24 @@ function CollectionDetail({
             Keep it to make it yours; agents can then only read and run it.
           </span>
           <span className="spacer" />
-          <button type="button" className="btn" onClick={() => api.remove(collection.id)}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() =>
+              setConfirming({
+                title: `Discard “${collection.name}”?`,
+                body: (
+                  <p>
+                    The draft and its {collection.steps.length} step{collection.steps.length === 1 ? "" : "s"} will be
+                    removed from Studio. This can't be undone.
+                  </p>
+                ),
+                confirm: "Discard draft",
+                danger: true,
+                run: () => api.remove(collection.id),
+              })
+            }
+          >
             Discard
           </button>
           <button type="button" className="btn primary" onClick={() => api.keepDraft(collection.id)}>

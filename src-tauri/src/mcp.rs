@@ -852,6 +852,19 @@ pub fn mcp_respond(id: u64, result: Value) {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn tool_arguments_keep_their_field_order() {
+        // An agent's JSON body passes through here on its way to the request, so
+        // its fields must come out in the order the agent wrote them.
+        let raw = r#"{"name":"send_request","arguments":{"body":{"zeta":1,"alpha":2,"mid":3}}}"#;
+        let parsed: Value = serde_json::from_str(raw).unwrap();
+        assert_eq!(
+            serde_json::to_string(&parsed["arguments"]["body"]).unwrap(),
+            r#"{"zeta":1,"alpha":2,"mid":3}"#
+        );
+    }
+
     use super::*;
     use std::io::Cursor;
 
