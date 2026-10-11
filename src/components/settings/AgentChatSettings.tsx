@@ -80,7 +80,8 @@ function AnthropicKey() {
       <p className="field-meta">
         Claude Agent signs in with an Anthropic API key. Studio keeps it in your system&apos;s credential store and gives
         it only to the Claude agent when a chat starts. Without one, Studio uses an{" "}
-        <span className="mono">ANTHROPIC_API_KEY</span> it was started with, if any.
+        <span className="mono">ANTHROPIC_API_KEY</span> it was started with, if any. With neither, Claude Agent
+        doesn&apos;t start: Studio never lets it use a claude.ai sign-in.
       </p>
       <dl className="settings-facts">
         <dt>Key</dt>

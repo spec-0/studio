@@ -661,6 +661,13 @@ Studio passes on an `ANTHROPIC_API_KEY` it was started with (from a terminal),
 if there is one. A key set in your shell profile doesn't reach Studio when you
 open it from the Dock, which is why the setting exists.
 
+Claude Agent always runs on that API key, never on a claude.ai or Claude Code
+subscription. With no key, Studio doesn't start it and says where to add one.
+Studio also starts the adapter with `--hide-claude-auth`, which makes it refuse
+any turn a subscription would pay for, and removes Claude Code's OAuth token
+variables from its environment. If the key ever appears in what the agent
+writes, Studio shows `[hidden]` in its place.
+
 **Chatting.** The agent starts when you send the first message and stops when
 you end the chat, start a new one, or quit Studio. Type `@` (or press the @
 button) to attach the operation on screen or another one from the open API, one

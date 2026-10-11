@@ -85,7 +85,7 @@ impl Known {
     /// The program that speaks ACP, and its arguments.
     fn program(self) -> (&'static str, &'static [&'static str]) {
         match self {
-            Known::Claude => ("claude-agent-acp", &[]),
+            Known::Claude => ("claude-agent-acp", &[HIDE_CLAUDE_AUTH]),
             Known::Codex => ("codex-acp", &[]),
             Known::Gemini => ("gemini", &["--acp"]),
         }
@@ -198,9 +198,31 @@ pub fn describe(dirs: &[PathBuf], overrides: &Overrides) -> Vec<AgentInfo> {
     out
 }
 
+/// Tells the Claude adapter never to use a claude.ai subscription: it hides
+/// that sign-in method and refuses any turn a subscription would pay for.
+/// Anthropic asks apps built on its Agent SDK not to offer claude.ai sign-in, so
+/// Studio passes this however the adapter is started, a chosen program included.
+pub const HIDE_CLAUDE_AUTH: &str = "--hide-claude-auth";
+
+/// Add the arguments a known agent always needs to a command line, once.
+fn with_required_args(known: Known, mut line: CommandLine) -> CommandLine {
+    if known == Known::Claude && !line.args.iter().any(|arg| arg == HIDE_CLAUDE_AUTH) {
+        line.args.push(HIDE_CLAUDE_AUTH.into());
+    }
+    line
+}
+
 /// How a known agent would be started: a chosen path first, then an installed
 /// program, then its adapter through `npx`.
 fn resolve_known(
+    known: Known,
+    dirs: &[PathBuf],
+    overrides: &Overrides,
+) -> Option<(&'static str, CommandLine)> {
+    resolve_source(known, dirs, overrides).map(|(how, line)| (how, with_required_args(known, line)))
+}
+
+fn resolve_source(
     known: Known,
     dirs: &[PathBuf],
     overrides: &Overrides,
@@ -497,6 +519,8 @@ struct Session {
     pid: u32,
     stdin: Option<ChildStdin>,
     stderr: Arc<Mutex<VecDeque<u8>>>,
+    /// Values given to this agent that its output must not show.
+    secrets: Arc<Vec<String>>,
 }
 
 static SESSIONS: Mutex<Option<HashMap<u64, Session>>> = Mutex::new(None);
@@ -580,26 +604,53 @@ pub fn read_lines(
     }
 }
 
-/// Environment an agent's process gets on top of Studio's own. Only Claude gets
+/// Shown when Claude Agent would start without an Anthropic API key.
+pub const NO_CLAUDE_KEY: &str = "Claude Agent needs an Anthropic API key. Add one in Settings, under Agent chat, \
+                                 then start a new chat. Studio doesn't use a claude.ai sign-in for it.";
+
+/// Variables that would let the Claude adapter pay with a claude.ai
+/// subscription instead of the API key. Studio started from a terminal could
+/// have them, so they're removed from the Claude agent's environment.
+const CLAUDE_SUBSCRIPTION_VARS: [&str; 2] = ["CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR"];
+
+/// Changes to an agent's environment on top of Studio's own: a value to set, or
+/// `None` to remove the variable.
+pub type AgentEnv = Vec<(&'static str, Option<String>)>;
+
+/// The environment for an agent, or why it must not start. Only Claude gets
 /// anything: the Anthropic API key saved in Settings, or failing that one Studio
-/// itself was started with (from a terminal). Studio opened from the Dock doesn't
-/// see a shell profile, so without this the key never reaches the adapter.
-pub fn agent_env(agent: &str, saved: Option<String>, inherited: Option<String>) -> Vec<(&'static str, String)> {
+/// itself was started with (from a terminal). Without either, Claude Agent isn't
+/// started at all, so it can't fall back to a claude.ai sign-in. Studio opened
+/// from the Dock doesn't see a shell profile, which is why the setting exists.
+pub fn agent_env(agent: &str, saved: Option<String>, inherited: Option<String>) -> Result<AgentEnv, String> {
     if Known::from_id(agent) != Some(Known::Claude) {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-    saved
-        .or(inherited)
+    let key = saved
         .filter(|key| !key.trim().is_empty())
-        .map(|key| vec![("ANTHROPIC_API_KEY", key)])
-        .unwrap_or_default()
+        .or(inherited.filter(|key| !key.trim().is_empty()))
+        .ok_or_else(|| NO_CLAUDE_KEY.to_string())?;
+    let mut env: AgentEnv = vec![("ANTHROPIC_API_KEY", Some(key))];
+    env.extend(CLAUDE_SUBSCRIPTION_VARS.iter().map(|name| (*name, None)));
+    Ok(env)
+}
+
+/// The values set in an environment, which must never be shown or logged.
+pub fn secret_values(env: &AgentEnv) -> Vec<String> {
+    env.iter().filter_map(|(_, value)| value.clone()).filter(|value| value.len() >= 8).collect()
+}
+
+/// `text` with every secret value replaced, for anything from the agent process
+/// that is shown, kept or logged.
+pub fn hide_secrets(text: &str, secrets: &[String]) -> String {
+    secrets.iter().fold(text.to_string(), |text, secret| text.replace(secret.as_str(), "[hidden]"))
 }
 
 fn spawn_command(
     line: &CommandLine,
     cwd: &Path,
     dirs: &[PathBuf],
-    env: &[(&'static str, String)],
+    env: &AgentEnv,
 ) -> std::io::Result<Child> {
     let mut command = Command::new(&line.program);
     command
@@ -614,7 +665,10 @@ fn spawn_command(
         command.env("PATH", path);
     }
     for (name, value) in env {
-        command.env(name, value);
+        match value {
+            Some(value) => command.env(name, value),
+            None => command.env_remove(name),
+        };
     }
     #[cfg(unix)]
     {
@@ -809,7 +863,7 @@ pub async fn acp_start(
     };
     // Read only for Claude, and only here: the key goes to this one process and
     // nowhere else. A keychain that can't be read falls back to Studio's own
-    // environment rather than stopping the chat.
+    // environment; with no key at all the agent isn't started.
     let saved = if Known::from_id(&agent) == Some(Known::Claude) {
         tauri::async_runtime::spawn_blocking(|| crate::secrets::anthropic_key(&crate::secrets::OsVault).ok().flatten())
             .await
@@ -818,7 +872,8 @@ pub async fn acp_start(
     } else {
         None
     };
-    let env = agent_env(&agent, saved, std::env::var("ANTHROPIC_API_KEY").ok());
+    let env = agent_env(&agent, saved, std::env::var("ANTHROPIC_API_KEY").ok())?;
+    let secrets = Arc::new(secret_values(&env));
     let mut child = spawn_command(&line, &cwd, &dirs, &env)
         .map_err(|error| format!("Couldn't start {}: {error}", line.program.display()))?;
     let id = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
@@ -838,17 +893,20 @@ pub async fn acp_start(
                 pid: child.id(),
                 stdin: child.stdin.take(),
                 stderr: Arc::clone(&tail),
+                secrets: Arc::clone(&secrets),
             },
         );
     });
 
     {
         let app = app.clone();
+        let secrets = Arc::clone(&secrets);
         std::thread::spawn(move || {
             read_lines(
                 stdout,
                 MAX_LINE_BYTES,
                 |line| {
+                    let line = hide_secrets(&line, &secrets);
                     let _ = app.emit(DATA_EVENT, json!({ "session": id, "line": line }));
                 },
                 || {
@@ -872,6 +930,7 @@ pub async fn acp_start(
     }
     {
         let app = app.clone();
+        let secrets = Arc::clone(&secrets);
         std::thread::spawn(move || {
             let code = child.wait().ok().and_then(|status| status.code());
             // Whatever it started goes with it.
@@ -882,7 +941,7 @@ pub async fn acp_start(
             }
             let _ = app.emit(
                 EXIT_EVENT,
-                json!({ "session": id, "code": code, "stderr": tail_text(&tail) }),
+                json!({ "session": id, "code": code, "stderr": hide_secrets(&tail_text(&tail), &secrets) }),
             );
         });
     }
@@ -923,7 +982,7 @@ pub fn acp_stderr(session: u64) -> Option<String> {
     with_sessions(|sessions| {
         sessions
             .get(&session)
-            .map(|session| tail_text(&session.stderr))
+            .map(|session| hide_secrets(&tail_text(&session.stderr), &session.secrets))
     })
 }
 
@@ -995,37 +1054,100 @@ mod tests {
     #[test]
     fn only_claude_gets_the_anthropic_key() {
         let key = || Some("sk-ant-test".to_string());
-        assert_eq!(agent_env("claude", key(), None), vec![("ANTHROPIC_API_KEY", "sk-ant-test".to_string())]);
+        let env = agent_env("claude", key(), None).unwrap();
+        assert!(env.contains(&("ANTHROPIC_API_KEY", Some("sk-ant-test".to_string()))));
         for other in ["codex", "gemini", "custom", "unknown"] {
-            assert!(agent_env(other, key(), key()).is_empty(), "{other} got the key");
+            assert!(agent_env(other, key(), key()).unwrap().is_empty(), "{other} got the key");
         }
     }
 
     #[test]
-    fn a_saved_key_wins_and_nothing_is_set_without_one() {
-        let saved = Some("saved".to_string());
+    fn a_saved_key_wins_over_one_studio_was_started_with() {
+        let key = |env: AgentEnv| env.into_iter().find(|(name, _)| *name == "ANTHROPIC_API_KEY").and_then(|(_, v)| v);
         let inherited = Some("from-terminal".to_string());
-        assert_eq!(agent_env("claude", saved, inherited.clone())[0].1, "saved");
-        assert_eq!(agent_env("claude", None, inherited)[0].1, "from-terminal");
-        assert!(agent_env("claude", None, None).is_empty());
-        assert!(agent_env("claude", Some("  ".into()), None).is_empty());
+        assert_eq!(key(agent_env("claude", Some("saved".into()), inherited.clone()).unwrap()).as_deref(), Some("saved"));
+        assert_eq!(key(agent_env("claude", None, inherited.clone()).unwrap()).as_deref(), Some("from-terminal"));
+        assert_eq!(key(agent_env("claude", Some("  ".into()), inherited).unwrap()).as_deref(), Some("from-terminal"));
+    }
+
+    #[test]
+    fn claude_agent_is_not_started_without_a_key() {
+        for (saved, inherited) in [(None, None), (Some("  ".to_string()), None), (None, Some(String::new()))] {
+            let error = agent_env("claude", saved, inherited).unwrap_err();
+            assert_eq!(error, NO_CLAUDE_KEY);
+            assert!(error.contains("Settings") && error.contains("Agent chat"));
+        }
+        // Other agents start as before.
+        assert!(agent_env("codex", None, None).is_ok());
+    }
+
+    #[test]
+    fn claude_agent_never_gets_a_subscription_token() {
+        let env = agent_env("claude", Some("sk-ant-test".into()), None).unwrap();
+        for name in CLAUDE_SUBSCRIPTION_VARS {
+            assert!(env.contains(&(name, None)), "{name} isn't removed");
+        }
+    }
+
+    #[test]
+    fn claude_is_always_started_without_claude_ai_sign_in() {
+        let dir = temp_dir("resolve-hide-auth");
+        program(&dir, "npx");
+        let line = resolve("claude", std::slice::from_ref(&dir), &Overrides::default()).unwrap();
+        assert_eq!(line.args, vec!["-y".to_string(), CLAUDE_ADAPTER.to_string(), HIDE_CLAUDE_AUTH.to_string()]);
+        program(&dir, "claude-agent-acp");
+        let line = resolve("claude", std::slice::from_ref(&dir), &Overrides::default()).unwrap();
+        assert_eq!(line.args, vec![HIDE_CLAUDE_AUTH.to_string()]);
+        let mut overrides = Overrides::default();
+        overrides.commands.insert(
+            "claude".into(),
+            CommandLine { program: PathBuf::from("/opt/claude-acp"), args: vec![HIDE_CLAUDE_AUTH.into()] },
+        );
+        assert_eq!(resolve("claude", &[dir], &overrides).unwrap().args, vec![HIDE_CLAUDE_AUTH.to_string()]);
+        assert!(!resolve_codex_args().contains(&HIDE_CLAUDE_AUTH.to_string()));
+    }
+
+    fn resolve_codex_args() -> Vec<String> {
+        let dir = temp_dir("resolve-codex-args");
+        program(&dir, "npx");
+        resolve("codex", &[dir], &Overrides::default()).unwrap().args
+    }
+
+    #[test]
+    fn hides_the_key_in_what_the_agent_writes() {
+        let env = agent_env("claude", Some("sk-ant-api03-secret".into()), None).unwrap();
+        let secrets = secret_values(&env);
+        assert_eq!(
+            hide_secrets("401: invalid x-api-key sk-ant-api03-secret (sk-ant-api03-secret)", &secrets),
+            "401: invalid x-api-key [hidden] ([hidden])"
+        );
+        assert_eq!(hide_secrets("nothing secret here", &secrets), "nothing secret here");
+        assert!(secret_values(&agent_env("codex", None, None).unwrap()).is_empty());
+    }
+
+    #[test]
+    fn hides_the_key_in_the_error_output_kept_for_a_session() {
+        let tail = Mutex::new(VecDeque::new());
+        push_tail(&tail, b"error: bad key sk-ant-api03-secret\n");
+        let secrets = vec!["sk-ant-api03-secret".to_string()];
+        assert_eq!(hide_secrets(&tail_text(&tail), &secrets), "error: bad key [hidden]\n");
     }
 
     #[cfg(unix)]
     #[test]
     fn the_key_reaches_the_process_it_was_given_to() {
         let dir = temp_dir("env");
-        let read = |env: &[(&'static str, String)]| {
+        let read = |env: &AgentEnv| {
             let line = CommandLine {
                 program: PathBuf::from("/bin/sh"),
-                args: vec!["-c".into(), "printf '%s' \"${ANTHROPIC_API_KEY-unset}\"".into()],
+                args: vec!["-c".into(), "printf '%s|%s' \"${ANTHROPIC_API_KEY-unset}\" \"${CLAUDE_CODE_OAUTH_TOKEN-unset}\"".into()],
             };
             let child = spawn_command(&line, &dir, &[PathBuf::from("/bin"), PathBuf::from("/usr/bin")], env).unwrap();
             String::from_utf8(child.wait_with_output().unwrap().stdout).unwrap()
         };
-        assert_eq!(read(&agent_env("claude", Some("sk-ant-test".into()), None)), "sk-ant-test");
+        assert_eq!(read(&agent_env("claude", Some("sk-ant-test".into()), None).unwrap()), "sk-ant-test|unset");
         if std::env::var_os("ANTHROPIC_API_KEY").is_none() {
-            assert_eq!(read(&agent_env("codex", Some("sk-ant-test".into()), None)), "unset");
+            assert_eq!(read(&agent_env("codex", Some("sk-ant-test".into()), None).unwrap()).split('|').next(), Some("unset"));
         }
     }
 
@@ -1078,7 +1200,7 @@ mod tests {
         program(&dir, "npx");
         let line = resolve("claude", &[dir], &Overrides::default()).unwrap();
         assert_eq!(line.program, adapter);
-        assert!(line.args.is_empty());
+        assert_eq!(line.args, vec![HIDE_CLAUDE_AUTH.to_string()]);
     }
 
     #[test]
@@ -1115,9 +1237,11 @@ mod tests {
         };
         let mut overrides = Overrides::default();
         overrides.commands.insert("claude".into(), chosen.clone());
+        let mut expected = chosen.clone();
+        expected.args.push(HIDE_CLAUDE_AUTH.into());
         assert_eq!(
             resolve("claude", std::slice::from_ref(&dir), &overrides).unwrap(),
-            chosen
+            expected
         );
 
         assert!(
@@ -1283,7 +1407,7 @@ mod tests {
             &line,
             &dir,
             &[PathBuf::from("/bin"), PathBuf::from("/usr/bin")],
-            &[],
+            &Vec::new(),
         )
         .unwrap();
         let started = Instant::now();
@@ -1338,7 +1462,7 @@ mod tests {
             &line,
             &dir,
             &[PathBuf::from("/bin"), PathBuf::from("/usr/bin")],
-            &[],
+            &Vec::new(),
         )
         .unwrap();
         let mut stdin = child.stdin.take().unwrap();
