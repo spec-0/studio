@@ -1107,14 +1107,17 @@ mod tests {
 
     #[test]
     fn reads_the_npm_prefix() {
-        let home = Path::new("/home/me");
+        // Absolute on every platform: "/home/me" isn't absolute on Windows.
+        let home = std::env::temp_dir().join("studio-acp-home");
+        let home = home.as_path();
+        let elsewhere = std::env::temp_dir().join("npm");
         assert_eq!(
             parse_npmrc_prefix("color=true\nprefix=~/.npm-global\n", home),
             Some(home.join(".npm-global"))
         );
         assert_eq!(
-            parse_npmrc_prefix("prefix = \"/opt/npm\"", home),
-            Some(PathBuf::from("/opt/npm"))
+            parse_npmrc_prefix(&format!("prefix = \"{}\"", elsewhere.display()), home),
+            Some(elsewhere)
         );
         assert_eq!(parse_npmrc_prefix("prefix=relative", home), None);
         assert_eq!(parse_npmrc_prefix("", home), None);
