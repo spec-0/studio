@@ -40,8 +40,8 @@ is built for working alongside agents:
   response is checked against the schema the spec declares for its status code.
 - **Your agent works through Studio.** A local MCP server, on your computer only,
   gives the agent the APIs open in Studio: their specs, operations, environments
-  and mocks. Letting the agent send requests and run collections through Studio,
-  with your approval, is the next step.
+  and mocks. It can send requests, build and run collections and start local
+  mocks through Studio, and you approve where its requests go.
 - **You review in Studio.** The schemas are drawn as a graph, so you can follow
   how the domain fits together. Collections chain steps across several specs and
   show which values pass between them, and every run has a log.
@@ -156,11 +156,13 @@ step references; the summary says what matched and what didn't.
   <sub>The summary after importing a Postman collection.</sub>
 </p>
 
-### Let a coding agent ask about your APIs
+### Let a coding agent work with your APIs
 
 Studio can run a local MCP server, so coding agents such as Claude Code or
 Cursor can read the APIs in your library, including specs you haven't
-published anywhere. It is off until you start it.
+published anywhere, and test them through Studio: send requests, build and run
+collections, and start local mocks. You approve the hosts its requests go to,
+and you can see everything it did. It is off until you start it.
 
 <p align="center">
   <img alt="A terminal: Claude Code asks Studio's MCP server which APIs are open, then writes a curl command for the Orders mock that reads the key from an environment variable" src=".github/assets/readme/mcp-terminal.gif" width="720"><br>
@@ -421,9 +423,10 @@ window. `Ctrl+Tab` is Ctrl on every platform.
 
 **Console** in the status bar (`⇧⌘Y`, or `Ctrl+Shift+Y`) opens a log of this
 session: requests as they're sent and answered, collection runs (with a link to
-each run's log), requests to local mocks, and MCP tool calls (the tool's name
-and whether it worked, never its arguments). It can be filtered and copied, keeps
-the last 1,000 entries, and a badge counts new errors. It is kept in memory only.
+each run's log), requests to local mocks, and MCP tool calls (which agent, the
+tool's name and whether it worked, never its arguments). Requests and runs an
+agent asked for say which agent. It can be filtered and copied, keeps the last
+1,000 entries, and a badge counts new errors. It is kept in memory only.
 
 ### Performance
 
@@ -470,6 +473,8 @@ servers you point it at.
 - **The local MCP server exists only when you turn it on.** It listens on this
   computer only (`127.0.0.1`), answers only requests that carry its token, turns
   away web pages, and stops when Studio quits. It never shares secret values.
+  An agent's first request to each host waits for you to allow it, and so does
+  starting a local mock or saving a file (see [Local MCP server](#local-mcp-server)).
 - **A local mock listens only when you start it, and only on this computer.**
   It uses `127.0.0.1`, answers web pages only when they are served from
   `localhost`, and stops when you stop it or quit Studio.
@@ -543,14 +548,57 @@ that is off by default too.
 
 **What agents can see.** The APIs in your library (titles, versions, servers,
 operations and the spec text), your environments' variable names and the values
-of variables that aren't secret, and whether you're signed in to Spec0. When you
-are signed in, agents can also get an API's hosted mock server (its address and
-key) and create or rebuild one for an API that's already published.
+of variables that aren't secret, your collections and their run logs, the local
+mocks that are running, and whether you're signed in to Spec0. When you are
+signed in, agents can also get an API's hosted mock server (its address and key)
+and create or rebuild one for an API that's already published.
 
-**What it doesn't do.** Agents don't send requests through Studio: they get
-URLs and call them themselves. Secret values are never shared. For searching
-every API in your organisation, use the Spec0 MCP server instead; this one only
-knows what's on your computer.
+**What agents can do.**
+
+- **Send requests** for an operation, or to any URL, through Studio. Studio
+  builds the request from the spec, fills in `{{variables}}` from the active
+  environment (secret ones too), uses your proxy and certificate settings, and
+  checks the response against the spec. The agent gets the status, headers, body
+  and the check, with credential headers hidden. The request is in History.
+- **Check a running server against its spec**, for example
+  `http://localhost:8080`: one request per operation, read-only methods unless
+  the agent asks for the others, with values from the active environment.
+- **Start and stop local mocks.**
+- **Build collections**: create one, add steps, pass a value from one step's
+  response to a later step, set the status a step expects, then run it and read
+  its log. A collection an agent creates is a **draft**: it shows in Studio with
+  *Keep* and *Discard*, and agents can change only their own drafts. A
+  collection you made or kept, they can read and run but not change. An agent
+  can also save a collection to a file, for example in your repository.
+- **Reload a spec** after changing its file, and see what changed (operations,
+  schemas, servers, version), or **check a spec for problems** such as a
+  reference that points nowhere or a path parameter nobody declared.
+
+**What you approve.** Studio asks you, in a dialog, before:
+
+- the first request to each host. *Allow for this session* covers that host
+  until you stop agents or quit Studio. Hosts on this computer (`localhost`,
+  `127.0.0.1`), where local mocks run, are asked about the same way.
+- a `DELETE`, `PUT` or `PATCH` to a host that isn't on this computer, separately
+  from its other requests.
+- starting a local mock, and every time an agent saves a file.
+
+An approval nobody answers is refused after five minutes. In the **MCP** tab you
+can list hosts agents may never call (Studio refuses those without asking) and
+set how many requests agents may send per minute (60 unless you change it).
+
+**Seeing what agents did.** The **MCP** tab lists the agents that connected (by
+the name their client gives, such as Claude Code), what you allowed this
+session, and an activity log: each tool call, and each request with what was
+sent and what came back, secret values replaced by their `{{name}}`. Runs an
+agent started are marked with its name in the collection's Runs view. The log is
+in memory only. **Stop agents** refuses everything waiting, stops runs agents
+started, forgets what you allowed, and stops the server.
+
+**What it doesn't do.** Secret values are never shared: the agent writes
+`{{token}}` and Studio fills it in. For searching every API in your
+organisation, use the Spec0 MCP server instead; this one only knows what's on
+your computer.
 
 **Privacy.** The server listens on `127.0.0.1` only, so other computers can't
 reach it. Every request needs the token, which is generated on your computer
@@ -562,7 +610,8 @@ server runs only while Studio is open.
 - **Only JSON response bodies are checked** (see [Checking responses](#checking-responses)).
 - **Collections run in Studio only.** There is no command-line runner yet, and
   an OAuth step uses the token Studio already holds for that API and
-  environment; get one from the API's Auth section first.
+  environment; get one from the API's Auth section first. The same goes for
+  requests an agent sends.
 - **A Postman import doesn't bring everything across.** Scripts aren't run
   (only status checks and saved response values are converted), OAuth 2 and
   digest auth are noted rather than converted, and a body that sends a whole

@@ -8,7 +8,8 @@ import { redact, redactDeep } from "./redact";
  * It lives in memory only. Nothing here is written to disk or sent anywhere,
  * and it is gone when Studio quits. It keeps the last `MAX_CONSOLE_ENTRIES`.
  * Every text is redacted with the known secrets as it is added, and MCP calls
- * are logged by tool name and outcome only: their arguments can hold anything.
+ * are logged by agent, tool name and outcome only: their arguments can hold
+ * anything. Requests an agent had Studio send say which agent.
  */
 
 export const MAX_CONSOLE_ENTRIES = 1000;
@@ -33,6 +34,8 @@ export interface ConsoleEntry {
   run?: { collectionId: string; runId: string };
   /** For an MCP call: the tool's name. */
   tool?: string;
+  /** The agent behind an MCP call, or behind a request Studio sent for one. */
+  agent?: string;
 }
 
 export type ConsoleInput = Omit<ConsoleEntry, "id" | "at"> & { at?: string };
@@ -70,7 +73,8 @@ export function filterEntries(entries: readonly ConsoleEntry[], filter: ConsoleF
   return entries.filter(
     (entry) =>
       matchesFilter(entry, filter) &&
-      (!needle || [entry.text, entry.url, entry.method, entry.tool].some((part) => part?.toLowerCase().includes(needle))),
+      (!needle ||
+        [entry.text, entry.url, entry.method, entry.tool, entry.agent].some((part) => part?.toLowerCase().includes(needle))),
   );
 }
 
@@ -154,15 +158,21 @@ export function resetConsole(): void {
 
 // What gets logged
 
-/** A request Studio sent and what came back (or why nothing did). */
-export function logRequest(request: { method: string; url: string }, outcome: { status: number; ms: number } | { error: string }) {
+/** A request Studio sent and what came back (or why nothing did). `agent` when an agent asked for it. */
+export function logRequest(
+  request: { method: string; url: string },
+  outcome: { status: number; ms: number } | { error: string },
+  agent?: string,
+) {
+  const by = agent ? `${agent}: ` : "";
   if ("error" in outcome) {
     logToConsole({
       source: "request",
       level: "error",
       method: request.method,
       url: request.url,
-      text: `${request.method} ${request.url} failed: ${outcome.error}`,
+      ...(agent ? { agent } : {}),
+      text: `${by}${request.method} ${request.url} failed: ${outcome.error}`,
     });
     return;
   }
@@ -173,17 +183,24 @@ export function logRequest(request: { method: string; url: string }, outcome: { 
     url: request.url,
     status: outcome.status,
     ms: outcome.ms,
-    text: `${request.method} ${request.url} → ${outcome.status} · ${outcome.ms} ms`,
+    ...(agent ? { agent } : {}),
+    text: `${by}${request.method} ${request.url} → ${outcome.status} · ${outcome.ms} ms`,
   });
 }
 
 /**
- * An MCP tool call: its name and whether it worked. Never its arguments or its
- * answer, which can hold anything an agent sent.
+ * An MCP tool call: which agent, the tool's name and whether it worked. Never
+ * its arguments or its answer, which can hold anything an agent sent.
  */
-export function logMcpCall(tool: string, ok: boolean) {
+export function logMcpCall(tool: string, ok: boolean, agent?: string) {
   const name = /^[A-Za-z0-9_.-]{1,80}$/.test(tool) ? tool : "(unknown tool)";
-  logToConsole({ source: "mcp", level: ok ? "info" : "error", tool: name, text: `MCP ${name} → ${ok ? "ok" : "error"}` });
+  logToConsole({
+    source: "mcp",
+    level: ok ? "info" : "error",
+    tool: name,
+    ...(agent ? { agent } : {}),
+    text: `MCP ${agent ? `${agent} · ` : ""}${name} → ${ok ? "ok" : "error"}`,
+  });
 }
 
 /** A request a local mock received and how it answered. */

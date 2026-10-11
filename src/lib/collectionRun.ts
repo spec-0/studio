@@ -225,6 +225,8 @@ export type RunEventBody =
       /** Where the steps go, one line each, in step order and without repeats. */
       targets: string[];
       stopOnFailure: boolean;
+      /** The agent that started the run over MCP. Absent when the developer did. */
+      startedBy?: string;
     }
   | {
       type: "step_started";
@@ -282,7 +284,7 @@ export interface RunOptions {
   /** Every event of the run, in order, already redacted. */
   onEvent?: (event: RunEvent) => void;
   /** What the run is, for its first event. Without it there is no `run_started`. */
-  run?: { collection: { id: string; name: string }; environment: string | null; targets: string[] };
+  run?: { collection: { id: string; name: string }; environment: string | null; targets: string[]; startedBy?: string };
   /** Describes a step for its `step_started` event. The key is used as the name without it. */
   describe?: (step: CollectionStep, index: number) => StepDescription;
   /** The clock, for tests. */

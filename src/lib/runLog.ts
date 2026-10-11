@@ -36,6 +36,8 @@ export interface RunLog {
   events: RunEvent[];
   /** Events were dropped to keep the log a sensible size. */
   truncated?: boolean;
+  /** The agent that started the run over MCP. Absent when the developer did. */
+  startedBy?: string;
 }
 
 export interface RunLogStore {
@@ -57,7 +59,10 @@ export function startLog(id: string, collection: { id: string; name: string }, e
 export function appendEvent(log: RunLog, event: RunEvent): RunLog {
   const events = log.events.length < MAX_EVENTS_PER_RUN || event.type === "run_finished" ? [...log.events, event] : log.events;
   const next: RunLog = { ...log, events, ...(events === log.events ? { truncated: true } : {}) };
-  if (event.type === "run_started") next.startedAt = event.at;
+  if (event.type === "run_started") {
+    next.startedAt = event.at;
+    if (event.startedBy) next.startedBy = event.startedBy;
+  }
   if (event.type === "run_finished") {
     next.finishedAt = event.at;
     next.ms = event.ms;
@@ -325,6 +330,7 @@ export function runLogText(log: RunLog): string {
   const started = clean.events.find((e) => e.type === "run_started");
   const lines = [
     `${clean.collection.name}: run ${clean.startedAt}`,
+    ...(clean.startedBy ? [`Started by: ${clean.startedBy}, over MCP`] : []),
     `Environment: ${clean.environment ?? "none"}`,
   ];
   if (started?.type === "run_started") {

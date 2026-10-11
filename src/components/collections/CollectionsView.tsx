@@ -215,7 +215,11 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
                     </span>
                     <span className="summary">
                       {collection.steps.length} step{collection.steps.length === 1 ? "" : "s"}
-                      {collection.file ? ` · ${fileName(collection.file.path)}` : " · in Studio"}
+                      {collection.draft
+                        ? ` · draft by ${collection.draft.by}`
+                        : collection.file
+                          ? ` · ${fileName(collection.file.path)}`
+                          : " · in Studio"}
                     </span>
                   </span>
                   {summary && (
@@ -767,6 +771,21 @@ function CollectionDetail({
         </div>
       </header>
 
+      {collection.draft && (
+        <div className="collection-draft" role="status">
+          <span>
+            <strong>Draft by {collection.draft.by}.</strong> An agent made this collection and can still change it.
+            Keep it to make it yours; agents can then only read and run it.
+          </span>
+          <span className="spacer" />
+          <button type="button" className="btn" onClick={() => api.remove(collection.id)}>
+            Discard
+          </button>
+          <button type="button" className="btn primary" onClick={() => api.keepDraft(collection.id)}>
+            Keep
+          </button>
+        </div>
+      )}
       {conflict && (
         <div className="verdict warn collection-banner" role="alert">
           <AlertTriangle size={14} aria-hidden className="glyph" />

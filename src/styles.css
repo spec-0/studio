@@ -3013,3 +3013,26 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
 .link-chip-text { flex: none; overflow: visible; }
 .link-chip-value { min-width: 40px; }
 .collection-title-row .history-check { white-space: nowrap; }
+
+/* Agents: approvals and activity (MCP tab) */
+.modal.agent-approval { width: min(520px, 100%); }
+.agent-approval-line { font-size: 12px; overflow-wrap: anywhere; margin: 0 0 var(--s2); }
+.agent-approval .modal-body p.field-meta { margin: 0 0 var(--s2); }
+.agent-activity { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s3); }
+.agent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.agent-blocked { flex-direction: column; align-items: stretch; gap: var(--s1); }
+.agent-blocked textarea { font-family: var(--font-mono); font-size: 11.5px; resize: vertical; min-height: 54px; }
+.agent-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
+.agent-entry.plain, .agent-entry summary { display: flex; gap: var(--s2); align-items: baseline; }
+.agent-entry summary { cursor: pointer; list-style: none; }
+.agent-entry summary::-webkit-details-marker { display: none; }
+.agent-time { color: hsl(var(--ink-3)); font-variant-numeric: tabular-nums; flex: none; }
+.agent-name { font-weight: 600; flex: none; }
+.agent-tool { font-family: var(--font-mono); font-size: 11px; color: hsl(var(--ink-2)); flex: none; }
+.agent-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.agent-summary.bad { color: hsl(var(--danger)); }
+.agent-detail { display: flex; flex-direction: column; gap: var(--s1); padding: var(--s1) 0 var(--s2) var(--s4); }
+.agent-detail pre { margin: 0; max-height: 220px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+.collection-draft { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3); border: 1px solid hsl(var(--border)); border-radius: var(--radius); background: hsl(var(--accent-soft)); font-size: 12px; }
+.collection-draft .spacer { flex: 1; }
+.run-started-by { color: hsl(var(--ink-2)); font-size: 12px; }

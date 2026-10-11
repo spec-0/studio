@@ -163,6 +163,12 @@ export interface Collection {
   updatedAt: string;
   /** Set when the collection lives in a file in a folder, e.g. a git repository. */
   file?: CollectionFileLink;
+  /**
+   * Made by an agent and not kept yet. Agents can change only their own
+   * drafts; the developer keeps one (or saves it to a file) or discards it.
+   * Kept in Studio's store only, never written to a collection file.
+   */
+  draft?: { by: string; at: string };
 }
 
 export function newCollectionId(): string {

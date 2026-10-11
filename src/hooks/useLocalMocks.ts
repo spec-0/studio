@@ -44,8 +44,9 @@ export function useLocalMocks() {
     void sync();
   }, [sync]);
 
-  const start = useCallback(
-    async (entry: LibraryEntry) => {
+  /** Start one and return its port; throws with the reason, which is also shown. */
+  const startOrThrow = useCallback(
+    async (entry: LibraryEntry): Promise<number> => {
       setBusy(entry.id);
       setError(null);
       try {
@@ -55,14 +56,23 @@ export function useLocalMocks() {
           setPrefs(next);
           await saveLocalMockPrefs(next);
         }
+        return status.port;
       } catch (caught) {
         setError({ id: entry.id, message: caught instanceof Error ? caught.message : String(caught) });
+        throw caught;
       } finally {
         await sync();
         setBusy(null);
       }
     },
     [prefs, sync],
+  );
+
+  const start = useCallback(
+    async (entry: LibraryEntry) => {
+      await startOrThrow(entry).catch(() => undefined);
+    },
+    [startOrThrow],
   );
 
   const stop = useCallback(
@@ -101,6 +111,7 @@ export function useLocalMocks() {
     invalid: prefs.invalid,
     setInvalid,
     start,
+    startOrThrow,
     stop,
     available: inTauri,
   };

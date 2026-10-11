@@ -5,7 +5,8 @@
     "description": "Lists the APIs in this Spec0 Studio library: specs the user opened from files, URLs or Spec0, including ones that aren't published anywhere. For each: id, title, version, where it came from, number of operations, base URLs from the spec's servers, and whether it has a hosted mock. Use the id or title with the other tools. To search every API in the user's organisation, use the remote Spec0 MCP server instead.",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
     "annotations": { "readOnlyHint": true, "openWorldHint": false },
-    "requiresSignIn": false
+    "requiresSignIn": false,
+    "waitsForUser": false
   },
   {
     "name": "get_api_spec",
@@ -21,12 +22,13 @@
       "additionalProperties": false
     },
     "annotations": { "readOnlyHint": true, "openWorldHint": false },
-    "requiresSignIn": false
+    "requiresSignIn": false,
+    "waitsForUser": false
   },
   {
     "name": "get_operation",
     "title": "Get one operation",
-    "description": "Returns one operation of an API: parameters, request body schema, responses, the security schemes it uses, and the full URL for each server (and for the hosted mock, if there is one). Identify it by operation_id, or by method and path. Studio does not send requests for you: call the URL yourself, for example with curl.",
+    "description": "Returns one operation of an API: parameters, request body schema, responses, the security schemes it uses, and the full URL for each server (and for the hosted mock, if there is one). Identify it by operation_id, or by method and path. To call it, use send_request, or call the URL yourself.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -39,7 +41,8 @@
       "additionalProperties": false
     },
     "annotations": { "readOnlyHint": true, "openWorldHint": false },
-    "requiresSignIn": false
+    "requiresSignIn": false,
+    "waitsForUser": false
   },
   {
     "name": "search_operations",
@@ -56,7 +59,8 @@
       "additionalProperties": false
     },
     "annotations": { "readOnlyHint": true, "openWorldHint": false },
-    "requiresSignIn": false
+    "requiresSignIn": false,
+    "waitsForUser": false
   },
   {
     "name": "get_connection_status",
@@ -64,7 +68,8 @@
     "description": "Says whether Studio is signed in to Spec0 or working locally, the organisation name, the Spec0 app URL, the address of the remote Spec0 MCP server, and the Studio and MCP server versions. Call this first to know whether the signed-in tools (mock servers) will work.",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
     "annotations": { "readOnlyHint": true, "openWorldHint": false },
-    "requiresSignIn": false
+    "requiresSignIn": false,
+    "waitsForUser": false
   },
   {
     "name": "list_environments",
@@ -72,7 +77,8 @@
     "description": "Lists the user's Studio environments (named sets of variables used as {{name}} in requests), which one is active, and each variable's name. Values are included for ordinary variables only. Secret variables are listed by name and marked secret; their values are never shared. If you need one, ask the user.",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
     "annotations": { "readOnlyHint": true, "openWorldHint": false },
-    "requiresSignIn": false
+    "requiresSignIn": false,
+    "waitsForUser": false
   },
   {
     "name": "get_mock_server",
@@ -87,7 +93,8 @@
       "additionalProperties": false
     },
     "annotations": { "readOnlyHint": true, "openWorldHint": true },
-    "requiresSignIn": true
+    "requiresSignIn": true,
+    "waitsForUser": false
   },
   {
     "name": "create_mock_server",
@@ -102,7 +109,8 @@
       "additionalProperties": false
     },
     "annotations": { "readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true },
-    "requiresSignIn": true
+    "requiresSignIn": true,
+    "waitsForUser": false
   },
   {
     "name": "refresh_mock_server",
@@ -117,6 +125,354 @@
       "additionalProperties": false
     },
     "annotations": { "readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true },
-    "requiresSignIn": true
+    "requiresSignIn": true,
+    "waitsForUser": false
+  },
+  {
+    "name": "send_request",
+    "title": "Send a request",
+    "description": "Sends one request for an operation through Studio, with the user's environments, proxy and certificate settings, and returns the status, headers, body and whether the response matches the spec. Refer to values as {{name}} from the active environment; Studio fills them in, and secret values never appear in what comes back. The user approves each host in Studio the first time (and DELETE, PUT and PATCH to hosts outside this computer separately), so this can wait for them. For a URL that isn't in any spec, pass method and url instead of api.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." },
+        "operation_id": { "type": "string", "description": "The operationId from the spec." },
+        "method": { "type": "string", "description": "HTTP method, such as POST. Use with path." },
+        "path": { "type": "string", "description": "Path as written in the spec, such as /orders/{orderId}. Use with method." },
+        "url": { "type": "string", "description": "A full URL, for a request that isn't in any spec. Use with method, without api." },
+        "target": { "type": "string", "description": "Where to send: \"server\" (the spec's first server), \"mock\" (the hosted mock), \"local-mock\" (the API's local mock, which must be running), or a base URL such as http://localhost:8080. Defaults to the spec's first server." },
+        "path_params": {
+          "type": "object",
+          "description": "Values for {path} parameters, by name. Values can use {{variable}} from the active environment.",
+          "additionalProperties": { "type": "string" }
+        },
+        "query": {
+          "type": "object",
+          "description": "Query parameters, by name.",
+          "additionalProperties": { "type": "string" }
+        },
+        "headers": {
+          "type": "object",
+          "description": "Extra headers, by name. Use {{variable}} for credentials; Studio fills them in and never returns the values.",
+          "additionalProperties": { "type": "string" }
+        },
+        "body": { "description": "The request body: a JSON value, or a string for other content types. Strings inside it can use {{variable}}." },
+        "auth_value": { "type": "string", "description": "The value for the operation's security scheme, usually a {{variable}}. Without it, an OAuth 2 scheme uses the token Studio holds for this API, if any." }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true },
+    "requiresSignIn": false,
+    "waitsForUser": true
+  },
+  {
+    "name": "check_contract",
+    "title": "Check a running server against the spec",
+    "description": "Sends a request for each operation of an API to a base URL (for example http://localhost:8080) and reports, for each one, the status and whether the response matches the spec. Path and required parameters come from the active environment by name; operations without values are skipped and say why. Only GET, HEAD and OPTIONS run unless include_mutating is true. The user approves the host in Studio first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." },
+        "target": { "type": "string", "description": "Where to send: \"server\" (the spec's first server), \"mock\" (the hosted mock), \"local-mock\" (the API's local mock, which must be running), or a base URL such as http://localhost:8080. Defaults to the spec's first server." },
+        "operations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Only these operations, as operationIds or \"METHOD /path\". Defaults to all."
+        },
+        "include_mutating": { "type": "boolean", "description": "Also run POST, PUT, PATCH and DELETE operations. Off by default." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true },
+    "requiresSignIn": false,
+    "waitsForUser": true
+  },
+  {
+    "name": "list_local_mocks",
+    "title": "List running local mocks",
+    "description": "Lists the local mocks running in Studio: which API each serves and its address on this computer.",
+    "inputSchema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "start_local_mock",
+    "title": "Start a local mock",
+    "description": "Starts a local mock of an API on this computer (127.0.0.1) and returns its address. It answers with examples from the spec, and runs until it is stopped or Studio quits.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "stop_local_mock",
+    "title": "Stop a local mock",
+    "description": "Stops the local mock of an API that is running in Studio. Requests to its address fail after that.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "list_collections",
+    "title": "List collections",
+    "description": "Lists the collections in Studio: name, id, number of steps, whether it is a draft made by an agent, the file it is saved to, and its last run.",
+    "inputSchema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "get_collection",
+    "title": "Get a collection",
+    "description": "Returns a collection's steps in order: each step's key, operation, target, parameters, headers, body, expected status, and the values it takes from earlier steps.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." }
+      },
+      "required": ["collection"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "create_collection",
+    "title": "Create a collection",
+    "description": "Creates a draft collection in Studio, empty or as a copy of another. The user sees it as it is built and can keep or discard it. Agents can change only the drafts they create.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "A name for the collection." },
+        "copy_of": { "type": "string", "description": "A collection to copy, by id or name." }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "add_step",
+    "title": "Add a step",
+    "description": "Adds an operation as a step at the end of a draft collection (or at position). Parameters not given start from the spec's examples. Returns the step's key, which later steps use to refer to its response.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." },
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." },
+        "operation_id": { "type": "string", "description": "The operationId from the spec." },
+        "method": { "type": "string", "description": "HTTP method, such as POST. Use with path." },
+        "path": { "type": "string", "description": "Path as written in the spec, such as /orders/{orderId}. Use with method." },
+        "key": { "type": "string", "description": "A key for the step. Defaults to the operationId." },
+        "name": { "type": "string", "description": "A name to show for the step." },
+        "target": { "type": "string", "description": "Where to send: \"server\" (the spec's first server), \"mock\" (the hosted mock), \"local-mock\" (the API's local mock, which must be running), or a base URL such as http://localhost:8080. Defaults to the spec's first server." },
+        "path_params": {
+          "type": "object",
+          "description": "Values for {path} parameters, by name. Values can use {{variable}} from the active environment.",
+          "additionalProperties": { "type": "string" }
+        },
+        "query": {
+          "type": "object",
+          "description": "Query parameters, by name.",
+          "additionalProperties": { "type": "string" }
+        },
+        "headers": {
+          "type": "object",
+          "description": "Extra headers, by name. Use {{variable}} for credentials; Studio fills them in and never returns the values.",
+          "additionalProperties": { "type": "string" }
+        },
+        "body": { "description": "The request body: a JSON value, or a string for other content types. Strings inside it can use {{variable}}." },
+        "expect_status": { "type": "string", "description": "The status the step expects: \"201\", \"4XX\". Defaults to any 2xx." },
+        "position": { "type": "integer", "description": "Where to put it, from 0. Defaults to the end." }
+      },
+      "required": ["collection", "api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "update_step",
+    "title": "Change a step",
+    "description": "Changes a step in a draft collection. Parameters and headers given are merged in (a null value removes one); a body given replaces the old one.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." },
+        "step": { "type": "string", "description": "The step's key, from get_collection." },
+        "name": { "type": "string", "description": "A new name to show." },
+        "target": { "type": "string", "description": "Where to send: \"server\" (the spec's first server), \"mock\" (the hosted mock), \"local-mock\" (the API's local mock, which must be running), or a base URL such as http://localhost:8080. Defaults to the spec's first server." },
+        "path_params": { "type": "object", "description": "Path parameter values to set, by name; null removes one." },
+        "query": { "type": "object", "description": "Query parameters to set, by name; null removes one." },
+        "headers": { "type": "object", "description": "Headers to set, by name; null removes one." },
+        "body": { "description": "The request body: a JSON value, or a string for other content types. Strings inside it can use {{variable}}." }
+      },
+      "required": ["collection", "step"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "remove_step",
+    "title": "Remove a step",
+    "description": "Removes a step from a draft collection. Later steps that used its response are listed in the result.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." },
+        "step": { "type": "string", "description": "The step's key, from get_collection." }
+      },
+      "required": ["collection", "step"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": true, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "link_value",
+    "title": "Use a value from an earlier step",
+    "description": "Fills a field of a step with a value from an earlier step's response, for example the new order's id in the next step's path. Written as a {{steps.<key>.<path>}} reference in the step.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." },
+        "step": { "type": "string", "description": "The key of the step whose field is filled." },
+        "field": { "type": "string", "description": "The field to fill: path.<name>, query.<name>, header.<name>, or body.<path> such as body.items[0].sku." },
+        "from_step": { "type": "string", "description": "The key of the earlier step." },
+        "from": { "type": "string", "description": "Where in its response: body.<path> such as body.id, headers.<name>, or status." }
+      },
+      "required": ["collection", "step", "field", "from_step", "from"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "set_expected_status",
+    "title": "Set a step's expected status",
+    "description": "Sets the status a step expects, such as \"404\" or \"4XX\". A step passes when the status matches and the response matches what the spec declares for that status. \"2XX\" is the default.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." },
+        "step": { "type": "string", "description": "The step's key, from get_collection." },
+        "status": { "type": "string", "description": "\"201\", \"404\", \"4XX\" or \"2XX\"." }
+      },
+      "required": ["collection", "step", "status"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "run_collection",
+    "title": "Run a collection",
+    "description": "Runs a collection's steps in order through Studio and waits for the result: each step's status, whether it passed, and why not. Values pass between steps and secret values never appear in the result. The run shows in Studio's Runs view, and the user approves the hosts it calls. Use get_run_log for the full log.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." },
+        "target": { "type": "string", "description": "Send every step that uses a spec here instead of its own target: \"server\", \"mock\", \"local-mock\" or a base URL." }
+      },
+      "required": ["collection"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true },
+    "requiresSignIn": false,
+    "waitsForUser": true
+  },
+  {
+    "name": "get_run_log",
+    "title": "Get a run's log",
+    "description": "Returns the log of a collection run, the latest by default: each step's request, response, schema check, values passed between steps and why it failed. Secret values are replaced by their {{name}}.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." },
+        "run_id": { "type": "string", "description": "A run id from run_collection. Defaults to the latest run." },
+        "format": { "type": "string", "enum": ["text", "json"], "description": "text (default) or json." }
+      },
+      "required": ["collection"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "save_collection_to_folder",
+    "title": "Save a collection to a file",
+    "description": "Saves a collection as a .spec0-collection.yaml file, for example in the project's repository, so it can be reviewed and run again. The user approves the path in Studio first. Saving keeps a draft. Secret values are written as {{references}}.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "collection": { "type": "string", "description": "The collection's id or name, from list_collections." },
+        "path": { "type": "string", "description": "Absolute path of the file. The .spec0-collection.yaml ending is added if missing." }
+      },
+      "required": ["collection", "path"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": true
+  },
+  {
+    "name": "reload_spec",
+    "title": "Reload a spec",
+    "description": "Reads an API's spec again from its file or URL, after it has been changed, and reports what changed: version, operations and schemas added, removed or changed, and servers.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
+  },
+  {
+    "name": "validate_spec",
+    "title": "Check a spec for problems",
+    "description": "Reports problems in an API's spec that stop it from loading or make operations hard to use: references that don't resolve, path parameters that aren't declared, duplicate operationIds, operations without responses, and missing servers.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "description": "The API's id or title, from list_local_apis." }
+      },
+      "required": ["api"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false },
+    "requiresSignIn": false,
+    "waitsForUser": false
   }
 ]

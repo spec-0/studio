@@ -306,21 +306,49 @@ and a test checks that. The check runs in Rust (`updates.rs`) so it can use the
 proxy from Network settings; the updater's JavaScript API isn't available to
 the web view.
 
-**The local MCP server is off until the user starts it, and hands out facts,
-not requests.** It listens on `127.0.0.1` only, requires the per-install bearer
-token on every request, and refuses any `Host` other than its own loopback
-address and any browser `Origin`, which is what stops a web page reaching it
-through DNS rebinding. Studio makes no request you didn't ask for, and a
-listening socket is the same kind of promise, so the server doesn't start by
-itself unless the user turned on "start when Studio opens" (off by default).
-Agents get specs, URLs and mock details and send requests themselves; adding a
-"send this request" tool would make Studio act for a caller the user can't see.
+**The local MCP server is off until the user starts it, and an agent acts
+through Studio only where the developer can see it and has said yes.** It
+listens on `127.0.0.1` only, requires the per-install bearer token on every
+request, and refuses any `Host` other than its own loopback address and any
+browser `Origin`, which is what stops a web page reaching it through DNS
+rebinding. Studio makes no request you didn't ask for, and a listening socket is
+the same kind of promise, so the server doesn't start by itself unless the user
+turned on "start when Studio opens" (off by default).
+
+Agents can send requests, run collections and start local mocks through Studio,
+because that is how a developer working through an agent tests an API. What
+keeps that consistent with "no request you didn't ask for" is in
+`src/lib/agentPolicy.ts` and `src/lib/agentControl.ts`, and none of it should be
+relaxed:
+
+- The first request to each host waits for the developer's answer in a dialog
+  (once, for the session, or no). `DELETE`, `PUT` and `PATCH` to a host that
+  isn't on this computer need their own answer. Blocked hosts are refused
+  without asking, and there is a cap per minute.
+- Starting a local mock asks too (it opens a port), and saving a collection file
+  asks every time, with the path shown.
+- The agent never sees a secret value. It writes `{{token}}`, Studio fills it in
+  when it sends, credential headers are hidden in what comes back, and every
+  tool result is redacted again on its way out (`answerCall` in
+  `src/lib/mcpServer.ts`).
+- Everything an agent does is visible: the console names the agent, its runs are
+  marked in the Runs view, and the MCP tab keeps an activity log. Stop agents
+  refuses whatever is waiting and stops the server.
+- Collections an agent creates are drafts, and agents change only their own
+  drafts. A collection the developer made or kept is read-only to agents.
 
 Rust owns the socket, the checks and the protocol (a small hand-written subset
-of MCP's Streamable HTTP transport: one `POST /mcp`, JSON responses, no
-sessions). Tool calls go to the web view as `studio://mcp-call` events and are
-answered by `src/lib/mcp.ts`, which already parses specs and talks to Spec0, and
-reads what Studio stored rather than what's on screen. The exception is
+of MCP's Streamable HTTP transport: one `POST /mcp`, JSON responses). Its only
+session is a label: `initialize` returns an `Mcp-Session-Id` so Studio can say
+which agent (by its `clientInfo` name) made each call; the token is still what
+lets a client in. Tool calls go to the web view as `studio://mcp-call` events.
+Tools that only read are answered by `src/lib/mcp.ts`, which reads what Studio
+stored rather than what's on screen. Tools that act are in
+`src/lib/mcpAgent.ts`, and reach the running app (the active environment with
+its secret values, collections, local mocks) through `useAgentApp`, so a run an
+agent starts goes through the same code as one the developer starts. Tools that
+can wait for the developer are marked `waitsForUser` and get a long timeout in
+Rust; stopping the server answers every call still waiting. The exception is
 `list_environments`, answered in Rust from `environments.json` alone: it never
 touches the credential store and drops the value of anything marked secret, so
 no bug in the interface can make a secret come back. Tool definitions live in
@@ -332,9 +360,9 @@ is for what only Studio knows.
 computer.** Each mock is one API on its own port on `127.0.0.1` (4010 upwards,
 remembered per API), so the spec's paths work unchanged under
 `http://127.0.0.1:<port>`; one shared port with a prefix per API would make
-every frontend rewrite its base path. There is no "start with Studio" setting
-and no MCP tool that starts one: a listening socket is something the user turns
-on by hand. It refuses any `Host` that isn't a loopback name (DNS rebinding) and
+every frontend rewrite its base path. There is no "start with Studio" setting,
+and the MCP tool that starts one asks the developer first: a listening socket is
+something the user turns on. It refuses any `Host` that isn't a loopback name (DNS rebinding) and
 any browser `Origin` other than `http(s)://localhost`, `127.0.0.1` or `[::1]`
 on any port, `null` included. That refusal covers simple requests as well as
 preflights, because a GET needs no preflight and would otherwise let any

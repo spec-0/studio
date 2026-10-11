@@ -4,6 +4,7 @@ import { useMcpServer } from "../../hooks/useMcpServer";
 import { MCP_TOOLS } from "../../lib/mcp";
 import { endpoint, maskToken, setupSnippets } from "../../lib/mcpServer";
 import { inTauri } from "../../lib/request";
+import { AgentActivity } from "./AgentActivity";
 
 interface Props {
   /** Signed in to Spec0: the mock server tools work. */
@@ -56,8 +57,9 @@ export function McpPanel({ signedIn }: Props) {
   return (
     <div className="mcp-panel">
       <p className="mcp-lede">
-        An MCP server lets AI coding agents on this computer, such as Claude Code or Cursor, ask Studio
-        about your APIs.
+        An MCP server lets AI coding agents on this computer, such as Claude Code or Cursor, work with your
+        APIs through Studio: read specs, send requests, run collections and start local mocks, with you
+        approving where requests go.
       </p>
 
       <div className="mcp-row">
@@ -187,15 +189,28 @@ export function McpPanel({ signedIn }: Props) {
                   sign-in
                 </span>
               )}
+              {tool.waitsForUser && (
+                <span className="tag" title="Studio asks you before this sends a request or writes a file">
+                  asks you
+                </span>
+              )}
             </li>
           );
         })}
       </ul>
 
+      <AgentActivity
+        rules={prefs.agentRules}
+        onRules={(next) => void mcp.setAgentRules(next)}
+        canStop={status.running}
+        busy={mcp.busy}
+        onStop={() => void mcp.stopAgents()}
+      />
+
       <p className="field-meta mcp-privacy">
-        Only programs on this computer can connect, and only with the token. Secret variable values
-        are never shared. Studio doesn&apos;t send requests for agents: they get URLs and call them
-        themselves. The server stops when Studio quits.
+        Only programs on this computer can connect, and only with the token. Secret variable values are
+        filled in by Studio and never shared. Collections an agent makes stay drafts until you keep them.
+        The server stops when Studio quits.
       </p>
     </div>
   );

@@ -318,15 +318,16 @@ export function buildPlan(
 
 /**
  * Send a request and return what came back. Each one is also noted in the app
- * console (method, URL, status and time, redacted), which lives in memory only.
+ * console (method, URL, status and time, redacted), which lives in memory only,
+ * with the agent's name when Studio sent it for one.
  */
-export async function send(plan: RequestPlan, transport: Transport = {}): Promise<ResponseResult> {
+export async function send(plan: RequestPlan, transport: Transport = {}, meta: { agent?: string } = {}): Promise<ResponseResult> {
   try {
     const response = await sendOnce(plan, transport);
-    logRequest(plan, response);
+    logRequest(plan, response, meta.agent);
     return response;
   } catch (error) {
-    logRequest(plan, { error: error instanceof Error ? error.message : String(error) });
+    logRequest(plan, { error: error instanceof Error ? error.message : String(error) }, meta.agent);
     throw error;
   }
 }

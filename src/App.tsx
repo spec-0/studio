@@ -39,6 +39,7 @@ import { TitleBar } from "./components/TitleBar";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { McpHost } from "./components/mcp/McpHost";
 import { UrlBar } from "./components/UrlBar";
+import { useAgentApp } from "./hooks/useAgentApp";
 import { useBoot } from "./hooks/useBoot";
 import { useBulkRun } from "./hooks/useBulkRun";
 import { useCollections } from "./hooks/useCollections";
@@ -279,6 +280,7 @@ export default function App() {
       [envFile, saveEnvFile],
     ),
   });
+  useAgentApp({ entries, vars, activeEnv, connection, session, localMocks, collections, setRequests });
 
   const {
     showPublish,

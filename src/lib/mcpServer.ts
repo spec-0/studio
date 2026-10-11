@@ -1,10 +1,26 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { agentApp } from "./agentApp";
+import {
+  currentStopGeneration,
+  gateMockStart,
+  gateRequest,
+  gateSave,
+  noteAgent,
+  recordActivity,
+  setAgentRules,
+  stopAgents,
+} from "./agentControl";
+import { agentLabel, DEFAULT_AGENT_RULES, normaliseRules, type AgentRules } from "./agentPolicy";
 import { logMcpCall } from "./appConsole";
 import { currentVersion } from "./appUpdates";
+import { readCollectionFile } from "./collectionFile";
+import * as history from "./history";
 import * as library from "./library";
-import { runTool, type ToolDeps } from "./mcp";
-import { inTauri } from "./request";
+import { runTool, type ToolDeps, type ToolResult } from "./mcp";
+import { AGENT_TOOLS, runAgentTool, type AgentToolDeps } from "./mcpAgent";
+import { redactDeep } from "./redact";
+import { appFetch, inTauri, send } from "./request";
 import { createMock, getMockApiKey, listMocks, listTeamApis, loadSession, refreshMock } from "./spec0";
 import { readStore, writeStore } from "./store";
 
@@ -19,7 +35,10 @@ import { readStore, writeStore } from "./store";
 export const MCP_STORE = "mcp.json";
 /** The port tried first; the server moves to the next free one if it's taken. */
 export const DEFAULT_MCP_PORT = 47321;
-/** Fired on `window` when a tool changed the library file, so the interface reloads it. */
+/**
+ * Fired on `window` when a tool changed the library file, so the interface
+ * reloads it. `detail.specChanged` is set when an API's spec text changed.
+ */
 export const LIBRARY_CHANGED_EVENT = "studio:library-changed";
 
 export interface McpPrefs {
@@ -28,9 +47,16 @@ export interface McpPrefs {
   port: number;
   /** Start the server when Studio opens. Off by default. */
   startOnLaunch: boolean;
+  /** What agents may send: blocked hosts and the cap per minute. */
+  agentRules: AgentRules;
 }
 
-export const DEFAULT_MCP_PREFS: McpPrefs = { token: "", port: DEFAULT_MCP_PORT, startOnLaunch: false };
+export const DEFAULT_MCP_PREFS: McpPrefs = {
+  token: "",
+  port: DEFAULT_MCP_PORT,
+  startOnLaunch: false,
+  agentRules: DEFAULT_AGENT_RULES,
+};
 
 /** 32 random bytes from the web view's CSPRNG, base64url. */
 export function newToken(): string {
@@ -53,7 +79,9 @@ export async function loadMcpPrefs(): Promise<McpPrefs> {
     port: validPort(stored.port) ? stored.port : DEFAULT_MCP_PORT,
     // Only an explicit `true` turns it on.
     startOnLaunch: stored.startOnLaunch === true,
+    agentRules: normaliseRules(stored.agentRules),
   };
+  setAgentRules(prefs.agentRules);
   if (!prefs.token) {
     prefs.token = newToken();
     await saveMcpPrefs(prefs);
@@ -62,6 +90,7 @@ export async function loadMcpPrefs(): Promise<McpPrefs> {
 }
 
 export async function saveMcpPrefs(prefs: McpPrefs): Promise<void> {
+  setAgentRules(prefs.agentRules);
   await writeStore(MCP_STORE, prefs);
 }
 
@@ -91,6 +120,16 @@ export async function startMcp(prefs: McpPrefs): Promise<McpStatus> {
 export async function stopMcp(): Promise<McpStatus> {
   if (!inTauri) return STOPPED;
   return invoke<McpStatus>("mcp_stop");
+}
+
+/**
+ * Stop agents: refuse what they're waiting for, cancel runs they started,
+ * forget what was allowed this session, and stop the server, which answers
+ * every call still in flight. The developer starts it again when they want.
+ */
+export async function stopAllAgents(): Promise<McpStatus> {
+  stopAgents();
+  return stopMcp();
 }
 
 export function endpoint(port: number): string {
@@ -144,14 +183,57 @@ const deps: ToolDeps = {
   libraryChanged: () => window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)),
 };
 
+const agentDeps: AgentToolDeps = {
+  app: agentApp,
+  loadLibrary: library.loadLibrary,
+  readSpecText: library.readSpecText,
+  send: (plan, transport, meta) => send(plan, transport, meta),
+  gateRequest,
+  gateMockStart,
+  gateSave,
+  stopGeneration: currentStopGeneration,
+  recordActivity,
+  recordHistory: history.record,
+  readFile: readCollectionFile,
+  rereadFile: library.rereadFile,
+  fetchText: async (url) => {
+    const response = await appFetch(url);
+    if (!response.ok) throw new Error(`${url} answered ${response.status}.`);
+    return response.text();
+  },
+  applyUpdate: library.applyUpdate,
+  specChanged: (id) => window.dispatchEvent(new CustomEvent(LIBRARY_CHANGED_EVENT, { detail: { specChanged: id } })),
+};
+
+interface AgentInfo {
+  name?: string | null;
+  version?: string | null;
+}
+
 interface CallPayload {
   id: number;
   name: string;
   arguments: unknown;
+  agent?: AgentInfo;
+}
+
+/** Answer one call, whichever module has the tool. Never throws. */
+export async function answerCall(name: string, args: unknown, agent: string): Promise<ToolResult> {
+  const result =
+    name in AGENT_TOOLS ? await runAgentTool(name, args, agentDeps, { agent }) : await runTool(name, args, deps);
+  // The last line of defence: whatever a tool built, no known secret value leaves Studio.
+  return redactDeep(result);
+}
+
+/** The first line of a result, for the activity view. */
+function firstLine(result: ToolResult): string {
+  const line = result.content[0]?.text.split("\n").find((row) => row.trim() && !/^[{[]$/.test(row.trim())) ?? "";
+  return line.length > 160 ? `${line.slice(0, 159)}…` : line;
 }
 
 let bridge: Promise<UnlistenFn> | null = null;
 let activity: Promise<UnlistenFn> | null = null;
+let clients: Promise<UnlistenFn> | null = null;
 
 /**
  * Answer `studio://mcp-call` events from the Rust server. Registered once per
@@ -160,14 +242,19 @@ let activity: Promise<UnlistenFn> | null = null;
 export function ensureBridge(): Promise<UnlistenFn> {
   if (!inTauri) return Promise.resolve(() => {});
   // Calls Rust answers itself (list_environments) are only reported, for the console.
-  activity ??= listen<{ name: string; ok: boolean }>("studio://mcp-activity", (event) =>
-    logMcpCall(event.payload.name, event.payload.ok),
-  );
+  activity ??= listen<{ name: string; ok: boolean; agent?: AgentInfo }>("studio://mcp-activity", (event) => {
+    const agent = agentLabel(event.payload.agent);
+    logMcpCall(event.payload.name, event.payload.ok, agent);
+    recordActivity({ agent, tool: event.payload.name, ok: event.payload.ok, summary: `${event.payload.name} (answered by Studio's shell)` });
+  });
+  clients ??= listen<AgentInfo>("studio://mcp-client", (event) => noteAgent(event.payload));
   bridge ??= listen<CallPayload>("studio://mcp-call", (event) => {
     const { id, name, arguments: args } = event.payload;
-    void runTool(name, args, deps).then((result) => {
-      // The console gets the tool's name and outcome, never its arguments.
-      logMcpCall(name, !result.isError);
+    const agent = agentLabel(event.payload.agent);
+    void answerCall(name, args, agent).then((result) => {
+      // The console gets the agent, the tool's name and outcome, never its arguments.
+      logMcpCall(name, !result.isError, agent);
+      recordActivity({ agent, tool: name, ok: !result.isError, summary: firstLine(result) });
       return invoke("mcp_respond", { id, result });
     });
   });

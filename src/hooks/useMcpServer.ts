@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { AgentRules } from "../lib/agentPolicy";
 import {
   DEFAULT_MCP_PREFS,
   loadMcpPrefs,
@@ -6,6 +7,7 @@ import {
   newToken,
   saveMcpPrefs,
   startMcp,
+  stopAllAgents,
   stopMcp,
   validPort,
   type McpPrefs,
@@ -79,6 +81,12 @@ export function useMcpServer() {
 
   const setStartOnLaunch = useCallback((value: boolean) => update({ startOnLaunch: value }, false), [update]);
 
+  /** Blocked hosts and the cap per minute. Takes effect at once; no restart. */
+  const setAgentRules = useCallback((agentRules: AgentRules) => update({ agentRules }, false), [update]);
+
+  /** Refuse everything agents are waiting for, cancel their runs, and stop the server. */
+  const stopAgents = useCallback(() => run(stopAllAgents), [run]);
+
   return {
     loaded,
     prefs,
@@ -90,6 +98,8 @@ export function useMcpServer() {
     regenerateToken,
     setPort,
     setStartOnLaunch,
+    setAgentRules,
+    stopAgents,
     /** The port it's on differs from the one asked for: the first was taken. */
     movedPort: status.running && status.port !== null && status.port !== prefs.port,
   };
