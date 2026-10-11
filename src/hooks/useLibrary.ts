@@ -106,16 +106,25 @@ export function useLibrary({
     [current],
   );
 
-  // A local MCP tool (creating or rebuilding a mock) wrote the library file.
+  // A local MCP tool wrote the library file: creating or rebuilding a mock, or
+  // reloading a spec an agent changed. A reloaded spec that is on screen is
+  // shown again from its new text.
+  const openNow = useRef(current);
+  openNow.current = current;
   useEffect(() => {
-    const reload = () =>
-      void library.loadLibrary().then((next) => {
+    const reload = (event: Event) =>
+      void library.loadLibrary().then(async (next) => {
         setEntries(next);
         setCurrent((open) => (open ? next.find((entry) => entry.id === open.id) ?? open : open));
+        const changed = (event as CustomEvent<{ specChanged?: string } | undefined>).detail?.specChanged;
+        const shown = changed && openNow.current?.id === changed ? next.find((entry) => entry.id === changed) : undefined;
+        if (!shown) return;
+        const text = await library.readSpecText(shown.id);
+        if (text) openSpec(parseSpec(text, shown.title, documentUrlOf(shown.source)), shown, text);
       });
     window.addEventListener(LIBRARY_CHANGED_EVENT, reload);
     return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, reload);
-  }, [setCurrent]);
+  }, [setCurrent, openSpec]);
 
   // Opening
 

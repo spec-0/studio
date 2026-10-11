@@ -136,3 +136,15 @@ describe("secret values never reach the console", () => {
     expect(JSON.stringify(entries)).not.toContain(SECRET);
   });
 });
+
+describe("agents in the console", () => {
+  it("names the agent behind an MCP call and behind a request Studio sent for it", () => {
+    resetConsole();
+    logMcpCall("send_request", true, "Claude Code");
+    logRequest({ method: "GET", url: "http://localhost:8080/orders" }, { status: 200, ms: 4 }, "Claude Code");
+    const { entries } = consoleState();
+    expect(entries[0]).toMatchObject({ source: "mcp", agent: "Claude Code", text: "MCP Claude Code · send_request → ok" });
+    expect(entries[1]).toMatchObject({ source: "request", agent: "Claude Code", text: "Claude Code: GET http://localhost:8080/orders → 200 · 4 ms" });
+    expect(filterEntries(entries, "all", "claude code")).toHaveLength(2);
+  });
+});

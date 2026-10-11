@@ -134,6 +134,24 @@ describe("tool definitions", () => {
       "get_mock_server",
       "create_mock_server",
       "refresh_mock_server",
+      "send_request",
+      "check_contract",
+      "list_local_mocks",
+      "start_local_mock",
+      "stop_local_mock",
+      "list_collections",
+      "get_collection",
+      "create_collection",
+      "add_step",
+      "update_step",
+      "remove_step",
+      "link_value",
+      "set_expected_status",
+      "run_collection",
+      "get_run_log",
+      "save_collection_to_folder",
+      "reload_spec",
+      "validate_spec",
     ]);
     const signedIn = MCP_TOOLS.filter((tool) => tool.requiresSignIn).map((tool) => tool.name);
     expect(signedIn).toEqual(["get_mock_server", "create_mock_server", "refresh_mock_server"]);
@@ -142,8 +160,12 @@ describe("tool definitions", () => {
     }
   });
 
-  it("has no tool that sends requests to an API", () => {
-    expect(MCP_TOOLS.some((tool) => /send|request|call_api|fetch/.test(tool.name))).toBe(false);
+  it("marks every tool that sends a request or writes a file as waiting for the developer", () => {
+    const waits = MCP_TOOLS.filter((tool) => tool.waitsForUser).map((tool) => tool.name);
+    expect(waits).toEqual(["send_request", "check_contract", "run_collection", "save_collection_to_folder"]);
+    for (const name of waits) {
+      expect(MCP_TOOLS.find((tool) => tool.name === name)!.description).toMatch(/approve/);
+    }
   });
 });
 

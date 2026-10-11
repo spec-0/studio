@@ -30,7 +30,8 @@ import { describeMockRefresh } from "./sync";
  *
  * Everything is read from what Studio has stored, never from React state, so
  * an answer is the same whichever screen is open. Nothing here sends a request
- * to an API: agents get URLs and call them themselves. The signed-in tools talk
+ * to an API; the tools that do (sending, running collections, local mocks) are
+ * in `mcpAgent.ts`, behind the developer's approval. The signed-in tools talk
  * to Spec0, and only when an agent calls them.
  */
 
@@ -39,6 +40,8 @@ export interface ToolDefinition {
   title: string;
   description: string;
   requiresSignIn: boolean;
+  /** Sends requests or writes a file, so it can wait for the developer's approval. */
+  waitsForUser: boolean;
 }
 
 /** The same list the Rust server returns from `tools/list`. */
@@ -47,6 +50,7 @@ export const MCP_TOOLS: ToolDefinition[] = toolDefinitions.map((tool) => ({
   title: tool.title,
   description: tool.description,
   requiresSignIn: tool.requiresSignIn,
+  waitsForUser: tool.waitsForUser,
 }));
 
 export interface ToolResult {
@@ -134,7 +138,8 @@ export function findApi(entries: LibraryEntry[], ref: string | undefined): Libra
 
 const parsedCache = new Map<string, { text: string; spec: ParsedSpec }>();
 
-async function specFor(entry: LibraryEntry, deps: ToolDeps): Promise<ParsedSpec> {
+/** An entry's spec, parsed once per version of its text. */
+export async function specFor(entry: LibraryEntry, deps: Pick<ToolDeps, "readSpecText">): Promise<ParsedSpec> {
   const text = await deps.readSpecText(entry.id);
   if (!text) throw new ToolFailure(`Studio has no document stored for ${entry.title}.`);
   const cached = parsedCache.get(entry.id);
@@ -430,9 +435,9 @@ const getOperation: Tool = async (args, deps) => {
         description: scheme.description,
       })),
     note:
-      "Studio doesn't send requests for you. Fill in {path} parameters and call the URL yourself, for example with curl. " +
+      "To call it, use send_request: Studio fills in {{variables}} from the active environment, including secret ones, without showing them to you. " +
       (entry.mockUrl ? "For the hosted mock's key, call get_mock_server. " : "") +
-      "Credentials the user keeps in Studio as secrets aren't shared; ask the user if you need one.",
+      "If you call the URL yourself, credentials the user keeps in Studio as secrets aren't shared; ask the user if you need one.",
   });
 
   let result = JSON.stringify(build(4), null, 2);

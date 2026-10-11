@@ -77,6 +77,7 @@ export function RunLogView({ runs, selectedId, onSelect, onClear, onExport }: Pr
                     <span className="summary">
                       {describeCounts(run)}
                       {run.environment ? ` · ${run.environment}` : ""}
+                      {run.startedBy ? ` · by ${run.startedBy}` : ""}
                     </span>
                   </span>
                 </button>
@@ -147,6 +148,7 @@ function RunDetail({
           </button>
         </div>
         <div className="runlog-facts meta">
+          {log.startedBy && <span className="run-started-by">started by {log.startedBy}, over MCP</span>}
           <span>env: {log.environment ?? "none"}</span>
           {started?.type === "run_started" && started.targets.length > 0 && <span>targets: {started.targets.join(", ")}</span>}
           {started?.type === "run_started" && started.stopOnFailure && <span>stops at the first failure</span>}

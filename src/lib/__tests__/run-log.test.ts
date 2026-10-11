@@ -453,3 +453,20 @@ describe("secret values never reach a run log", () => {
     expect(events.find((e) => e.type === "request_sent")).toMatchObject({ headers: { Authorization: "Basic me:{{token}}" } });
   });
 });
+
+describe("runs started by an agent", () => {
+  it("say who started them, in the log and in its text", async () => {
+    const events: RunEvent[] = [];
+    await runSteps([step("listPets")], async (s) => ({ key: s.key, verdict: "pass", status: 200 }), {
+      stopOnFailure: true,
+      run: { collection: { id: "c1", name: "Pets" }, environment: null, targets: [], startedBy: "Claude Code" },
+      onEvent: (event) => events.push(event),
+    });
+    const log = events.reduce(appendEvent, startLog("run_x", { id: "c1", name: "Pets" }, null, events[0].at));
+    expect(log.startedBy).toBe("Claude Code");
+    expect(runLogText(log)).toContain("Started by: Claude Code, over MCP");
+
+    const mine = startLog("run_y", { id: "c1", name: "Pets" }, null, events[0].at);
+    expect(runLogText(mine)).not.toContain("Started by");
+  });
+});

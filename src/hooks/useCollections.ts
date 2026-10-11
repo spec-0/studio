@@ -73,6 +73,7 @@ import { parseSpec, type OperationSpec, type ParsedSpec } from "../lib/spec";
 import { DEFAULT_API_URL, absoluteMockUrl, type Session } from "../lib/spec0";
 import { mockCredentials } from "../lib/targets";
 import { validateResponse, type ValidationResult } from "../lib/validate";
+import type { AgentRunOptions, AgentRunOutcome } from "../lib/agentApp";
 import { useRunLogs } from "./useRunLogs";
 
 /** A run of one collection, as the view shows it. */
@@ -425,6 +426,33 @@ export function useCollections({
     [writeTo, notify],
   );
 
+  /**
+   * For agents (`AgentApp.collections`): add without opening it, change and
+   * read back, and save to a path the developer approved. Saving keeps a draft.
+   */
+  const agentActions = useMemo(
+    () => ({
+      list: () => latest.current,
+      add: (collection: Collection) => commit([...latest.current, collection]),
+      change: (id: string, change: (collection: Collection) => Collection) => {
+        update(id, change);
+        setRevision((n) => n + 1);
+        return latest.current.find((c) => c.id === id) ?? null;
+      },
+      saveTo: async (id: string, path: string) => {
+        const collection = latest.current.find((c) => c.id === id);
+        if (!collection) throw new Error("That collection was removed.");
+        const { draft: _draft, ...kept } = collection;
+        const { text, warnings } = textForFile(kept, path);
+        await writeCollectionFile(path, text);
+        replace({ ...kept, file: { path, syncedHash: textHash(text), dirty: false } });
+        notify(id, { kind: "info", text: `Saved to ${fileName(path)}.` });
+        return warnings;
+      },
+    }),
+    [commit, update, replace, notify],
+  );
+
   /** Save to a file in a folder of the user's choosing, and keep the collection linked to it. */
   const saveToFolder = useCallback(
     async (id: string) => {
@@ -638,6 +666,17 @@ export function useCollections({
 
   const rename = useCallback((id: string, name: string) => update(id, (c) => ({ ...c, name })), [update]);
 
+  /** Keep a draft an agent made: it becomes an ordinary collection that agents can no longer change. */
+  const keepDraft = useCallback(
+    (id: string) =>
+      update(id, (c) => {
+        if (!c.draft) return c;
+        const { draft: _draft, ...kept } = c;
+        return kept;
+      }),
+    [update],
+  );
+
   const setStopOnFailure = useCallback(
     (id: string, stopOnFailure: boolean) => update(id, (c) => ({ ...c, stopOnFailure })),
     [update],
@@ -833,10 +872,32 @@ export function useCollections({
     [activeEnv?.id, vars, connection],
   );
 
+  /**
+   * Run a collection. The developer runs one from its screen; an agent runs one
+   * over MCP with `agent`, which can send every step somewhere else, asks
+   * before each request goes, and is marked with the agent's name in the Runs
+   * view and the console.
+   */
   const run = useCallback(
-    async (id: string) => {
-      const collection = latest.current.find((c) => c.id === id);
-      if (!collection || runs[id]?.running) return;
+    async (id: string, agent?: AgentRunOptions): Promise<AgentRunOutcome> => {
+      const original = latest.current.find((c) => c.id === id);
+      if (!original) return { error: "That collection was removed." };
+      if (runs[id]?.running) return { error: `${original.name} is already running. Wait for it to finish, then try again.` };
+      // An agent's target goes on every step that uses a spec, for this run only.
+      const override = agent?.target;
+      const collection: Collection = override
+        ? {
+            ...original,
+            steps: original.steps.map((step) => {
+              if (!step.api) return step;
+              if (override === "first-server") {
+                const { target: _target, ...rest } = step;
+                return rest;
+              }
+              return { ...step, target: override };
+            }),
+          }
+        : original;
       const runId = `run_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
       const at = new Date().toISOString();
       cancelled.current.delete(id);
@@ -863,11 +924,13 @@ export function useCollections({
       const described = collection.steps.map(describe);
       const targets = [...new Set(described.map((d) => d.target ?? d.url ?? "").filter(Boolean))];
       const logged = { collection: { id: collection.id, name: collection.name }, runId, environment: activeEnv?.name ?? null };
+      const by = agent ? ` by ${agent.startedBy}` : "";
       logToConsole({
         source: "collection",
         level: "info",
         run: { collectionId: collection.id, runId },
-        text: `Run started: ${collection.name} · ${total} step${total === 1 ? "" : "s"}${activeEnv ? ` · ${activeEnv.name}` : ""}`,
+        ...(agent ? { agent: agent.startedBy } : {}),
+        text: `Run started${by}: ${collection.name} · ${total} step${total === 1 ? "" : "s"}${activeEnv ? ` · ${activeEnv.name}` : ""}`,
       });
 
       const execute = async (
@@ -913,11 +976,19 @@ export function useCollections({
         if ("error" in planned) return { key: step.key, verdict: "fail", reason: planned.error };
         const plan = planned.plan;
 
+        // An agent's run asks before each request, the same as a request it sends itself.
+        const refused = agent ? await agent.gate(plan) : null;
+        if (refused) return { key: step.key, verdict: "fail", reason: refused, request: plan };
+
         const targetKind: TargetKind = linked ? (step.target?.kind ?? "server") : "url";
         emit({ type: "request_sent", method: plan.method, url: plan.url, headers: plan.headers, targetKind });
         let response;
         try {
-          response = await send(plan, { ...transportFor(connection, plan.url), jar: linked?.entry.id ?? "__scratch__" });
+          response = await send(
+            plan,
+            { ...transportFor(connection, plan.url), jar: linked?.entry.id ?? "__scratch__" },
+            agent ? { agent: agent.startedBy } : {},
+          );
         } catch (error) {
           const reason = describeSendError(error, inTauri);
           emit({ type: "request_failed", error: reason });
@@ -1011,10 +1082,15 @@ export function useCollections({
 
       const results = await runSteps(collection.steps, execute, {
         stopOnFailure: collection.stopOnFailure,
-        cancelled: () => cancelled.current.has(id),
+        cancelled: () => cancelled.current.has(id) || Boolean(agent?.cancelled()),
         onResult: (partial) =>
           setRuns((prev) => ({ ...prev, [id]: { runId, at, running: true, results: partial } })),
-        run: { collection: logged.collection, environment: logged.environment, targets },
+        run: {
+          collection: logged.collection,
+          environment: logged.environment,
+          targets,
+          ...(agent ? { startedBy: agent.startedBy } : {}),
+        },
         describe: (_step, index) => described[index],
         onEvent: (event) => runLogs.onEvent(logged, event),
       });
@@ -1024,9 +1100,11 @@ export function useCollections({
         source: "collection",
         level: summary.failed ? "error" : "info",
         run: { collectionId: collection.id, runId },
-        text: `Run finished: ${collection.name} · ${describeRun(summary)}`,
+        ...(agent ? { agent: agent.startedBy } : {}),
+        text: `Run finished${by}: ${collection.name} · ${describeRun(summary)}`,
       });
       setRequests(await history.loadHistory());
+      return { runId, results };
     },
     [runs, ensureSpecs, entries, mockUrlFor, session, tokenFor, vars, connection, activeEnv, setRequests, localMocks.running, runLogs.onEvent],
   );
@@ -1177,6 +1255,10 @@ export function useCollections({
     closeNaming: useCallback(() => setNaming(null), []),
     remove,
     rename,
+    keepDraft,
+    agentActions,
+    /** The OAuth token Studio holds for an API in the active environment, renewed if needed. */
+    tokenFor,
     setStopOnFailure,
     updateStep,
     renameStepKey,

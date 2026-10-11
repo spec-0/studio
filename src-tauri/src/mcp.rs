@@ -10,8 +10,13 @@
 //!
 //! This is a small hand-written subset of MCP's Streamable HTTP transport:
 //! one `POST /mcp` endpoint, one JSON-RPC request per HTTP request, a plain
-//! JSON response, no sessions and no server-sent events. That is all a server
-//! with a fixed tool list needs, and it keeps the shell free of a web framework.
+//! JSON response and no server-sent events. That is all a server with a fixed
+//! tool list needs, and it keeps the shell free of a web framework.
+//!
+//! `initialize` starts a session (`Mcp-Session-Id`), only so Studio can say
+//! which agent made each call: the name the client gave in `clientInfo`. The
+//! token is what lets a client in; a session id is not a credential. Clients
+//! that send no session id still work, as an unnamed agent.
 //!
 //! Tool logic lives in two places, on purpose:
 //!
@@ -19,10 +24,13 @@
 //!    never touches the credential store, and secret values are dropped here, so
 //!    no bug in the interface can make one come back.
 //!  - Every other tool is handed to the web view (`studio://mcp-call`) and
-//!    answered by `src/lib/mcp.ts`, which already parses specs and talks to
-//!    Spec0. The web view replies through `mcp_respond`.
+//!    answered by `src/lib/mcp.ts`, which already parses specs, sends requests
+//!    and talks to Spec0. The web view replies through `mcp_respond`.
 //!
-//! Nothing in this module sends a network request.
+//! Tools that send requests wait for the developer to approve them in Studio,
+//! so they get a much longer time to answer than the others. Stopping the
+//! server answers every call still waiting, at once, so no agent is left
+//! hanging. Nothing in this module sends a network request.
 
 use serde::Serialize;
 use serde_json::{json, Map, Value};
@@ -33,7 +41,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::hash::{BuildHasher, Hasher};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{Emitter, Manager};
 
 /// The port tried first. If it's taken, the next few are tried in turn.
@@ -49,6 +58,8 @@ const TOOLS_JSON: &str = include_str!("../../src/lib/mcp-tools.json");
 pub const CALL_EVENT: &str = "studio://mcp-call";
 /// Tool calls answered in Rust, for the window's console: name and outcome only.
 pub const ACTIVITY_EVENT: &str = "studio://mcp-activity";
+/// A client finished `initialize`: which agent it says it is.
+pub const CLIENT_EVENT: &str = "studio://mcp-client";
 
 const MAX_HEADER_BYTES: usize = 16 * 1024;
 const MAX_BODY_BYTES: usize = 1024 * 1024;
@@ -56,15 +67,25 @@ const MAX_CONNECTIONS: usize = 16;
 const MIN_TOKEN_LEN: usize = 32;
 /// Creating a mock can take a while; reading a spec never does.
 const CALL_TIMEOUT: Duration = Duration::from_secs(90);
+/// For tools marked `waitsForUser`: they wait for the developer to approve a
+/// request, then send it, or run a whole collection. Studio gives up on an
+/// approval itself after a few minutes, well before this.
+const LONG_CALL_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const IO_TIMEOUT: Duration = Duration::from_secs(15);
+/// Sessions kept at once. The oldest goes first; its client is asked to start again.
+const MAX_SESSIONS: usize = 64;
+/// Longest agent name or version kept from `clientInfo`.
+const MAX_CLIENT_TEXT: usize = 80;
 
 const INSTRUCTIONS: &str = "Spec0 Studio's local MCP server. It shares what Studio holds on this \
 machine: the APIs in the user's library (including specs that aren't published anywhere), their \
-operations and servers, the user's environments (secret values are never shared), and hosted mock \
-servers when the user is signed in to Spec0. Studio does not send requests for you: use \
-get_operation or get_mock_server to get a URL, then call it yourself, for example with curl. To \
-search every API in the user's organisation, use the remote Spec0 MCP server; \
-get_connection_status gives its address.";
+operations and servers, the user's environments (secret values are never shared), collections and \
+their run logs, local mocks, and hosted mock servers when the user is signed in to Spec0. It can \
+also send requests and run collections for you, using the user's environments and auth: refer to \
+values as {{name}} and Studio fills them in, so you never see secret values. The user approves the \
+hosts you call in Studio, so a send can wait for them. Collections you create are drafts the user \
+can keep or discard. To search every API in the user's organisation, use the remote Spec0 MCP \
+server; get_connection_status gives its address.";
 
 // HTTP
 
@@ -141,6 +162,7 @@ fn reason(status: u16) -> &'static str {
     match status {
         200 => "OK",
         202 => "Accepted",
+        204 => "No Content",
         400 => "Bad Request",
         401 => "Unauthorized",
         403 => "Forbidden",
@@ -271,12 +293,23 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 
 // JSON-RPC
 
+/// Which agent a call comes from: what its client said in `initialize`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct Agent {
+    /// `clientInfo.name`, such as `claude-code`. None when the client didn't say,
+    /// or sent no session id.
+    pub name: Option<String>,
+    pub version: Option<String>,
+}
+
 /// Runs the tools that aren't answered in Rust. The real one asks the web view.
 pub trait ToolHost: Send + Sync {
-    fn call(&self, name: &str, arguments: &Value) -> Result<Value, String>;
+    fn call(&self, name: &str, arguments: &Value, agent: &Agent) -> Result<Value, String>;
     /// Tells the window's console that a call answered here (not forwarded)
-    /// happened: the tool's name and whether it worked. Never its arguments.
-    fn note(&self, _name: &str, _ok: bool) {}
+    /// happened: the tool's name, whether it worked, and which agent. Never its arguments.
+    fn note(&self, _name: &str, _ok: bool, _agent: &Agent) {}
+    /// A client finished `initialize`.
+    fn connected(&self, _agent: &Agent) {}
 }
 
 pub struct Config {
@@ -285,6 +318,62 @@ pub struct Config {
     /// The app's config directory, where `environments.json` lives.
     pub config_dir: PathBuf,
     pub studio_version: String,
+    /// Session id → agent, oldest first. Gone when the server stops.
+    pub sessions: Mutex<Vec<(String, Agent)>>,
+}
+
+impl Config {
+    fn agent_for(&self, session: &str) -> Option<Agent> {
+        let sessions = self.sessions.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        sessions.iter().find(|(id, _)| id == session).map(|(_, agent)| agent.clone())
+    }
+
+    fn start_session(&self, agent: Agent) -> String {
+        let id = session_id();
+        let mut sessions = self.sessions.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        if sessions.len() >= MAX_SESSIONS {
+            sessions.remove(0);
+        }
+        sessions.push((id.clone(), agent));
+        id
+    }
+
+    fn end_session(&self, session: &str) -> bool {
+        let mut sessions = self.sessions.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let before = sessions.len();
+        sessions.retain(|(id, _)| id != session);
+        sessions.len() != before
+    }
+}
+
+/// 128 bits from the standard library's per-process random hash keys, a clock
+/// and a counter. Unguessable enough for what it is: a label for a client that
+/// already holds the token, not a credential.
+fn session_id() -> String {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let count = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let mut out = String::with_capacity(32);
+    for salt in [0u64, 1] {
+        let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+        hasher.write_u64(count);
+        hasher.write_u128(nanos);
+        hasher.write_u64(salt);
+        out.push_str(&format!("{:016x}", hasher.finish()));
+    }
+    out
+}
+
+/// What an agent calls itself, kept short and printable; None when it gave nothing usable.
+fn client_text(value: Option<&Value>) -> Option<String> {
+    let text: String = value?
+        .as_str()?
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(MAX_CLIENT_TEXT)
+        .collect();
+    let text = text.trim().to_string();
+    (!text.is_empty()).then_some(text)
 }
 
 fn rpc_error(id: &Value, code: i64, message: &str) -> Value {
@@ -306,9 +395,19 @@ pub fn handle(request: &HttpRequest, config: &Config, host: &dyn ToolHost) -> Ht
         return HttpResponse::text(401, "Missing or wrong token. Copy it from Studio's MCP settings.")
             .with_header("WWW-Authenticate", "Bearer realm=\"spec0-studio\"");
     }
+    let session = request.header("mcp-session-id").map(str::trim).filter(|id| !id.is_empty());
+    if request.method == "DELETE" {
+        // A client ending its session. There is nothing else to delete.
+        return match session {
+            Some(id) if config.end_session(id) => HttpResponse::empty(204),
+            Some(_) => HttpResponse::text(404, "No such session."),
+            None => HttpResponse::text(405, "Send Mcp-Session-Id to end a session.")
+                .with_header("Allow", "POST, DELETE"),
+        };
+    }
     if request.method != "POST" {
-        // No server-sent event stream and no sessions to delete.
-        return HttpResponse::text(405, "Only POST is supported.").with_header("Allow", "POST");
+        // No server-sent event stream.
+        return HttpResponse::text(405, "Only POST is supported.").with_header("Allow", "POST, DELETE");
     }
     let content_type = request.header("content-type").unwrap_or("").to_ascii_lowercase();
     if !content_type.starts_with("application/json") {
@@ -326,8 +425,24 @@ pub fn handle(request: &HttpRequest, config: &Config, host: &dyn ToolHost) -> Ht
         );
     };
 
+    // A session this server doesn't know (it was restarted, or the session was
+    // ended) gets a 404, which tells the client to initialize again.
+    let method = object.get("method").and_then(Value::as_str);
+    let agent = match session {
+        Some(id) if method != Some("initialize") => match config.agent_for(id) {
+            Some(agent) => agent,
+            None => {
+                return HttpResponse::json(
+                    404,
+                    &rpc_error(object.get("id").unwrap_or(&Value::Null), -32001, "Session not found. Initialize again."),
+                )
+            }
+        },
+        _ => Agent::default(),
+    };
+
     // A notification or a response from the client: nothing to answer.
-    let Some(method) = object.get("method").and_then(Value::as_str) else {
+    let Some(method) = method else {
         return HttpResponse::empty(202);
     };
     let Some(id) = object.get("id") else {
@@ -353,10 +468,20 @@ pub fn handle(request: &HttpRequest, config: &Config, host: &dyn ToolHost) -> Ht
 
     let empty = Value::Object(Map::new());
     let params = object.get("params").unwrap_or(&empty);
-    let body = match dispatch(method, params, config, host) {
+    let body = match dispatch(method, params, config, host, &agent) {
         Ok(result) => json!({ "jsonrpc": "2.0", "id": id, "result": result }),
         Err((code, message)) => rpc_error(id, code, &message),
     };
+    if method == "initialize" && body.get("result").is_some() {
+        let client = params.get("clientInfo");
+        let agent = Agent {
+            name: client_text(client.and_then(|info| info.get("name"))),
+            version: client_text(client.and_then(|info| info.get("version"))),
+        };
+        host.connected(&agent);
+        let id = config.start_session(agent);
+        return HttpResponse::json(200, &body).with_header("Mcp-Session-Id", &id);
+    }
     HttpResponse::json(200, &body)
 }
 
@@ -365,6 +490,7 @@ fn dispatch(
     params: &Value,
     config: &Config,
     host: &dyn ToolHost,
+    agent: &Agent,
 ) -> Result<Value, (i64, String)> {
     match method {
         "initialize" => {
@@ -393,7 +519,7 @@ fn dispatch(
                 .and_then(Value::as_str)
                 .ok_or((-32602, "Missing tool name.".to_string()))?;
             if !tool_names().iter().any(|known| known == name) {
-                host.note(name, false);
+                host.note(name, false, agent);
                 return Err((-32602, format!("Unknown tool: {name}")));
             }
             let arguments = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
@@ -401,10 +527,10 @@ fn dispatch(
                 return Err((-32602, "Tool arguments must be an object.".to_string()));
             }
             if name == "list_environments" {
-                host.note(name, true);
+                host.note(name, true, agent);
                 return Ok(list_environments(&config.config_dir));
             }
-            Ok(match host.call(name, &arguments) {
+            Ok(match host.call(name, &arguments, agent) {
                 Ok(result) if is_tool_result(&result) => result,
                 Ok(_) => tool_error("Studio returned something that isn't a tool result."),
                 Err(message) => tool_error(&message),
@@ -425,17 +551,31 @@ fn tool_names() -> Vec<String> {
         .collect()
 }
 
-/// What `tools/list` returns: the shared definitions without Studio's own field.
+/// What `tools/list` returns: the shared definitions without Studio's own fields.
 fn tool_list() -> Vec<Value> {
     tool_definitions()
         .into_iter()
         .map(|mut tool| {
             if let Some(object) = tool.as_object_mut() {
                 object.remove("requiresSignIn");
+                object.remove("waitsForUser");
             }
             tool
         })
         .collect()
+}
+
+/// How long Studio has to answer a tool: long for one that may wait on the developer.
+fn call_timeout(name: &str) -> Duration {
+    let waits = tool_definitions().iter().any(|tool| {
+        tool.get("name").and_then(Value::as_str) == Some(name)
+            && tool.get("waitsForUser").and_then(Value::as_bool) == Some(true)
+    });
+    if waits {
+        LONG_CALL_TIMEOUT
+    } else {
+        CALL_TIMEOUT
+    }
 }
 
 fn is_tool_result(value: &Value) -> bool {
@@ -534,29 +674,42 @@ struct WebviewHost {
 }
 
 impl ToolHost for WebviewHost {
-    fn call(&self, name: &str, arguments: &Value) -> Result<Value, String> {
+    fn call(&self, name: &str, arguments: &Value, agent: &Agent) -> Result<Value, String> {
         let id = NEXT_CALL.fetch_add(1, Ordering::Relaxed);
         let (sender, receiver) = mpsc::channel();
         with_pending(|pending| {
             pending.insert(id, sender);
         });
-        let payload = json!({ "id": id, "name": name, "arguments": arguments });
+        let payload = json!({ "id": id, "name": name, "arguments": arguments, "agent": agent });
         if let Err(error) = self.app.emit(CALL_EVENT, payload) {
             with_pending(|pending| {
                 pending.remove(&id);
             });
             return Err(format!("Couldn't reach Studio's window: {error}"));
         }
-        let result = receiver.recv_timeout(CALL_TIMEOUT);
+        let result = receiver.recv_timeout(call_timeout(name));
         with_pending(|pending| {
             pending.remove(&id);
         });
         result.map_err(|_| "Studio didn't answer in time. Is its window open?".to_string())
     }
 
-    fn note(&self, name: &str, ok: bool) {
+    fn note(&self, name: &str, ok: bool, agent: &Agent) {
         // Best effort: the console is a convenience, and a closed window just misses it.
-        let _ = self.app.emit(ACTIVITY_EVENT, json!({ "name": name, "ok": ok }));
+        let _ = self.app.emit(ACTIVITY_EVENT, json!({ "name": name, "ok": ok, "agent": agent }));
+    }
+
+    fn connected(&self, agent: &Agent) {
+        let _ = self.app.emit(CLIENT_EVENT, agent);
+    }
+}
+
+/// Answer every call still waiting on the web view, for example for an
+/// approval, so stopping the server never leaves an agent hanging.
+fn release_pending(message: &str) {
+    let waiting: Vec<mpsc::Sender<Value>> = with_pending(|pending| pending.drain().map(|(_, sender)| sender).collect());
+    for sender in waiting {
+        let _ = sender.send(tool_error(message));
     }
 }
 
@@ -619,6 +772,7 @@ fn accept_loop(listener: TcpListener, stop: Arc<AtomicBool>, config: Arc<Config>
 }
 
 fn stop_server() {
+    release_pending("Stopped in Studio: the developer stopped the MCP server, so this call wasn't finished.");
     let running = SERVER.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).take();
     if let Some(mut running) = running {
         running.stop.store(true, Ordering::Relaxed);
@@ -664,6 +818,7 @@ pub fn mcp_start(app: tauri::AppHandle, port: Option<u16>, token: String) -> Res
         token,
         config_dir,
         studio_version: app.package_info().version.to_string(),
+        sessions: Mutex::new(Vec::new()),
     });
     let host: Arc<dyn ToolHost> = Arc::new(WebviewHost { app: app.clone() });
     let stop = Arc::new(AtomicBool::new(false));
@@ -697,6 +852,19 @@ pub fn mcp_respond(id: u64, result: Value) {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn tool_arguments_keep_their_field_order() {
+        // An agent's JSON body passes through here on its way to the request, so
+        // its fields must come out in the order the agent wrote them.
+        let raw = r#"{"name":"send_request","arguments":{"body":{"zeta":1,"alpha":2,"mid":3}}}"#;
+        let parsed: Value = serde_json::from_str(raw).unwrap();
+        assert_eq!(
+            serde_json::to_string(&parsed["arguments"]["body"]).unwrap(),
+            r#"{"zeta":1,"alpha":2,"mid":3}"#
+        );
+    }
+
     use super::*;
     use std::io::Cursor;
 
@@ -705,11 +873,12 @@ mod tests {
 
     struct FakeHost;
     impl ToolHost for FakeHost {
-        fn call(&self, name: &str, arguments: &Value) -> Result<Value, String> {
+        fn call(&self, name: &str, arguments: &Value, agent: &Agent) -> Result<Value, String> {
             if name == "get_api_spec" && arguments.get("api").is_none() {
                 return Err("api is required".into());
             }
-            Ok(json!({ "content": [{ "type": "text", "text": format!("ran {name}") }] }))
+            let by = agent.name.as_deref().unwrap_or("nobody");
+            Ok(json!({ "content": [{ "type": "text", "text": format!("ran {name} for {by}") }] }))
         }
     }
 
@@ -719,6 +888,7 @@ mod tests {
             token: TOKEN.into(),
             config_dir: dir.to_path_buf(),
             studio_version: "0.2.0".into(),
+            sessions: Mutex::new(Vec::new()),
         }
     }
 
@@ -836,7 +1006,7 @@ mod tests {
         request.method = "GET".into();
         let response = handle(&request, &config(&dir), &FakeHost);
         assert_eq!(response.status, 405);
-        assert!(response.headers.contains(&("Allow", "POST".into())));
+        assert!(response.headers.contains(&("Allow", "POST, DELETE".into())));
 
         let mut request = post(&json!({}));
         set_header(&mut request, "content-type", Some("text/plain"));
@@ -900,15 +1070,123 @@ mod tests {
             "get_mock_server",
             "create_mock_server",
             "refresh_mock_server",
+            "send_request",
+            "run_collection",
+            "save_collection_to_folder",
         ] {
             assert!(names.contains(&expected), "missing {expected}");
         }
         for tool in tools {
             assert!(tool["description"].as_str().unwrap().len() > 40);
             assert_eq!(tool["inputSchema"]["type"], "object");
-            // Studio's own marker stays out of the protocol.
+            // Studio's own markers stay out of the protocol.
             assert!(tool.get("requiresSignIn").is_none());
+            assert!(tool.get("waitsForUser").is_none());
         }
+    }
+
+    #[test]
+    fn tools_that_wait_for_the_developer_get_longer() {
+        assert_eq!(call_timeout("send_request"), LONG_CALL_TIMEOUT);
+        assert_eq!(call_timeout("run_collection"), LONG_CALL_TIMEOUT);
+        assert_eq!(call_timeout("check_contract"), LONG_CALL_TIMEOUT);
+        assert_eq!(call_timeout("save_collection_to_folder"), LONG_CALL_TIMEOUT);
+        assert_eq!(call_timeout("list_local_apis"), CALL_TIMEOUT);
+        assert_eq!(call_timeout("no_such_tool"), CALL_TIMEOUT);
+    }
+
+    #[test]
+    fn stopping_answers_calls_still_waiting() {
+        let (sender, receiver) = mpsc::channel();
+        with_pending(|pending| {
+            pending.insert(u64::MAX, sender);
+        });
+        release_pending("stopped");
+        let answer = receiver.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert_eq!(answer["isError"], true);
+        assert_eq!(answer["content"][0]["text"], "stopped");
+        assert!(with_pending(|pending| pending.is_empty()));
+    }
+
+    // Sessions
+
+    fn initialize(config: &Config, client: Value) -> HttpResponse {
+        let body = json!({
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": { "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": client }
+        });
+        handle(&post(&body), config, &FakeHost)
+    }
+
+    fn session_of(response: &HttpResponse) -> String {
+        response
+            .headers
+            .iter()
+            .find(|(name, _)| *name == "Mcp-Session-Id")
+            .map(|(_, value)| value.clone())
+            .expect("a session id")
+    }
+
+    fn call_tool(config: &Config, session: Option<&str>) -> (u16, Value) {
+        let mut request = post(&json!({ "jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": { "name": "list_local_apis", "arguments": {} } }));
+        set_header(&mut request, "mcp-session-id", session);
+        let response = handle(&request, config, &FakeHost);
+        (response.status, serde_json::from_str(&response.body).unwrap_or(Value::Null))
+    }
+
+    #[test]
+    fn calls_are_attributed_to_the_agent_that_initialized() {
+        let dir = temp_dir("session");
+        let config = config(&dir);
+        let first = initialize(&config, json!({ "name": "claude-code", "version": "2.1.0" }));
+        let second = initialize(&config, json!({ "name": "cursor\u{0007}", "version": "1" }));
+        let (a, b) = (session_of(&first), session_of(&second));
+        assert_eq!(a.len(), 32);
+        assert_ne!(a, b);
+
+        let (_, body) = call_tool(&config, Some(&a));
+        assert_eq!(body["result"]["content"][0]["text"], "ran list_local_apis for claude-code");
+        // Control characters are dropped from the name.
+        let (_, body) = call_tool(&config, Some(&b));
+        assert_eq!(body["result"]["content"][0]["text"], "ran list_local_apis for cursor");
+        // No session id: still served, without a name.
+        let (status, body) = call_tool(&config, None);
+        assert_eq!(status, 200);
+        assert_eq!(body["result"]["content"][0]["text"], "ran list_local_apis for nobody");
+    }
+
+    #[test]
+    fn an_unknown_or_ended_session_must_initialize_again() {
+        let dir = temp_dir("ended");
+        let config = config(&dir);
+        let (status, body) = call_tool(&config, Some("not-a-session"));
+        assert_eq!(status, 404);
+        assert_eq!(body["error"]["code"], -32001);
+
+        let session = session_of(&initialize(&config, json!({ "name": "codex" })));
+        let mut end = post(&json!({}));
+        end.method = "DELETE".into();
+        set_header(&mut end, "mcp-session-id", Some(&session));
+        assert_eq!(handle(&end, &config, &FakeHost).status, 204);
+        assert_eq!(handle(&end, &config, &FakeHost).status, 404);
+        assert_eq!(call_tool(&config, Some(&session)).0, 404);
+
+        // Initializing again with a stale id is how a client recovers.
+        let mut again = post(&json!({ "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {} }));
+        set_header(&mut again, "mcp-session-id", Some(&session));
+        assert_eq!(handle(&again, &config, &FakeHost).status, 200);
+    }
+
+    #[test]
+    fn old_sessions_make_room_for_new_ones() {
+        let dir = temp_dir("many");
+        let config = config(&dir);
+        let first = session_of(&initialize(&config, json!({ "name": "first" })));
+        for n in 0..MAX_SESSIONS {
+            initialize(&config, json!({ "name": format!("agent {n}") }));
+        }
+        assert_eq!(call_tool(&config, Some(&first)).0, 404);
+        assert_eq!(config.sessions.lock().unwrap().len(), MAX_SESSIONS);
     }
 
     #[test]
@@ -919,7 +1197,7 @@ mod tests {
             &dir,
         );
         assert_eq!(status, 200);
-        assert_eq!(body["result"]["content"][0]["text"], "ran list_local_apis");
+        assert_eq!(body["result"]["content"][0]["text"], "ran list_local_apis for nobody");
 
         // A failure inside a tool is a result the model can read, not a protocol error.
         let (_, body) = rpc(
@@ -930,7 +1208,7 @@ mod tests {
         assert_eq!(body["result"]["content"][0]["text"], "api is required");
 
         let (_, body) = rpc(
-            &post(&json!({ "jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": { "name": "send_request" } })),
+            &post(&json!({ "jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": { "name": "delete_everything" } })),
             &dir,
         );
         assert_eq!(body["error"]["code"], -32602);
@@ -1084,10 +1362,10 @@ mod tests {
         use std::sync::Mutex as StdMutex;
         struct Recording(StdMutex<Vec<(String, bool)>>);
         impl ToolHost for Recording {
-            fn call(&self, _name: &str, _arguments: &Value) -> Result<Value, String> {
+            fn call(&self, _name: &str, _arguments: &Value, _agent: &Agent) -> Result<Value, String> {
                 Ok(json!({ "content": [] }))
             }
-            fn note(&self, name: &str, ok: bool) {
+            fn note(&self, name: &str, ok: bool, _agent: &Agent) {
                 self.0.lock().unwrap().push((name.to_string(), ok));
             }
         }
