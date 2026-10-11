@@ -24,6 +24,7 @@ const SOURCE_LABEL: Record<ConsoleEntry["source"], string> = {
   collection: "collection",
   mock: "local mock",
   mcp: "MCP",
+  agent: "agent chat",
 };
 
 function time(iso: string): string {

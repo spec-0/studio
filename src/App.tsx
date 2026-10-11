@@ -34,6 +34,8 @@ import { SettingsView } from "./components/SettingsView";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { ConsolePanel } from "./components/ConsolePanel";
+import { AgentChatPanel } from "./components/agent-chat/AgentChatPanel";
+import { AgentChatSettings } from "./components/settings/AgentChatSettings";
 import { toggleConsole } from "./lib/appConsole";
 import { TitleBar } from "./components/TitleBar";
 import { UpdateDialog } from "./components/UpdateDialog";
@@ -78,6 +80,7 @@ import type { ApiSection, TopTab } from "./lib/navigation";
 import { describeExpiry } from "./lib/oauth";
 import { canPublish, whyNotPublishable } from "./lib/publish";
 import { toMarkdown } from "./lib/runner";
+import { mentionChoices } from "./lib/agentChat";
 import { sendTargetFor } from "./lib/shortcuts";
 import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import { openapiText, type OperationSpec, type ParsedSpec } from "./lib/spec";
@@ -511,6 +514,21 @@ export default function App() {
   const showSidebar = view === "operation" || view === "schema";
   const openNetworkFor = () => nav.openSettings("network", { host: hostOf(interpolate(server, vars)) });
 
+  /** What the chat panel's @ menu can attach: built when the menu opens, not on every render. */
+  const chatMentions = useCallback(
+    () =>
+      mentionChoices({
+        api:
+          route === "api" && spec
+            ? { title: spec.title || current?.title || "Untitled API", operations: spec.operations, current: operation }
+            : null,
+        history: requests,
+        collections: collections.collections,
+        runsFor: collections.runLogs.runsFor,
+      }),
+    [route, spec, current, operation, requests, collections.collections, collections.runLogs.runsFor],
+  );
+
   return (
     <div
       className="app"
@@ -640,6 +658,7 @@ export default function App() {
                 />
               ),
               mcp: <McpSettings signedIn={Boolean(session)} />,
+              agent: <AgentChatSettings />,
               data: <DataSettings historyCount={requests.length} onClearHistory={clearHistory} />,
             }}
           />
@@ -1188,6 +1207,7 @@ export default function App() {
       <UpdateDialog updater={updater} />
       <DeepLinkDialog links={deepLinks} />
       <McpHost />
+      <AgentChatPanel mentionChoices={chatMentions} onOpenSettings={() => nav.openSettings("agent")} />
       <ConsolePanel
         onOpenRun={(collectionId, runId) => {
           collections.select(collectionId);

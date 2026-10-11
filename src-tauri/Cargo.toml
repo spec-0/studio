@@ -45,6 +45,11 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 # The native credential store for each platform, gated by target so a Linux
 # build doesn't try to link the macOS Security framework.
+# Stopping a chat agent and everything it started (see src/acp.rs) signals its
+# process group. Already in the build through Tauri; listed for direct use.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 apple-native-keyring-store = { version = "1", features = ["keychain"] }
 

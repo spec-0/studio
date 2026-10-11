@@ -16,6 +16,7 @@ const DESCRIPTIONS: Record<SettingsSectionId, string> = {
   updates: "Updates to Studio itself. Nothing is checked unless you ask.",
   appearance: "How Studio looks.",
   mcp: "Let a coding agent on this machine see the APIs open in Studio.",
+  agent: "Chat with a coding agent you already use, inside Studio.",
   data: "What Studio keeps, where it keeps it, and how to clear it.",
 };
 

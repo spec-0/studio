@@ -1,3 +1,4 @@
+mod acp;
 mod cookies;
 mod deep_link;
 mod git;
@@ -21,6 +22,8 @@ mod updates;
 ///  - **Secrets** go to the OS credential store, which only native code can reach.
 ///  - **The local MCP server** (off unless the user starts it) needs a socket too.
 ///  - **Local mocks** (off unless the user starts one) need one socket each.
+///  - **The chat panel's agent** (off until the user starts a chat) is a process
+///    of its own, which only native code can start and stop.
 ///
 /// `spec0://` links are received here and handed to the web view (see `deep_link`).
 pub fn run() {
@@ -79,7 +82,20 @@ pub fn run() {
             local_mock::local_mock_respond,
             deep_link::deep_link_take,
             menu::menu_close_tab,
+            acp::acp_agents,
+            acp::acp_start,
+            acp::acp_send,
+            acp::acp_stop,
+            acp::acp_stderr,
+            acp::acp_choose_command,
+            acp::acp_clear_command,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running spec0 Studio");
+        .build(tauri::generate_context!())
+        .expect("error while building spec0 Studio")
+        .run(|_app, event| {
+            // A chat agent is a separate process; it must not outlive Studio.
+            if let tauri::RunEvent::Exit = event {
+                acp::stop_all();
+            }
+        });
 }

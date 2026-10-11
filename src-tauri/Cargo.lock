@@ -4095,6 +4095,7 @@ dependencies = [
  "cookie_store",
  "dbus-secret-service-keyring-store",
  "keyring-core",
+ "libc",
  "rcgen",
  "reqwest",
  "rustls",

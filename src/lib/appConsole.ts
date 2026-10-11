@@ -2,8 +2,8 @@ import { redact, redactDeep } from "./redact";
 
 /**
  * The app console: what Studio did in this session, as it happened. Requests
- * sent and what came back, collection runs, requests to local mocks, and MCP
- * tool calls.
+ * sent and what came back, collection runs, requests to local mocks, MCP
+ * tool calls, and chat sessions with an agent.
  *
  * It lives in memory only. Nothing here is written to disk or sent anywhere,
  * and it is gone when Studio quits. It keeps the last `MAX_CONSOLE_ENTRIES`.
@@ -13,7 +13,7 @@ import { redact, redactDeep } from "./redact";
 
 export const MAX_CONSOLE_ENTRIES = 1000;
 
-export type ConsoleSource = "request" | "collection" | "mock" | "mcp";
+export type ConsoleSource = "request" | "collection" | "mock" | "mcp" | "agent";
 
 export interface ConsoleEntry {
   id: number;
@@ -33,11 +33,13 @@ export interface ConsoleEntry {
   run?: { collectionId: string; runId: string };
   /** For an MCP call: the tool's name. */
   tool?: string;
+  /** For a chat session: the agent's name. */
+  agent?: string;
 }
 
 export type ConsoleInput = Omit<ConsoleEntry, "id" | "at"> & { at?: string };
 
-export type ConsoleFilter = "all" | "requests" | "collections" | "mock" | "mcp" | "errors";
+export type ConsoleFilter = "all" | "requests" | "collections" | "mock" | "mcp" | "agent" | "errors";
 
 export const CONSOLE_FILTERS: Array<{ id: ConsoleFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -45,6 +47,7 @@ export const CONSOLE_FILTERS: Array<{ id: ConsoleFilter; label: string }> = [
   { id: "collections", label: "Collections" },
   { id: "mock", label: "Local mock" },
   { id: "mcp", label: "MCP" },
+  { id: "agent", label: "Agent chat" },
   { id: "errors", label: "Errors" },
 ];
 
@@ -60,6 +63,8 @@ export function matchesFilter(entry: ConsoleEntry, filter: ConsoleFilter): boole
       return entry.source === "mock";
     case "mcp":
       return entry.source === "mcp";
+    case "agent":
+      return entry.source === "agent";
     case "errors":
       return entry.level === "error";
   }
@@ -70,7 +75,7 @@ export function filterEntries(entries: readonly ConsoleEntry[], filter: ConsoleF
   return entries.filter(
     (entry) =>
       matchesFilter(entry, filter) &&
-      (!needle || [entry.text, entry.url, entry.method, entry.tool].some((part) => part?.toLowerCase().includes(needle))),
+      (!needle || [entry.text, entry.url, entry.method, entry.tool, entry.agent].some((part) => part?.toLowerCase().includes(needle))),
   );
 }
 
@@ -184,6 +189,15 @@ export function logRequest(request: { method: string; url: string }, outcome: { 
 export function logMcpCall(tool: string, ok: boolean) {
   const name = /^[A-Za-z0-9_.-]{1,80}$/.test(tool) ? tool : "(unknown tool)";
   logToConsole({ source: "mcp", level: ok ? "info" : "error", tool: name, text: `MCP ${name} → ${ok ? "ok" : "error"}` });
+}
+
+/**
+ * A chat session with an agent starting, ending or failing, tagged with the
+ * agent's name. Never what was said in it.
+ */
+export function logAgentSession(agent: string, text: string, level: "info" | "error" = "info") {
+  const name = agent.trim().slice(0, 80) || "Agent";
+  logToConsole({ source: "agent", level, agent: name, text: `${name}: ${text}` });
 }
 
 /** A request a local mock received and how it answered. */

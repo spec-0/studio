@@ -167,6 +167,15 @@ published anywhere. It is off until you start it.
   <sub>A coding agent asks Studio which APIs are open, then calls a mock.</sub>
 </p>
 
+### Chat with your coding agent inside Studio
+
+If you'd rather not switch to a terminal, the **Agent** panel (`⇧⌘J`) talks to a
+coding agent you already use, such as Claude, Codex or Gemini CLI. Studio starts
+the agent on your computer and gives it the local MCP server's tools. Type `@` to
+attach the operation you're looking at, a response, a collection step or a run
+log, and answer the agent's permission requests in the panel. It is off until you
+choose an agent in Settings. See [Agent chat](#agent-chat).
+
 <details>
 <summary>More screenshots</summary>
 
@@ -413,6 +422,7 @@ Use Ctrl instead of ⌘ on Windows and Linux.
 | `/` | Search | `⌘,` | Settings |
 | `Ctrl+Tab` | Next request tab | `Ctrl+Shift+Tab` | Previous request tab |
 | `⌘W` | Close request tab | `Esc` | Close |
+| `⇧⌘Y` | Console | `⇧⌘J` | Agent chat |
 
 On macOS, `⇧⌘]` and `⇧⌘[` also move between request tabs, and `⇧⌘W` closes the
 window. `Ctrl+Tab` is Ctrl on every platform.
@@ -421,8 +431,9 @@ window. `Ctrl+Tab` is Ctrl on every platform.
 
 **Console** in the status bar (`⇧⌘Y`, or `Ctrl+Shift+Y`) opens a log of this
 session: requests as they're sent and answered, collection runs (with a link to
-each run's log), requests to local mocks, and MCP tool calls (the tool's name
-and whether it worked, never its arguments). It can be filtered and copied, keeps
+each run's log), requests to local mocks, MCP tool calls (the tool's name
+and whether it worked, never its arguments), and agent chat sessions starting
+and ending (never what was said). It can be filtered and copied, keeps
 the last 1,000 entries, and a badge counts new errors. It is kept in memory only.
 
 ### Performance
@@ -470,6 +481,11 @@ servers you point it at.
 - **The local MCP server exists only when you turn it on.** It listens on this
   computer only (`127.0.0.1`), answers only requests that carry its token, turns
   away web pages, and stops when Studio quits. It never shares secret values.
+- **The agent chat sends only what you send.** It's off until you choose an
+  agent, and the agent starts only when you send a message. What you type and
+  attach goes to that agent and from there to its model provider; secret values
+  are replaced by their `{{name}}` first. Studio never sees your sign-in to the
+  agent, and past chats are kept on this computer only.
 - **A local mock listens only when you start it, and only on this computer.**
   It uses `127.0.0.1`, answers web pages only when they are served from
   `localhost`, and stops when you stop it or quit Studio.
@@ -557,6 +573,56 @@ reach it. Every request needs the token, which is generated on your computer
 (you can make a new one at any time). Requests from web pages are refused. The
 server runs only while Studio is open.
 
+## Agent chat
+
+The Agent panel is a chat with a coding agent that's already on your computer.
+Studio doesn't run a model of its own. It starts the agent, talks to it over the
+[Agent Client Protocol](https://agentclientprotocol.com) (ACP), the same way
+editors like Zed host agents, and shows what comes back.
+
+**Choosing an agent.** Open Settings → Agent chat. Studio looks for:
+
+| Agent | What Studio runs |
+|---|---|
+| Claude | Anthropic's Claude Agent SDK through its ACP adapter, `@agentclientprotocol/claude-agent-acp` (installed, or fetched with `npx`, which needs Node.js) |
+| Codex | Its ACP adapter, `@agentclientprotocol/codex-acp` (installed, or fetched with `npx`) |
+| Gemini CLI | `gemini --acp` (Gemini CLI must be installed) |
+| Another agent | Any program you choose that speaks ACP |
+
+Adapters fetched with `npx` are pinned to a version Studio was tested with. Apps
+started from the Dock or a launcher don't get your terminal's `PATH`, so Studio
+also looks in the usual places (Homebrew, `~/.local/bin`, npm's global folder,
+nvm, Volta and others). If it still can't find a program, choose its full path
+by hand; Studio shows you the exact command and asks you to confirm it before
+saving. **Test the connection** starts the agent, opens a session and stops it
+again, without sending anything.
+
+**Signing in** happens in the agent, not in Studio. Each provider has its own
+rules for apps that host its agent: Anthropic asks apps built on its Agent SDK to
+use an API key rather than a claude.ai sign-in, and Google doesn't allow its
+Gemini CLI sign-in to be used by other software to reach its services. Check your
+provider's terms before you use a subscription here.
+
+**Chatting.** The agent starts when you send the first message and stops when
+you end the chat, start a new one, or quit Studio. Type `@` (or press the @
+button) to attach the operation on screen or another one from the open API, one
+of your last few responses, a collection step or a recent run log. Attachments
+are sent as text, with secret values replaced. When the agent wants to use one of
+its tools (to read a file or run a command, for example), the panel asks you
+first, with the choices the agent offers. **Stop** ends the current turn.
+
+**Studio's tools.** If the [local MCP server](#local-mcp-server) is running when a
+chat starts, Studio gives the agent its address and token, so the agent can use
+Studio's tools without any setup. If it isn't running, the panel says so and can
+start it.
+
+**Where the agent works.** By default, in an empty folder of Studio's own, away
+from Studio's settings. Choose a project folder in Settings if you want the
+agent to work on your specs.
+
+**Past chats** are kept on this computer (the last 30), with secret values
+replaced, and can be read again or deleted from the panel.
+
 ## Known limitations
 
 - **Only JSON response bodies are checked** (see [Checking responses](#checking-responses)).
@@ -583,6 +649,9 @@ server runs only while Studio is open.
 - **Some example values are placeholders.** When a field has no example, no
   format and an unfamiliar name, Studio fills in something like `"string"`,
   which you'll want to replace.
+- **Agent chat is new.** It has been tested with a stand-in agent much more
+  than with real ones, and the ACP adapters it runs are young. A past chat can
+  be read but not continued: a new message starts a new session.
 - **Secrets can fall back to a plain file** when there is no credential store
   (see [Privacy](#privacy)).
 - **The app is allowed to make HTTP requests to any host**, because an API

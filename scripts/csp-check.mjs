@@ -11,8 +11,9 @@
  * Two checks:
  *   1. The bundled app loads with no CSP violation. This is the general guard
  *      against any dependency that starts needing eval.
- *   2. Response validation actually produces findings. The app can load fine
- *      while validation alone is blocked.
+ *   2. Response validation actually produces findings, a Swagger 2.0 spec
+ *      converts, and a chat with an agent runs. The app can load fine while
+ *      any one of these alone is blocked.
  *
  *   node scripts/csp-check.mjs
  */
@@ -200,6 +201,20 @@ const openPage = async () => {
       failures += 1;
       console.error(`✗ opening a Swagger 2.0 spec failed under the policy: ${JSON.stringify(swagger).slice(0, 300)}`);
     }
+  }
+
+  // The chat panel reads every agent message through the ACP library's checks.
+  const acp = await page
+    .waitForFunction(() => globalThis.__CSP_ACP__, { timeout: 10_000 })
+    .then((handle) => handle.jsonValue())
+    .catch(() => null);
+  const acpViolations = await collect();
+  if (acp?.stop === "end_turn" && acp.text === "ok" && acp.agent === "CSP agent" && !acpViolations.length) {
+    console.log("✓ a chat with an agent runs under the policy");
+  } else {
+    failures += 1;
+    console.error(`✗ a chat with an agent failed under the policy: ${JSON.stringify(acp).slice(0, 300)}`);
+    for (const v of acpViolations) console.error(`    ${v.slice(0, 200)}`);
   }
   await page.close();
 }
