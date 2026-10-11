@@ -40,7 +40,11 @@ export async function testAgent(agent: AgentId, workspace: string | null): Promi
   } catch (error) {
     const stderr = process ? redact(await process.stderr().catch(() => "")).trim().split("\n").slice(-6).join("\n") : "";
     logAgentSession(agent, `connection test failed: ${errorText(error)}`, "error");
-    const reason = isAuthRequired(error) ? "The agent needs you to sign in to it first, in a terminal." : errorText(error);
+    const signIn =
+      agent === "claude"
+        ? "Claude Agent needs an Anthropic API key. Add one below, then test again."
+        : "The agent needs you to sign in to it first, in a terminal.";
+    const reason = isAuthRequired(error) ? signIn : errorText(error);
     return { ok: false, text: `${reason}${stderr ? `\n\n${stderr}` : ""}` };
   } finally {
     await process?.stop().catch(() => undefined);

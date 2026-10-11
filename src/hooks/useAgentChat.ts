@@ -42,7 +42,7 @@ export type ChatStatus = "idle" | "starting" | "ready" | "working" | "ended";
 /** How to sign in to each agent before the first chat. */
 export const SIGN_IN: Record<AgentId, string> = {
   claude:
-    "Claude needs an Anthropic API key (ANTHROPIC_API_KEY) where it can read it. Anthropic asks apps built on its Agent SDK to use an API key rather than a claude.ai sign-in.",
+    "Claude Agent needs an Anthropic API key. Add one in Settings, under Agent chat, then start a new chat. Anthropic asks apps built on its Agent SDK to use an API key rather than a claude.ai sign-in.",
   codex: "Run `codex login` in a terminal, then start a new chat.",
   gemini: "Run `gemini` in a terminal and choose how to sign in, then start a new chat.",
   custom: "Sign in to the agent the way its documentation describes, then start a new chat.",

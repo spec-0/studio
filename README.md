@@ -490,7 +490,9 @@ servers you point it at.
   agent, and the agent starts only when you send a message. What you type and
   attach goes to that agent and from there to its model provider; secret values
   are replaced by their `{{name}}` first. Studio never sees your sign-in to the
-  agent, and past chats are kept on this computer only.
+  agent, and past chats are kept on this computer only. An Anthropic API key for
+  Claude, if you save one, is kept in the credential store and given only to the
+  Claude agent.
 - **A local mock listens only when you start it, and only on this computer.**
   It uses `127.0.0.1`, answers web pages only when they are served from
   `localhost`, and stops when you stop it or quit Studio.
@@ -650,6 +652,14 @@ rules for apps that host its agent: Anthropic asks apps built on its Agent SDK t
 use an API key rather than a claude.ai sign-in, and Google doesn't allow its
 Gemini CLI sign-in to be used by other software to reach its services. Check your
 provider's terms before you use a subscription here.
+
+For Claude, add an Anthropic API key in Settings → Agent chat. Studio keeps it in
+your operating system's credential store and passes it, as `ANTHROPIC_API_KEY`,
+only to the Claude agent when a chat starts. Once it's saved, Studio's window
+can't read it back; it only knows that a key is there. Without a saved key,
+Studio passes on an `ANTHROPIC_API_KEY` it was started with (from a terminal),
+if there is one. A key set in your shell profile doesn't reach Studio when you
+open it from the Dock, which is why the setting exists.
 
 **Chatting.** The agent starts when you send the first message and stops when
 you end the chat, start a new one, or quit Studio. Type `@` (or press the @

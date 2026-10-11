@@ -580,7 +580,27 @@ pub fn read_lines(
     }
 }
 
-fn spawn_command(line: &CommandLine, cwd: &Path, dirs: &[PathBuf]) -> std::io::Result<Child> {
+/// Environment an agent's process gets on top of Studio's own. Only Claude gets
+/// anything: the Anthropic API key saved in Settings, or failing that one Studio
+/// itself was started with (from a terminal). Studio opened from the Dock doesn't
+/// see a shell profile, so without this the key never reaches the adapter.
+pub fn agent_env(agent: &str, saved: Option<String>, inherited: Option<String>) -> Vec<(&'static str, String)> {
+    if Known::from_id(agent) != Some(Known::Claude) {
+        return Vec::new();
+    }
+    saved
+        .or(inherited)
+        .filter(|key| !key.trim().is_empty())
+        .map(|key| vec![("ANTHROPIC_API_KEY", key)])
+        .unwrap_or_default()
+}
+
+fn spawn_command(
+    line: &CommandLine,
+    cwd: &Path,
+    dirs: &[PathBuf],
+    env: &[(&'static str, String)],
+) -> std::io::Result<Child> {
     let mut command = Command::new(&line.program);
     command
         .args(&line.args)
@@ -592,6 +612,9 @@ fn spawn_command(line: &CommandLine, cwd: &Path, dirs: &[PathBuf]) -> std::io::R
     // it gets the same search path the agent was found with.
     if let Ok(path) = std::env::join_paths(dirs) {
         command.env("PATH", path);
+    }
+    for (name, value) in env {
+        command.env(name, value);
     }
     #[cfg(unix)]
     {
@@ -784,7 +807,19 @@ pub async fn acp_start(
         .await
         .map_err(|error| error.to_string())??
     };
-    let mut child = spawn_command(&line, &cwd, &dirs)
+    // Read only for Claude, and only here: the key goes to this one process and
+    // nowhere else. A keychain that can't be read falls back to Studio's own
+    // environment rather than stopping the chat.
+    let saved = if Known::from_id(&agent) == Some(Known::Claude) {
+        tauri::async_runtime::spawn_blocking(|| crate::secrets::anthropic_key(&crate::secrets::OsVault).ok().flatten())
+            .await
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+    let env = agent_env(&agent, saved, std::env::var("ANTHROPIC_API_KEY").ok());
+    let mut child = spawn_command(&line, &cwd, &dirs, &env)
         .map_err(|error| format!("Couldn't start {}: {error}", line.program.display()))?;
     let id = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
     let stdout = child
@@ -956,6 +991,43 @@ async fn confirm(app: &tauri::AppHandle, title: &str, message: &str) -> Result<b
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn only_claude_gets_the_anthropic_key() {
+        let key = || Some("sk-ant-test".to_string());
+        assert_eq!(agent_env("claude", key(), None), vec![("ANTHROPIC_API_KEY", "sk-ant-test".to_string())]);
+        for other in ["codex", "gemini", "custom", "unknown"] {
+            assert!(agent_env(other, key(), key()).is_empty(), "{other} got the key");
+        }
+    }
+
+    #[test]
+    fn a_saved_key_wins_and_nothing_is_set_without_one() {
+        let saved = Some("saved".to_string());
+        let inherited = Some("from-terminal".to_string());
+        assert_eq!(agent_env("claude", saved, inherited.clone())[0].1, "saved");
+        assert_eq!(agent_env("claude", None, inherited)[0].1, "from-terminal");
+        assert!(agent_env("claude", None, None).is_empty());
+        assert!(agent_env("claude", Some("  ".into()), None).is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_key_reaches_the_process_it_was_given_to() {
+        let dir = temp_dir("env");
+        let read = |env: &[(&'static str, String)]| {
+            let line = CommandLine {
+                program: PathBuf::from("/bin/sh"),
+                args: vec!["-c".into(), "printf '%s' \"${ANTHROPIC_API_KEY-unset}\"".into()],
+            };
+            let child = spawn_command(&line, &dir, &[PathBuf::from("/bin"), PathBuf::from("/usr/bin")], env).unwrap();
+            String::from_utf8(child.wait_with_output().unwrap().stdout).unwrap()
+        };
+        assert_eq!(read(&agent_env("claude", Some("sk-ant-test".into()), None)), "sk-ant-test");
+        if std::env::var_os("ANTHROPIC_API_KEY").is_none() {
+            assert_eq!(read(&agent_env("codex", Some("sk-ant-test".into()), None)), "unset");
+        }
+    }
 
     fn temp_dir(tag: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("studio-acp-{tag}-{}", std::process::id()));
@@ -1211,6 +1283,7 @@ mod tests {
             &line,
             &dir,
             &[PathBuf::from("/bin"), PathBuf::from("/usr/bin")],
+            &[],
         )
         .unwrap();
         let started = Instant::now();
@@ -1265,6 +1338,7 @@ mod tests {
             &line,
             &dir,
             &[PathBuf::from("/bin"), PathBuf::from("/usr/bin")],
+            &[],
         )
         .unwrap();
         let mut stdin = child.stdin.take().unwrap();

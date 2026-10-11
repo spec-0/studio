@@ -281,6 +281,36 @@ pub fn probe(vault: &dyn Vault) -> Backend {
     }
 }
 
+// The Anthropic API key for the chat panel's Claude agent
+//
+// One fixed account, outside the environment/variable space: [`account`] always
+// puts a `/` in what it builds and this has none, so no environment id or
+// variable name can reach it, and it is never written to the index. The webview
+// can save it, remove it and ask whether one is saved. Only Rust reads it back,
+// to hand it to the Claude agent's process when that starts.
+
+pub const ANTHROPIC_KEY_ACCOUNT: &str = "agent-chat:anthropic-api-key";
+
+/// The saved key, if there is one.
+pub fn anthropic_key(vault: &dyn Vault) -> Result<Option<String>, SecretError> {
+    Ok(vault.get(ANTHROPIC_KEY_ACCOUNT)?.filter(|value| !value.trim().is_empty()))
+}
+
+pub fn set_anthropic_key(vault: &dyn Vault, value: &str) -> Result<(), SecretError> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Err(SecretError::failed("the key is empty"));
+    }
+    if value.len() > 512 || value.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err(SecretError::failed("that doesn't look like an API key"));
+    }
+    vault.set(ANTHROPIC_KEY_ACCOUNT, value)
+}
+
+pub fn delete_anthropic_key(vault: &dyn Vault) -> Result<(), SecretError> {
+    vault.delete(ANTHROPIC_KEY_ACCOUNT)
+}
+
 // Tauri commands
 //
 // All async and run off the main thread: a credential store may block on a
@@ -339,6 +369,22 @@ pub async fn secret_list(app: tauri::AppHandle) -> Result<Vec<SecretKey>, Secret
     blocking(move || Ok(list(&index))).await
 }
 
+/// Whether an Anthropic API key is saved for the chat panel. Never the key.
+#[tauri::command]
+pub async fn anthropic_key_saved() -> Result<bool, SecretError> {
+    blocking(|| Ok(anthropic_key(&OsVault)?.is_some())).await
+}
+
+#[tauri::command]
+pub async fn anthropic_key_set(value: String) -> Result<(), SecretError> {
+    blocking(move || set_anthropic_key(&OsVault, &value)).await
+}
+
+#[tauri::command]
+pub async fn anthropic_key_delete() -> Result<(), SecretError> {
+    blocking(|| delete_anthropic_key(&OsVault)).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,6 +420,35 @@ mod tests {
             self.values.borrow_mut().remove(account);
             Ok(())
         }
+    }
+
+    #[test]
+    fn the_anthropic_key_has_its_own_account_that_no_variable_can_reach() {
+        assert!(!ANTHROPIC_KEY_ACCOUNT.contains('/'));
+        for (env_id, name) in [("agent-chat:anthropic-api-key", "x"), ("agent-chat", "anthropic-api-key"), ("env_1", "agent-chat:anthropic-api-key")] {
+            assert_ne!(account(env_id, name).unwrap(), ANTHROPIC_KEY_ACCOUNT);
+        }
+    }
+
+    #[test]
+    fn saves_reads_and_removes_the_anthropic_key_without_touching_the_index() {
+        let vault = MemoryVault::default();
+        let index = temp_index("anthropic");
+        assert_eq!(anthropic_key(&vault).unwrap(), None);
+        set_anthropic_key(&vault, "  sk-ant-test-123\n").unwrap();
+        assert_eq!(anthropic_key(&vault).unwrap().as_deref(), Some("sk-ant-test-123"));
+        assert!(list(&index).is_empty());
+        delete_anthropic_key(&vault).unwrap();
+        assert_eq!(anthropic_key(&vault).unwrap(), None);
+    }
+
+    #[test]
+    fn refuses_an_empty_or_odd_anthropic_key_without_echoing_it() {
+        let vault = MemoryVault::default();
+        assert!(set_anthropic_key(&vault, "   ").is_err());
+        let error = set_anthropic_key(&vault, "sk-ant two words").unwrap_err();
+        assert!(!error.message.contains("sk-ant"));
+        assert_eq!(anthropic_key(&vault).unwrap(), None);
     }
 
     fn temp_index(tag: &str) -> PathBuf {

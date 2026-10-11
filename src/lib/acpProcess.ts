@@ -60,6 +60,26 @@ export async function clearCommand(agent: AgentId): Promise<void> {
   await invoke("acp_clear_command", { agent });
 }
 
+// The Anthropic API key for Claude Agent
+//
+// Kept in the operating system's credential store by Rust, which hands it to the
+// Claude agent's process when that starts. The web view can save it, remove it
+// and ask whether one is saved; there is deliberately no way to read it back.
+
+/** Whether an Anthropic API key is saved. Never the key itself. */
+export async function anthropicKeySaved(): Promise<boolean> {
+  if (!inTauri) return false;
+  return invoke<boolean>("anthropic_key_saved");
+}
+
+export async function saveAnthropicKey(value: string): Promise<void> {
+  await invoke("anthropic_key_set", { value });
+}
+
+export async function removeAnthropicKey(): Promise<void> {
+  await invoke("anthropic_key_delete");
+}
+
 /** Split a typed argument line on spaces, keeping quoted parts together. */
 export function splitArgs(line: string): string[] {
   const out: string[] = [];

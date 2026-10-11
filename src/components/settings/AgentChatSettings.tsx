@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { FolderOpen, RefreshCw } from "lucide-react";
 import { useAgentChatSettings } from "../../hooks/useAgentChatSettings";
-import type { AgentId, AgentInfo } from "../../lib/acpProcess";
+import {
+  anthropicKeySaved,
+  removeAnthropicKey,
+  saveAnthropicKey,
+  type AgentId,
+  type AgentInfo,
+} from "../../lib/acpProcess";
 import { testAgent } from "../../lib/agentChatTest";
 import { agentChatShortcutLabel, setAgentChatPanelOpen } from "../../lib/agentChatPanel";
 import { isMac } from "../../lib/platform";
@@ -26,10 +32,89 @@ function howText(agent: AgentInfo): string {
 }
 
 const INSTALL: Record<Exclude<AgentId, "custom">, string> = {
-  claude: "Studio runs Claude through Anthropic's Claude Agent SDK, using its ACP adapter. It needs Node.js.",
+  claude:
+    "Studio runs Claude through Anthropic's Claude Agent SDK, using its ACP adapter. It needs Node.js and an Anthropic API key.",
   codex: "Install Codex and sign in with `codex login`. Studio runs it through its ACP adapter.",
   gemini: "Install Gemini CLI (`npm install -g @google/gemini-cli`) and sign in with `gemini`.",
 };
+
+/** A message from a failed keychain call, which never contains the key. */
+function keyError(error: unknown): string {
+  if (error && typeof error === "object" && "message" in error) return String((error as { message: unknown }).message);
+  return String(error);
+}
+
+/**
+ * The Anthropic API key Claude Agent uses. Saved to the operating system's
+ * credential store; once saved, this only ever knows that there is one.
+ */
+function AnthropicKey() {
+  const [saved, setSaved] = useState<boolean | null>(null);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    anthropicKeySaved()
+      .then(setSaved)
+      .catch((err) => setError(`Couldn't read the credential store: ${keyError(err)}`));
+  }, []);
+
+  const run = async (work: () => Promise<void>, after: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await work();
+      setSaved(after);
+      setValue("");
+    } catch (err) {
+      setError(keyError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="section">
+      <h3>Anthropic API key</h3>
+      <p className="field-meta">
+        Claude Agent signs in with an Anthropic API key. Studio keeps it in your system&apos;s credential store and gives
+        it only to the Claude agent when a chat starts. Without one, Studio uses an{" "}
+        <span className="mono">ANTHROPIC_API_KEY</span> it was started with, if any.
+      </p>
+      <dl className="settings-facts">
+        <dt>Key</dt>
+        <dd>{saved === null ? "…" : saved ? "Saved" : "Not saved"}</dd>
+      </dl>
+      <div className="settings-actions">
+        <input
+          type="password"
+          value={value}
+          aria-label="Anthropic API key"
+          placeholder={saved ? "Paste a new key to replace it" : "sk-ant-…"}
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onChange={(event) => setValue(event.target.value)}
+        />
+        <button
+          className="btn primary"
+          disabled={busy || !value.trim()}
+          onClick={() => void run(() => saveAnthropicKey(value), true)}
+        >
+          Save
+        </button>
+        {saved && (
+          <button className="btn ghost" disabled={busy} onClick={() => void run(removeAnthropicKey, false)}>
+            Remove
+          </button>
+        )}
+      </div>
+      {error && <div className="error-box">{error}</div>}
+    </section>
+  );
+}
 
 /**
  * Settings for the chat panel: which agent it talks to, where that agent
@@ -208,6 +293,8 @@ export function AgentChatSettings() {
           </div>
         )}
       </section>
+
+      {prefs.agent === "claude" && <AnthropicKey />}
 
       <section className="section">
         <h3>Folder</h3>
