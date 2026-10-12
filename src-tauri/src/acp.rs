@@ -1467,15 +1467,17 @@ mod tests {
             &Vec::new(),
         )
         .unwrap();
+        // The shell creates the file before it writes the id into it, so wait
+        // for a number, not just for the file.
         let started = Instant::now();
-        while !marker.exists() && started.elapsed() < Duration::from_secs(5) {
+        let grandchild: i32 = loop {
+            let read = std::fs::read_to_string(&marker).ok();
+            if let Some(pid) = read.and_then(|text| text.trim().parse().ok()) {
+                break pid;
+            }
+            assert!(started.elapsed() < Duration::from_secs(5), "the script never wrote its child's id");
             std::thread::sleep(Duration::from_millis(20));
-        }
-        let grandchild: i32 = std::fs::read_to_string(&marker)
-            .unwrap()
-            .trim()
-            .parse()
-            .unwrap();
+        };
         // SAFETY: signal 0 only checks that the process exists.
         assert_eq!(unsafe { libc::kill(grandchild, 0) }, 0);
 
