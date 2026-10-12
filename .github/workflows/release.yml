@@ -245,7 +245,7 @@ jobs:
           DMG=$(ls "$BUNDLE"/dmg/*.dmg)
 
           echo "Disk image:"
-          xcrun stapler validate "$DMG"
+          .github/scripts/stapler-validate.sh "$DMG"
           spctl --assess --type open --context context:primary-signature --verbose=4 "$DMG"
 
           echo "The app inside it:"
@@ -253,7 +253,7 @@ jobs:
           hdiutil attach "$DMG" -nobrowse -quiet -mountpoint "$MNT"
           APP="$MNT/spec0 Studio.app"
           codesign --verify --deep --strict --verbose=2 "$APP"
-          xcrun stapler validate "$APP"
+          .github/scripts/stapler-validate.sh "$APP"
           spctl --assess --type execute --verbose=4 "$APP"
           hdiutil detach "$MNT" -quiet
 
@@ -270,7 +270,7 @@ jobs:
           tar -xzf "$ARCHIVE" -C "$OUT"
           APP="$OUT/spec0 Studio.app"
           codesign --verify --deep --strict --verbose=2 "$APP"
-          xcrun stapler validate "$APP"
+          .github/scripts/stapler-validate.sh "$APP"
           spctl --assess --type execute --verbose=4 "$APP"
 
       # Tauri names the image `spec0 Studio_<version>_universal.dmg`. That is the
@@ -287,7 +287,7 @@ jobs:
           cd "$BUNDLE/dmg"
           cp "$(ls *.dmg | head -1)" spec0-studio-macos-universal.dmg
           # Copying preserves the stapled ticket, but prove it rather than assume.
-          xcrun stapler validate spec0-studio-macos-universal.dmg
+          "$GITHUB_WORKSPACE/.github/scripts/stapler-validate.sh" spec0-studio-macos-universal.dmg
 
       - name: Collect release files
         env:
