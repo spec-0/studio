@@ -56,12 +56,28 @@ function sanitize(node: unknown, seen = new WeakSet<object>()): any {
     out[key] = sanitize(value, seen);
   }
 
-  // 3.0's `nullable: true` is 3.1's `type: [T, "null"]`.
-  if (src.nullable === true && out.type) {
-    out.type = Array.isArray(out.type) ? [...out.type, "null"] : [out.type, "null"];
-  }
   delete out.nullable;
-  return out;
+  return src.nullable === true ? allowNull(out) : out;
+}
+
+/** Keywords that can reject `null` even after "null" is added to `type`. */
+const NULL_REJECTING = ["$ref", "allOf", "oneOf", "anyOf", "not", "const"];
+
+/**
+ * 3.0's `nullable: true`: the value may also be null. For a plain typed schema
+ * that is 3.1's `type: [T, "null"]` (plus null in an `enum`), which keeps the
+ * validator's messages specific. Anything else (no `type`, or a `$ref` or
+ * `allOf` that would still reject null, which is how most specs write a
+ * nullable object) becomes "this schema, or null".
+ */
+function allowNull(schema: Json): Json {
+  if (schema.type !== undefined && !NULL_REJECTING.some((key) => key in schema)) {
+    const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+    const out: Json = { ...schema, type: types.includes("null") ? types : [...types, "null"] };
+    if (Array.isArray(schema.enum) && !schema.enum.includes(null)) out.enum = [...schema.enum, null];
+    return out;
+  }
+  return { anyOf: [schema, { type: "null" }] };
 }
 
 /** Walk the response against the schema and report fields the spec never declared. */

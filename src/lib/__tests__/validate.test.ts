@@ -150,6 +150,58 @@ describe("the OpenAPI 3.0 dialect", () => {
     expect(validateResponse(doc, schema, { note: null }).status).toBe("ok");
   });
 
+  it("accepts null for a nullable field with an enum", () => {
+    const schema: Json = {
+      type: "object",
+      properties: { state: { type: "string", enum: ["active", "paused"], nullable: true } },
+    };
+    expect(validateResponse(doc, schema, { state: null }).status).toBe("ok");
+    expect(validateResponse(doc, schema, { state: "active" }).status).toBe("ok");
+    expect(validateResponse(doc, schema, { state: "gone" }).status).toBe("mismatch");
+  });
+
+  it("accepts null for a nullable reference written with allOf", () => {
+    const schema: Json = {
+      type: "object",
+      properties: { customer: { nullable: true, allOf: [{ $ref: "#/components/schemas/Customer" }] } },
+    };
+    expect(validateResponse(doc, schema, { customer: null }).status).toBe("ok");
+    expect(validateResponse(doc, schema, { customer: { email: "a@b.c" } }).status).toBe("ok");
+    expect(validateResponse(doc, schema, { customer: { email: 42 } }).status).toBe("mismatch");
+  });
+
+  it("accepts null for a nullable $ref and for nullable without a type", () => {
+    const schema: Json = {
+      type: "object",
+      properties: {
+        customer: { $ref: "#/components/schemas/Customer", nullable: true },
+        anything: { nullable: true, description: "No type given" },
+        typedRef: { type: "object", nullable: true, allOf: [{ $ref: "#/components/schemas/Customer" }] },
+      },
+    };
+    expect(validateResponse(doc, schema, { customer: null, anything: null, typedRef: null }).status).toBe("ok");
+  });
+
+  it("still reports null where the spec doesn't allow it", () => {
+    const schema: Json = {
+      type: "object",
+      properties: {
+        isActive: { type: "boolean" },
+        state: { type: "string", enum: ["active", "paused"] },
+        customer: { $ref: "#/components/schemas/Customer" },
+      },
+    };
+    for (const body of [{ isActive: null }, { state: null }, { customer: null }]) {
+      expect(validateResponse(doc, schema, body).status).toBe("mismatch");
+    }
+  });
+
+  it("leaves 3.1's type arrays alone", () => {
+    const schema: Json = { type: "object", properties: { isActive: { type: ["boolean", "null"] } } };
+    expect(validateResponse(doc, schema, { isActive: null }).status).toBe("ok");
+    expect(validateResponse(doc, schema, { isActive: "yes" }).status).toBe("mismatch");
+  });
+
   it("ignores annotation-only keywords rather than choking on them", () => {
     const schema: Json = {
       type: "object",
