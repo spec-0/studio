@@ -9,7 +9,7 @@
   <a href="https://github.com/spec-0/studio/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/spec-0/studio?label=release&color=5B4CF5"></a>
   <a href="https://github.com/spec-0/studio/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/spec-0/studio/ci.yml?branch=main&label=CI"></a>
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/spec-0/studio?color=52525B"></a>
-  <a href="https://spec-0.github.io/studio/"><img alt="User guide" src="https://img.shields.io/badge/docs-user%20guide-5B4CF5"></a>
+  <a href="https://studio-docs.spec0.io/"><img alt="User guide" src="https://img.shields.io/badge/docs-user%20guide-5B4CF5"></a>
 </p>
 
 <p align="center">
@@ -811,7 +811,7 @@ npm run app:build      # installers for your platform (.dmg, .AppImage/.deb, .ex
 - **Security problems**: report them privately, as described in [SECURITY.md](SECURITY.md),
   rather than in a public issue.
 - **Pull requests** are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
-- **The user guide** at [spec-0.github.io/studio](https://spec-0.github.io/studio/) is
+- **The user guide** at [studio-docs.spec0.io](https://studio-docs.spec0.io/) is
   written in [docs/user](docs/user/) and built by [site/](site/). A fix or a new page is a
   pull request there.
 

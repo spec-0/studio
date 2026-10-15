@@ -1,7 +1,7 @@
 # Builds the docs site (site/) from docs/user on every pull request that
 # changes either, and keeps the built site as an artifact. To preview a change,
 # download "docs-site-preview" from the run's summary, unzip it, and serve the
-# folder: `npx serve <folder>`, then open http://localhost:3000/studio/.
+# folder: `npx serve <folder>`, then open http://localhost:3000/.
 #
 # The build fails on a broken link, image or clip inside the site.
 
@@ -39,15 +39,8 @@ jobs:
         run: |
           npm ci
           npm run build
-      # Laid out the way it will be served, under /studio, so it can be
-      # previewed with any static server.
-      - name: Arrange the preview
-        run: |
-          mkdir -p preview
-          cp -R site/out preview/studio
-          cp site/out/404.html preview/404.html
       - uses: actions/upload-artifact@v7
         with:
           name: docs-site-preview
-          path: preview
+          path: site/out
           retention-days: 14

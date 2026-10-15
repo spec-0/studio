@@ -7,11 +7,12 @@ const withMDX = createMDX();
 // the repository rather than site/.
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 
-// GitHub Pages serves the site at https://spec-0.github.io/studio, so pages and
-// files live under /studio. A custom domain serves it at the root: build with
-// SITE_BASE_PATH="" and SITE_URL set to that domain.
-const basePath = (process.env.SITE_BASE_PATH ?? '/studio').replace(/\/$/, '');
-const siteUrl = process.env.SITE_URL ?? `https://spec-0.github.io${basePath}`;
+// The site is served at the root of its own domain, https://studio-docs.spec0.io.
+// To serve it under a path instead (for example GitHub's own
+// https://spec-0.github.io/studio), build with SITE_BASE_PATH=/studio and
+// SITE_URL set to the full address.
+const basePath = (process.env.SITE_BASE_PATH ?? '').replace(/\/$/, '');
+const siteUrl = (process.env.SITE_URL ?? 'https://studio-docs.spec0.io').replace(/\/$/, '');
 
 /** @type {import('next').NextConfig} */
 const config = {

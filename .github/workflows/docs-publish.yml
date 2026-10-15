@@ -1,4 +1,7 @@
-# Publishes the docs site to GitHub Pages (https://spec-0.github.io/studio).
+# Publishes the docs site to GitHub Pages, at https://studio-docs.spec0.io.
+#
+# The custom domain is set in the repository's Pages settings; publishing from
+# Actions needs no CNAME file.
 #
 # The Release workflow calls this after it has published a release, so the
 # site is built from that release's tag and always describes the app people
@@ -7,7 +10,8 @@
 # "Use workflow from".
 #
 # GitHub Pages must be set to deploy from GitHub Actions
-# (Settings → Pages → Build and deployment → Source: GitHub Actions).
+# (Settings → Pages → Build and deployment → Source: GitHub Actions), with
+# studio-docs.spec0.io as its custom domain.
 
 name: Publish docs
 

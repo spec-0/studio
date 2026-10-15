@@ -121,7 +121,7 @@ the plugin back.
 
 ## Improving the docs
 
-The user guide at [spec-0.github.io/studio](https://spec-0.github.io/studio/)
+The user guide at [studio-docs.spec0.io](https://studio-docs.spec0.io/)
 is written in [docs/user](docs/user/), next to the code, and [site/](site/)
 builds it into a static site. When a change alters what a user sees or does,
 update the page that describes it in the same pull request.

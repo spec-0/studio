@@ -1,7 +1,7 @@
 # Studio user guide
 
 These pages are the Studio user guide published at
-[spec-0.github.io/studio](https://spec-0.github.io/studio/). This folder is
+[studio-docs.spec0.io](https://studio-docs.spec0.io/). This folder is
 where they're written, so a fix or a new page starts here, as a pull request
 like any other. The site itself is built from this folder by the app in
 [`site/`](../../site/).
@@ -81,7 +81,7 @@ npm ci
 npm run dev
 ```
 
-Then open http://localhost:3000/studio/.
+Then open http://localhost:3000/.
 
 Before you open a pull request, run the quick check from the root of the
 repository:
@@ -102,7 +102,7 @@ It checks that:
 On a pull request, CI runs the same check, builds the whole site (failing on
 any link, image or clip that leads nowhere), and keeps the built site as an
 artifact called **docs-site-preview**. Download it from the run's summary,
-unzip it, run `npx serve` in that folder and open http://localhost:3000/studio/
+unzip it, run `npx serve` in that folder and open http://localhost:3000/
 to see the site exactly as it will be published.
 
 ## Style

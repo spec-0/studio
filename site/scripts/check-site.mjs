@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const out = fileURLToPath(new URL('../out', import.meta.url));
-const basePath = (process.env.SITE_BASE_PATH ?? '/studio').replace(/\/$/, '');
+const basePath = (process.env.SITE_BASE_PATH ?? '').replace(/\/$/, '');
 
 function walk(dir) {
   return readdirSync(dir).flatMap((name) => {
