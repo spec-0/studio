@@ -1,10 +1,10 @@
 # Publishes the docs site to GitHub Pages (https://spec-0.github.io/studio).
 #
-# It runs when the Release workflow has published a release, and builds the
-# docs from that release's tag, so the site always describes the app people
+# The Release workflow calls this after it has published a release, so the
+# site is built from that release's tag and always describes the app people
 # can download. A change that only fixes the docs can be published without a
-# release: run this workflow by hand, optionally with a ref (a tag, branch or
-# commit; the latest release tag if left empty).
+# release: run this workflow by hand and pick the branch or tag to build in
+# "Use workflow from".
 #
 # GitHub Pages must be set to deploy from GitHub Actions
 # (Settings → Pages → Build and deployment → Source: GitHub Actions).
@@ -12,15 +12,8 @@
 name: Publish docs
 
 on:
-  workflow_run:
-    workflows: [Release]
-    types: [completed]
+  workflow_call:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: Tag, branch or commit to publish (empty for the latest release)
-        required: false
-        default: ""
 
 # One deployment at a time; a newer one waits rather than cancelling a live one.
 concurrency:
@@ -29,39 +22,16 @@ concurrency:
 
 jobs:
   build:
-    # Only after a successful release from a tag, not after a manual trial run.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
-      - name: Choose what to publish
-        id: ref
-        env:
-          GH_TOKEN: ${{ github.token }}
-          INPUT_REF: ${{ inputs.ref }}
-          RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            REF="$RELEASE_TAG"
-          elif [ -n "$INPUT_REF" ]; then
-            REF="$INPUT_REF"
-          else
-            REF=$(gh release view --repo "${{ github.repository }}" --json tagName -q .tagName)
-          fi
-          echo "Publishing the docs from $REF"
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+      # Builds the commit the workflow runs on: the release tag when the
+      # Release workflow calls it, or the branch or tag picked for a manual run.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ steps.ref.outputs.ref }}
           persist-credentials: false
-      # No npm cache here: this job can build a ref given by hand, and a cache
-      # written from it would be read by builds of the default branch.
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
