@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/* Spec0's violet (#5B4CF5) as the accent, lighter on dark backgrounds. */
+@theme {
+  --color-fd-primary: hsl(245, 89%, 63%);
+  --color-fd-primary-foreground: hsl(0, 0%, 100%);
+  --color-fd-ring: hsl(245, 89%, 63%);
+}
+
+.dark {
+  --color-fd-primary: hsl(245, 100%, 80%);
+  --color-fd-primary-foreground: hsl(245, 40%, 10%);
+  --color-fd-ring: hsl(245, 100%, 80%);
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}

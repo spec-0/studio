@@ -28,7 +28,7 @@ Claude agent. If it ever shows up in what the agent writes, Studio shows `[hidde
 |---|---|---|
 | Past chats | On this computer, with secret values replaced | The last 30 |
 | Agent activity (tool calls, requests and responses) | In memory, in the MCP tab | Until Studio quits |
-| Chat sessions starting and ending | In memory, in the [console](/docs/studio/console) | Until Studio quits; never what was said |
+| Chat sessions starting and ending | In memory, in the [console](/console) | Until Studio quits; never what was said |
 | Studio's instructions | Studio's agent folder | Until you turn them off |
 
 ## What the agent can do, and what stops it
@@ -50,13 +50,13 @@ The agent can use Studio's tools, but Studio decides what each tool may do:
   offers **Reconnect**.
 
 These limits are enforced by Studio, not by asking the agent nicely. The
-[instructions](/docs/studio/agent-chat/instructions) help the agent work well, but an agent that
-ignores them still can't get past an approval. See [Local MCP server](/docs/studio/mcp) for the full
+[instructions](/agent-chat/instructions) help the agent work well, but an agent that
+ignores them still can't get past an approval. See [Local MCP server](/mcp) for the full
 list of tools and approvals.
 
 ## What Studio doesn't give the agent
 
 Studio doesn't give the agent access to your files or a terminal. The agent has its own tools for
-those, works in the [folder you chose](/docs/studio/agent-chat/setup#the-folder-the-agent-works-in),
+those, works in the [folder you chose](/agent-chat/setup#the-folder-the-agent-works-in),
 and asks for permission in the chat the way it normally does. Studio's own empty folder is the
 default, so the agent starts with nothing of yours to read.

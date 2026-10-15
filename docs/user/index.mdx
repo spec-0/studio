@@ -27,20 +27,20 @@ says. When the API and its spec drift apart, you see it the moment it happens.
 
 | Task | How Studio helps |
 |---|---|
-| **Send requests** | Forms come from the spec: real field names, dropdowns for allowed values, bodies filled in. See [Sending requests](/docs/studio/requests). |
-| **Check responses** | Each JSON response is checked against the schema for its status code, including fields the spec never mentions. See [Checking responses](/docs/studio/checking-responses). |
-| **Read the data model** | Browse schemas, and see how they link as a [graph](/docs/studio/schema-graph). |
-| **Run flows across APIs** | A [collection](/docs/studio/collections) runs steps in order, passes values between them, and checks every step against its own spec. |
-| **Mock an API** | Start a [local mock](/docs/studio/local-mocks) of any spec in one click, or share a [hosted mock](/docs/studio/hosted-mocks) with your team. |
-| **Test with your coding agent** | A [local MCP server](/docs/studio/mcp) lets agents like Claude Code or Cursor read your APIs, send requests, start local mocks and run collections through Studio, after you allow where their requests go. |
-| **Chat with an agent in Studio** | The [agent chat](/docs/studio/agent-chat) panel talks to Claude, Codex or Gemini CLI, with the operation or response you're looking at attached. |
+| **Send requests** | Forms come from the spec: real field names, dropdowns for allowed values, bodies filled in. See [Sending requests](/requests). |
+| **Check responses** | Each JSON response is checked against the schema for its status code, including fields the spec never mentions. See [Checking responses](/checking-responses). |
+| **Read the data model** | Browse schemas, and see how they link as a [graph](/schema-graph). |
+| **Run flows across APIs** | A [collection](/collections) runs steps in order, passes values between them, and checks every step against its own spec. |
+| **Mock an API** | Start a [local mock](/local-mocks) of any spec in one click, or share a [hosted mock](/hosted-mocks) with your team. |
+| **Test with your coding agent** | A [local MCP server](/mcp) lets agents like Claude Code or Cursor read your APIs, send requests, start local mocks and run collections through Studio, after you allow where their requests go. |
+| **Chat with an agent in Studio** | The [agent chat](/agent-chat) panel talks to Claude, Codex or Gemini CLI, with the operation or response you're looking at attached. |
 
 ## Try it in three minutes
 
 <Steps>
 <Step>
 
-**Install Studio.** Download it for your system from the [install page](/docs/studio/install) and
+**Install Studio.** Download it for your system from the [install page](/install) and
 open it.
 
 </Step>
@@ -62,7 +62,7 @@ https://petstore3.swagger.io/api/v3/openapi.json
 </Step>
 </Steps>
 
-[Your first request](/docs/studio/first-request) walks through the same steps in more detail.
+[Your first request](/first-request) walks through the same steps in more detail.
 
 ## Works with no account
 
@@ -71,9 +71,9 @@ Spec0 itself: hosted mocks, your organisation's catalog, and publishing a spec. 
 collections, local mocks, history, environments and secrets, and the local MCP server. Once an API
 is in your library, it opens with no network at all.
 
-Studio sends no telemetry, analytics or crash reports. See [Privacy and security](/docs/studio/privacy).
+Studio sends no telemetry, analytics or crash reports. See [Privacy and security](/privacy).
 
-If your team uses Spec0, [signing in](/docs/studio/connect) adds your organisation's APIs, their
+If your team uses Spec0, [signing in](/connect) adds your organisation's APIs, their
 environments, and hosted mocks. Signing out takes nothing away.
 
 ## How it differs from other API clients
@@ -91,16 +91,16 @@ If you use Postman, Insomnia, Bruno or Yaak:
 
 The top bar has five tabs: **APIs** (your library and the API you have open), **Collections**,
 **History**, **Mocks** and **MCP**. On the right are the environment picker, a chip that says
-whether you're **Local** or **Signed in**, **Agent** for the [agent chat](/docs/studio/agent-chat)
+whether you're **Local** or **Signed in**, **Agent** for the [agent chat](/agent-chat)
 (`⇧⌘J`), and **Settings** (`⌘,`).
 
 When an API is open, a bar under it has its name and version, four views (**Operations**,
 **Schemas**, **Graph**, **Document**, on `⌘1` to `⌘4`), and buttons for **Local mock**,
-**Create mock**, **Run** and **Add API**. Under that is a strip of [request tabs](/docs/studio/requests#request-tabs).
+**Create mock**, **Run** and **Add API**. Under that is a strip of [request tabs](/requests#request-tabs).
 
 The status bar at the bottom shows counts for the open API, the progress of a running
-[collection](/docs/studio/collections/running), and the **Console** button
-([Console and logs](/docs/studio/console)).
+[collection](/collections/running), and the **Console** button
+([Console and logs](/console)).
 
 ## Open source
 

@@ -21,7 +21,7 @@ An **environment** in Studio is a named set of variables, such as `baseUrl`, `to
 
 <Callout>
 **Two things share the word "environment".** A Studio environment is your own set of variables and
-never leaves your computer. A [Spec0 environment](/docs/studio/connect#environments) is a place
+never leaves your computer. A [Spec0 environment](/connect#environments) is a place
 your API is deployed, shown as a target in the address bar. You'll often use both at once: one says
 where the request goes, the other fills in the blanks.
 </Callout>
@@ -82,7 +82,7 @@ command to paste.
 If the credential store can't be reached, Studio keeps secret values in a local file that is **not
 encrypted**, and the Environments dialog says so. This mostly happens on Linux with no keyring
 running, or a locked one. Install or unlock a keyring and restart Studio: the values then move
-into the credential store. See [Troubleshooting](/docs/studio/troubleshooting#secrets-arent-in-the-keyring-on-linux).
+into the credential store. See [Troubleshooting](/troubleshooting#secrets-arent-in-the-keyring-on-linux).
 </Callout>
 
 Windows limits how long a stored credential can be. A very long token can go over that limit; only

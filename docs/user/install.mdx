@@ -72,7 +72,7 @@ sudo apt install ./spec0-studio-linux-amd64.deb
 ```
 
 To keep secret values in the system keyring, you need a running Secret Service, such as GNOME
-Keyring or KWallet. See [Where secrets are kept](/docs/studio/auth-environments#where-secrets-are-kept).
+Keyring or KWallet. See [Where secrets are kept](/auth-environments#where-secrets-are-kept).
 
   </Tab>
 </Tabs>
@@ -114,7 +114,7 @@ How the update installs depends on how you installed Studio:
 | `.deb` | Studio asks for your password (through `pkexec`) to install the new package. |
 
 <Callout title="Good to know">
-The update check uses the proxy from Studio's [network settings](/docs/studio/network), but not
+The update check uses the proxy from Studio's [network settings](/network), but not
 its certificate settings. If your network inspects encrypted traffic with a private certificate
 authority, the check may fail. Download the new version from the releases page instead.
 </Callout>

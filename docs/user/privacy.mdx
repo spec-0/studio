@@ -17,15 +17,15 @@ protected.
 - **Update checks on request**, or on start if you turn that on. It's one request to
   github.com and sends nothing about your work.
 - **Agent requests, after you allow them.** An agent using the
-  [local MCP server](/docs/studio/mcp) can send requests through Studio, but each new host waits for
+  [local MCP server](/mcp) can send requests through Studio, but each new host waits for
   your answer, and you can block hosts outright. See
-  [Approving what agents do](/docs/studio/mcp#approving-what-agents-do).
+  [Approving what agents do](/mcp#approving-what-agents-do).
 - **Agent chat messages.** What you type and attach in the
-  [agent chat](/docs/studio/agent-chat) goes to that agent and from there to its model provider, with
+  [agent chat](/agent-chat) goes to that agent and from there to its model provider, with
   secret values replaced by their `{{name}}`. The chat is off until you choose an agent, and the
   agent starts only when you send a message. Studio never sees your sign-in to the agent. An
   Anthropic API key for Claude Agent, if you save one, is kept in the credential store and given
-  only to the Claude agent. See [Privacy and safety](/docs/studio/agent-chat/privacy-and-safety).
+  only to the Claude agent. See [Privacy and safety](/agent-chat/privacy-and-safety).
 - **No requests from the reference view.** The rendered reference is given the spec's text, never a
   URL, and the window blocks its network requests. A remote image in a spec's description isn't
   loaded, because loading it would tell the spec's author that you opened it.
@@ -53,7 +53,7 @@ Everything is on your computer. **Settings → Data & privacy** shows the folder
 - **One place for secrets.** Auth values aren't stored per API. They go in an environment, where
   you mark them secret.
 - **The credential store.** Secret values go in the macOS Keychain, Windows Credential Manager, or
-  the Secret Service on Linux. See [Where secrets are kept](/docs/studio/auth-environments#where-secrets-are-kept).
+  the Secret Service on Linux. See [Where secrets are kept](/auth-environments#where-secrets-are-kept).
 - **Never written down.** History, error messages, saved unsent changes, collection files, run
   logs, the console, agent activity, saved chats and exported reports show `{{name}}` instead of the
   value. An auth value typed
@@ -71,20 +71,20 @@ They move to the credential store the next time Studio starts and can reach it.
 
 Certificate checks can't be turned off for everything at once. You can trust a private CA, or skip
 checks, for one host at a time, and Studio marks requests to that host as **unverified**. See
-[Network settings](/docs/studio/network#certificates).
+[Network settings](/network#certificates).
 
 ## Links from web pages
 
 A `spec0://` link can be sent by any web page, so Studio asks before doing anything. It shows the
 API's name, the host it would download from and the full address, and downloads nothing until you
 press **Open**. It only accepts `https` addresses on public hosts. See
-[Open in Studio links](/docs/studio/library#open-in-studio-links).
+[Open in Studio links](/library#open-in-studio-links).
 
 ## Servers Studio runs on your computer
 
 Studio can run two kinds of server. Both are off until you start them, listen on `127.0.0.1` only
 (other computers can't reach them), and stop when Studio quits. Starting a chat in the
-[agent chat](/docs/studio/agent-chat) starts the MCP server too, unless you turn that off in
+[agent chat](/agent-chat) starts the MCP server too, unless you turn that off in
 **Settings → Agent chat**.
 
 | | Local MCP server | Local mock |
@@ -94,7 +94,7 @@ Studio can run two kinds of server. Both are off until you start them, listen on
 | **Shares secret values** | Never. Secret variables are listed by name only, and Studio fills them in when it sends a request. | Not applicable: it answers from the spec |
 | **Sends requests** | Only to hosts you allow, at most the number per minute you set | No |
 
-See [Local MCP server](/docs/studio/mcp#security) and [Local mock servers](/docs/studio/local-mocks).
+See [Local MCP server](/mcp#security) and [Local mock servers](/local-mocks).
 
 ## Reporting a security problem
 

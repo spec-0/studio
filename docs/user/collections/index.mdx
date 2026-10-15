@@ -9,10 +9,10 @@ it. Each step points at an operation in one of your specs, so its response is ch
 spec. One collection can use several APIs.
 
 This page covers building a collection. The other pages in this section cover
-[passing values between steps](/docs/studio/collections/chaining),
-[running and run logs](/docs/studio/collections/running),
-[files and git](/docs/studio/collections/files), and
-[importing from Postman](/docs/studio/collections/postman).
+[passing values between steps](/collections/chaining),
+[running and run logs](/collections/running),
+[files and git](/collections/files), and
+[importing from Postman](/collections/postman).
 
 ## How collections differ from other clients'
 
@@ -55,7 +55,7 @@ Repeat for each step. The steps can come from different APIs.
 </Steps>
 
 The step is added with what you had filled in and where it was aimed. A request in
-[History](/docs/studio/requests#history) can be added too, with **Add to a collection**; it keeps the
+[History](/requests#history) can be added too, with **Add to a collection**; it keeps the
 values it was sent with.
 
 <Screenshot
@@ -75,14 +75,14 @@ Select a step to edit it. Its header has:
 |---|---|
 | **Key** | The step's name in references, such as `createOrder` in `{{steps.createOrder.body.id}}`. |
 | **Name** | A readable name, shown in the list and in run logs. |
-| **Expects** | The status that counts as a pass. Empty means any 2xx. See [Expected status](/docs/studio/collections/running#expected-status). |
+| **Expects** | The status that counts as a pass. Empty means any 2xx. See [Expected status](/collections/running#expected-status). |
 | **Send to** | Where this step goes: one of the API's servers, its hosted mock, its local mock, or a URL you type. |
 
 Below that, **Request** holds the step's inputs, in the same editor as any other request, and
 **Response** shows its last response.
 
 Each step has its own target. So one step can call a real staging server while the next calls a
-[local mock](/docs/studio/local-mocks) of an API that doesn't exist yet. A step aimed at a local
+[local mock](/local-mocks) of an API that doesn't exist yet. A step aimed at a local
 mock needs that mock to be running; Studio doesn't start it for you, and the step says so.
 
 ## Reorder and remove steps
@@ -103,17 +103,17 @@ The collection header has three views:
 | View | What it shows |
 |---|---|
 | **Steps** | The step list and the selected step's request and response. |
-| **Chain** | How values pass from step to step. See [Passing values between steps](/docs/studio/collections/chaining). |
-| **Runs** | The last 20 runs and their logs. See [Running a collection](/docs/studio/collections/running). |
+| **Chain** | How values pass from step to step. See [Passing values between steps](/collections/chaining). |
+| **Runs** | The last 20 runs and their logs. See [Running a collection](/collections/running). |
 
 ## Collections made by agents
 
-A coding agent using the [local MCP server](/docs/studio/mcp) can build a collection for you. It
+A coding agent using the [local MCP server](/mcp) can build a collection for you. It
 appears in the list as a **draft** while the agent adds steps, with a banner that names the agent.
 Choose **Keep** to make it yours, or **Discard** to delete it.
 
 Agents can change only their own drafts. A collection you made or kept, they can read and run, but
-not change. See [Collections agents build](/docs/studio/mcp#collections-agents-build).
+not change. See [Collections agents build](/mcp#collections-agents-build).
 
 ## When a spec changes
 
@@ -138,6 +138,6 @@ the API.
 - Collections run in Studio only. There's no command-line runner yet.
 - A step that uses OAuth uses the token Studio already holds for that API and environment. Get one
   from the API's Auth section first.
-- Studio doesn't run scripts. Pass values with [links](/docs/studio/collections/chaining) and check
-  status codes with [Expects](/docs/studio/collections/running#expected-status).
+- Studio doesn't run scripts. Pass values with [links](/collections/chaining) and check
+  status codes with [Expects](/collections/running#expected-status).
 </Callout>

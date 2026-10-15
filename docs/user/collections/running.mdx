@@ -16,7 +16,7 @@ active environment.
   after it are marked as not run. Untick it to run every step whatever happens.
 - A step **passes** when its status is the one it expects, **and** its response matches what its
   spec declares for that status.
-- The whole run is one entry in [History](/docs/studio/requests#history), with its steps inside it.
+- The whole run is one entry in [History](/requests#history), with its steps inside it.
 
 While it runs, the status bar at the bottom shows the collection and the step, such as "Running
 Checkout · step 2 of 5", with a progress bar, on whatever page you're on. Click it to open the run.
@@ -90,7 +90,7 @@ that couldn't be found. A step that didn't run says why it was skipped.
   collection. They're never sent anywhere.
 - Secret values are replaced by their `{{name}}` in the log and in exports, including secrets you
   add to an environment after the run.
-- Every run also appears in the [console](/docs/studio/console), with a link to its log.
+- Every run also appears in the [console](/console), with a link to its log.
 - A run a coding agent started says which agent, in the Runs list and in its log. See
-  [Local MCP server](/docs/studio/mcp).
+  [Local MCP server](/mcp).
 </Callout>

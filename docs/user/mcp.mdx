@@ -17,7 +17,7 @@ responses are checked against the spec. You decide which hosts an agent may call
 does is listed in the MCP tab.
 
 The server is **off by default**. Nothing listens until you start it, or until you start a chat in
-the [agent chat](/docs/studio/agent-chat), which starts it and connects the agent for you.
+the [agent chat](/agent-chat), which starts it and connects the agent for you.
 
 ## Turning it on
 
@@ -147,7 +147,7 @@ Tools marked **sign-in** work only while Studio is signed in to Spec0.
 | Tool | What it does | |
 |---|---|---|
 | `list_local_mocks` | Lists the local mocks that are running, and their addresses. | |
-| `start_local_mock` | Starts a [local mock](/docs/studio/local-mocks) of an API and returns its address. | asks |
+| `start_local_mock` | Starts a [local mock](/local-mocks) of an API and returns its address. | asks |
 | `stop_local_mock` | Stops an API's local mock. | |
 
 ### Collections
@@ -158,7 +158,7 @@ Tools marked **sign-in** work only while Studio is signed in to Spec0.
 | `get_collection` | Returns a collection's steps in order, with their targets, parameters, bodies, expected statuses and links. | |
 | `create_collection` | Creates a draft collection, empty or as a copy of another. | |
 | `add_step`, `update_step`, `remove_step` | Change the steps of a draft. | |
-| `link_value` | Fills a field of a step with a value from an earlier step's response, such as the new order's id. See [Chaining](/docs/studio/collections/chaining). | |
+| `link_value` | Fills a field of a step with a value from an earlier step's response, such as the new order's id. See [Chaining](/collections/chaining). | |
 | `set_expected_status` | Sets the status a step expects, such as `404` or `4XX`. | |
 | `run_collection` | Runs a collection and returns each step's status, whether it passed, and why not. | asks |
 | `get_run_log` | Returns a run's log: each step's request, response, schema check and the values passed between steps. | |
@@ -179,8 +179,8 @@ Tools marked **sign-in** work only while Studio is signed in to Spec0.
 | `create_mock_server` | Creates a hosted mock for an API that is already published to Spec0. If the API already has one, returns that one. | sign-in |
 | `refresh_mock_server` | Rebuilds an API's hosted mock from the latest version on Spec0. The address and key stay the same. | sign-in |
 
-An API that is only on your computer has to be [published from Studio](/docs/studio/document#publishing-a-local-spec-to-spec0)
-before an agent can create a hosted mock for it. See [Hosted mock servers](/docs/studio/hosted-mocks).
+An API that is only on your computer has to be [published from Studio](/document#publishing-a-local-spec-to-spec0)
+before an agent can create a hosted mock for it. See [Hosted mock servers](/hosted-mocks).
 
 ## Approving what agents do
 
@@ -240,7 +240,7 @@ The **Agents** section of the MCP tab shows:
 - an **Activity** log: each tool call, and each request with what was sent and what came back,
   with secret values replaced. It covers this session only.
 
-The [console](/docs/studio/console) also records each tool call and says which agent made it.
+The [console](/console) also records each tool call and says which agent made it.
 
 **Stop agents** refuses everything agents are waiting for, stops runs they started, forgets what
 you allowed this session, and stops the server. The same button is in every approval dialog.
@@ -272,5 +272,5 @@ Spec0 has two MCP servers. They answer different questions.
 | **Needs a Spec0 account** | No, except for the hosted mock tools | Yes, for your organisation's APIs |
 
 You can use both at once. Use the local server while you build and test an API on your computer, and
-the remote one to search every API in your organisation. See [Spec0 MCP server](/docs/agents#spec0-mcp-server)
+the remote one to search every API in your organisation. See [Spec0 MCP server](https://docs.spec0.io/docs/agents#spec0-mcp-server)
 for how to set up the remote one.

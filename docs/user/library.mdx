@@ -14,7 +14,7 @@ dialog has three tabs:
 
 | Tab | What it adds |
 |---|---|
-| **Spec0** | An API from your organisation's catalog. Needs you to be [signed in](/docs/studio/connect). |
+| **Spec0** | An API from your organisation's catalog. Needs you to be [signed in](/connect). |
 | **URL** | A spec from a web address. |
 | **Local file** | A YAML or JSON file on your computer. |
 
@@ -44,7 +44,7 @@ Studio keeps a copy of the spec's text, not a link to the file. So an API you've
 Because Studio works from its copy, editing the file doesn't change the API in Studio straight away.
 To pick up your edits, press the **Refresh** button on the API's card in the library ("Re-read from
 source"). It works the same way for a spec from a URL. For an API from Spec0, see
-[Keeping specs current](/docs/studio/connect#keeping-specs-current).
+[Keeping specs current](/connect#keeping-specs-current).
 
 References to other files (a `$ref` to `./schemas/order.yaml`, say) aren't followed. A spec split
 across files needs bundling into one file first.
@@ -56,7 +56,7 @@ across files needs bundling into one file first.
 | `⌘P` | Switch to another API |
 | `⌘L` | Back to the library |
 
-Requests you've opened stay in the [request tabs](/docs/studio/requests#request-tabs) strip across
+Requests you've opened stay in the [request tabs](/requests#request-tabs) strip across
 APIs, so you can also move between APIs by tab.
 
 Each API's card in the library has buttons for its mocks, **Refresh**, **Rename** and **Remove from
@@ -67,7 +67,7 @@ library**. Removing an API also closes its request tabs and drops its unsent cha
 Studio opens **Swagger 2.0** specs, in JSON or YAML, by converting them to OpenAPI 3.0 when you open
 them. The conversion runs on your computer and makes no network requests.
 
-- **Raw shows the original.** The [Document](/docs/studio/document) view's Raw tab shows the file as
+- **Raw shows the original.** The [Document](/document) view's Raw tab shows the file as
   you added it. Everything else uses the converted spec.
 - **It says so.** The API bar shows "Converted from Swagger 2.0 when opened".
 - **Known gaps are listed.** Studio says where the conversion may not be exact. For example, a

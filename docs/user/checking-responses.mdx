@@ -26,7 +26,7 @@ Each finding points at the exact JSON path, such as `items[0].sku`.
 The extra-fields result is the one to watch. A response that has quietly grown a field is often
 the first sign that an API and its spec have drifted apart, and most API clients won't tell you.
 
-The result is saved in [History](/docs/studio/requests#history) with the request. You can
+The result is saved in [History](/requests#history) with the request. You can
 re-check an old response against the current spec later.
 
 <Callout title="Good to know">
@@ -57,7 +57,7 @@ It's careful by design:
 Every request is also in History, tagged with its run.
 
 For a fixed sequence of calls, such as create an order, get it, then pay for it, use a
-[collection](/docs/studio/collections) instead.
+[collection](/collections) instead.
 
 ## Large specs
 

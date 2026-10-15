@@ -1,0 +1,53 @@
+# Builds the docs site (site/) from docs/user on every pull request that
+# changes either, and keeps the built site as an artifact. To preview a change,
+# download "docs-site-preview" from the run's summary, unzip it, and serve the
+# folder: `npx serve <folder>`, then open http://localhost:3000/studio/.
+#
+# The build fails on a broken link, image or clip inside the site.
+
+name: Docs site
+
+on:
+  pull_request:
+    paths:
+      - "docs/user/**"
+      - "site/**"
+      - ".github/assets/spec0-studio-*.svg"
+      - ".github/workflows/docs-site.yml"
+
+concurrency:
+  group: docs-site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Check the user guide
+        run: node scripts/check-user-docs.mjs
+      - name: Build the site
+        working-directory: site
+        run: |
+          npm ci
+          npm run build
+      # Laid out the way it will be served, under /studio, so it can be
+      # previewed with any static server.
+      - name: Arrange the preview
+        run: |
+          mkdir -p preview
+          cp -R site/out preview/studio
+          cp site/out/404.html preview/404.html
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docs-site-preview
+          path: preview
+          retention-days: 14

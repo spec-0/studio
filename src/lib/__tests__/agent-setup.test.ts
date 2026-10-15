@@ -87,7 +87,7 @@ describe("agent setup: what each agent needs", () => {
   });
 
   it("links to the agent chat guide", () => {
-    expect(AGENT_CHAT_DOCS_URL).toBe("https://docs.spec0.io/docs/studio/agent-chat");
+    expect(AGENT_CHAT_DOCS_URL).toBe("https://spec-0.github.io/studio/agent-chat/");
   });
 });
 

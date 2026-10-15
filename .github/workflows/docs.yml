@@ -1,7 +1,7 @@
-# Checks the user guide in docs/user, which is published at
-# docs.spec0.io/docs/studio. The site isn't in this repository, so this catches
-# what would break there: bad frontmatter, components the site doesn't have,
-# links between pages that lead nowhere, and missing images.
+# Checks the user guide in docs/user before the site in site/ builds it: bad
+# frontmatter, components the site doesn't have, links between pages that
+# lead nowhere, and missing images. It runs in seconds, without building the
+# site; docs-site.yml builds it.
 
 name: Docs
 

@@ -5,7 +5,7 @@ docType: how-to
 ---
 
 This page covers building and sending a request, the request tabs, and History. For auth and
-variables, see [Auth, environments and secrets](/docs/studio/auth-environments).
+variables, see [Auth, environments and secrets](/auth-environments).
 
 ## The request editor
 
@@ -49,8 +49,8 @@ The address bar shows the method, where the request goes, and the operation's pa
   `localhost:8080`, or any host the spec never mentions. A spec with no `servers` works too.
 - **The path isn't editable.** It belongs to the operation.
 - **The target menu** switches between the spec's servers, the environments Spec0 knows the API is
-  deployed to, its [hosted mock](/docs/studio/hosted-mocks), its
-  [local mock](/docs/studio/local-mocks) when one is running, and **Custom…**.
+  deployed to, its [hosted mock](/hosted-mocks), its
+  [local mock](/local-mocks) when one is running, and **Custom…**.
 
 Nothing is chosen for you: a new API starts on the spec's first server. A request aimed at a mock is
 labelled **MOCK** or **LOCAL MOCK** in the address bar and in History, so you always know whether
@@ -61,7 +61,7 @@ resolves it against the spec's own address, as OpenAPI describes. A spec from a 
 nothing to resolve against, so type the base URL yourself.
 
 To keep an address you typed, the bookmark icon saves it as `baseUrl` in the active
-[environment](/docs/studio/auth-environments#environments).
+[environment](/auth-environments#environments).
 
 <Callout title="No CORS">
 Requests are sent by the app itself, not by a web page, so browser CORS rules don't apply. There's
@@ -93,7 +93,7 @@ Tabs come back when Studio reopens.
 <Callout title="Good to know">
 - Studio keeps up to 20 tabs. Opening another closes the one you used longest ago, but never one
   with unsent changes.
-- Tabs are for operations. A [collection](/docs/studio/collections) step is edited in its
+- Tabs are for operations. A [collection](/collections) step is edited in its
   collection.
 - On macOS, `⌘W` closes the tab on screen. When no tab is on screen, it closes the window.
   `⇧⌘W` always closes the window.
@@ -153,12 +153,12 @@ Open an entry to see:
 - what was sent: method, full URL, headers and body
 - what came back: status, time, size, headers and body
 - when it ran, which API and environment it used, and whether it went to a mock
-- the [schema check](/docs/studio/checking-responses) from when it ran. If the spec has changed
+- the [schema check](/checking-responses) from when it ran. If the spec has changed
   since, **Re-check against current spec** shows what the check says now.
 
 A recording has no Send button, so it always shows what happened. To run it again, choose
 **Copy to a new request**, which fills the editor from the recording. **Add to a collection** adds it
-as a [collection](/docs/studio/collections) step, with the values it was sent with.
+as a [collection](/collections) step, with the values it was sent with.
 
 To delete everything, use **Clear history** in **Settings → Data & privacy**. Secret values are
 never written into History.

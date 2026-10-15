@@ -1,10 +1,9 @@
-// Checks the user guide in docs/user before it's published at
-// https://docs.spec0.io/docs/studio.
+// Checks the user guide in docs/user before the site in site/ builds it.
 //
-// The site itself isn't in this repository, so this catches what would break
-// there: frontmatter it can't read, components it doesn't have, links between
-// Studio pages that lead nowhere, and images that aren't here. No dependencies,
-// so it runs in a second.
+// It catches what would break the site: frontmatter it can't read, components
+// it doesn't have, links between pages that lead nowhere, and images that
+// aren't here. No dependencies, so it runs in a second, without building the
+// site. (The site build checks its own output too.)
 //
 //   node scripts/check-user-docs.mjs
 
@@ -13,8 +12,6 @@ import { join, relative, sep } from "node:path";
 
 const ROOT = new URL("../docs/user/", import.meta.url).pathname;
 const ASSETS = join(ROOT, "assets");
-/** Where the pages are published. Links between Studio pages use this prefix. */
-const SITE_PREFIX = "/docs/studio";
 
 /** Components the site provides, and the props each one must have. */
 const COMPONENTS = {
@@ -25,7 +22,6 @@ const COMPONENTS = {
   Step: [],
   Accordions: [],
   Accordion: [],
-  Mermaid: [],
   Screenshot: ["src", "alt", "caption", "width", "height"],
   Clip: ["src", "poster", "label", "caption", "width", "height"],
 };
@@ -98,9 +94,9 @@ for (const path of pages) {
   anchors.set(rel(path), ids);
 }
 
-/** The page file a site path points at, or null. */
+/** The page file a site path (such as /collections/running) points at, or null. */
 function pageFor(sitePath) {
-  const rest = sitePath.slice(SITE_PREFIX.length).replace(/^\/|\/$/g, "");
+  const rest = sitePath.replace(/^\/|\/$/g, "");
   const candidates = rest ? [`${rest}.mdx`, `${rest}/index.mdx`] : ["index.mdx"];
   return candidates.find((candidate) => anchors.has(candidate)) ?? null;
 }
@@ -113,10 +109,9 @@ function checkLink(file, line, target) {
     return;
   }
   if (!path.startsWith("/")) {
-    fail(file, line, `link to ${target}: use a site path such as ${SITE_PREFIX}/library, not a relative path`);
+    fail(file, line, `link to ${target}: use a site path such as /library, not a relative path`);
     return;
   }
-  if (path !== SITE_PREFIX && !path.startsWith(SITE_PREFIX + "/")) return; // another part of the site
   const page = pageFor(path);
   if (!page) {
     fail(file, line, `link to ${target}: there's no page at ${path}`);

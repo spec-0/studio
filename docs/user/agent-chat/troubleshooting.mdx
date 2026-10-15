@@ -31,7 +31,7 @@ Sign in to the agent itself, then press **Test again** or start a new chat:
 Claude Agent doesn't start without an Anthropic API key. Save one under **Anthropic API key** in
 **Settings → Agent chat**, or in the setup view in the panel. A key set only in your shell profile
 isn't seen when you open Studio from the Dock. Studio uses an API key for Claude Agent and never a
-claude.ai or Claude Code sign-in. See [Claude Agent](/docs/studio/agent-chat/setup#claude-agent).
+claude.ai or Claude Code sign-in. See [Claude Agent](/agent-chat/setup#claude-agent).
 
 ## The agent doesn't have Studio's tools
 
@@ -41,7 +41,7 @@ Check the line at the top of the chat.
   the chat was open, for example after **Stop agents**, a new token or a new port. Press
   **Reconnect**. The agent starts a new session and doesn't see the earlier messages.
 - **It offers Start it and reconnect.** The server couldn't start, often because its port is taken.
-  See [The MCP server started on a different port](/docs/studio/troubleshooting#the-mcp-server-started-on-a-different-port),
+  See [The MCP server started on a different port](/troubleshooting#the-mcp-server-started-on-a-different-port),
   then press the button.
 - **It says Studio's tools are turned off.** **Give the agent Studio's tools** is off in
   **Settings → Agent chat**. Turn it on and start a new chat.
@@ -56,7 +56,7 @@ If the agent answers from general knowledge, or reaches for `curl`:
 - Open the **Studio context** chip on your first message to check what the agent was told is open.
 
 If an agent keeps ignoring the tools, please tell us. See
-[Contributing](/docs/studio/agent-chat/contributing).
+[Contributing](/agent-chat/contributing).
 
 ## A tool call failed
 
@@ -73,7 +73,7 @@ Studio refuses a request when:
 - agents sent more requests this minute than **Requests a minute** allows
 - you pressed **Stop agents**
 
-The agent's card shows which. See [Approving what agents do](/docs/studio/mcp#approving-what-agents-do).
+The agent's card shows which. See [Approving what agents do](/mcp#approving-what-agents-do).
 
 ## The agent can't change a collection
 
@@ -83,5 +83,5 @@ the agent can read and run it, or copy it into a new draft.
 ## The agent stopped unexpectedly
 
 The chat shows the agent's exit code and the last lines it wrote. The
-[console](/docs/studio/console) has the same entry. Start a new chat; if it happens again, please
+[console](/console) has the same entry. Start a new chat; if it happens again, please
 [open an issue](https://github.com/spec-0/studio/issues) with those lines.

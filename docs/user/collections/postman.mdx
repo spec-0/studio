@@ -13,7 +13,7 @@ is checked against the spec from then on.
 <Steps>
 <Step>
 
-Add the APIs the collection calls to your [library](/docs/studio/library) first, so there's a spec
+Add the APIs the collection calls to your [library](/library) first, so there's a spec
 to link each request to.
 
 </Step>
@@ -67,8 +67,8 @@ their responses aren't checked. Add the API later and use **Link to an operation
 | GraphQL bodies | A JSON body with `query` and `variables` |
 | Bearer, basic and API key auth, including inherited auth | The spec's matching security scheme where there is one, otherwise a header or query parameter. Values are always `{{variables}}`. |
 | Collection variables | An environment you can choose to create |
-| A test that checks the status | The step's [expected status](/docs/studio/collections/running#expected-status) |
-| A script that saves a response value for a later request | A [link](/docs/studio/collections/chaining) in the later steps that use it |
+| A test that checks the status | The step's [expected status](/collections/running#expected-status) |
+| A script that saves a response value for a later request | A [link](/collections/chaining) in the later steps that use it |
 
 For example, `pm.environment.set("orderId", pm.response.json().id)` in the "Create order" request
 becomes `{{steps.createOrder.body.id}}` in each later step that used `{{orderId}}`. A variable is
@@ -84,7 +84,7 @@ JSON body. Each one becomes a `{{variable}}`.
 The summary then offers to create an environment with the collection's variables and these secret
 values, and make it active. You can leave the secret values out; those variables are then created
 empty. Secret values go into your system's
-[credential store](/docs/studio/auth-environments#where-secrets-are-kept), like any other.
+[credential store](/auth-environments#where-secrets-are-kept), like any other.
 
 ## The summary
 

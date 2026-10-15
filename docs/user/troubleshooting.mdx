@@ -26,7 +26,7 @@ Get-FileHash .\spec0-studio-windows-x64-setup.exe
 
 It shouldn't: the Mac app is signed and notarized by Apple. A warning means something is wrong with
 the download. Don't open it; check it against `SHA256SUMS.txt`, as described in
-[Install](/docs/studio/install), and download it again if it doesn't match.
+[Install](/install), and download it again if it doesn't match.
 
 ### Studio won't start on Linux
 
@@ -40,7 +40,7 @@ age. Builds are x86_64 only. If an AppImage won't run, check that it's executabl
 
 Studio converts Swagger 2.0 to OpenAPI 3.0 when you open it. The **Raw** tab shows the original
 file; everything else uses the converted spec. Where the conversion may not be exact, such as a
-`tsv` list format, Studio says so. See [Swagger 2.0 specs](/docs/studio/library#swagger-20-specs).
+`tsv` list format, Studio says so. See [Swagger 2.0 specs](/library#swagger-20-specs).
 
 Swagger 1.2 and older don't open.
 
@@ -52,13 +52,13 @@ example with `npx @redocly/cli bundle openapi.yaml -o bundled.yaml`.
 ### I edited the spec file, but Studio shows the old version
 
 Studio works from its own copy of the spec. Press **Refresh** on the API's card in the library to
-re-read it. See [What Studio keeps](/docs/studio/library#what-studio-keeps).
+re-read it. See [What Studio keeps](/library#what-studio-keeps).
 
 ### The request goes to the wrong server, or to a path like `/api/v3`
 
 The base URL is yours to set: type it in the address bar, or pick a server from the target menu. A
 spec from a local file whose server is a path (such as `/api/v3`) has nothing to resolve it against,
-so type the full address. See [The address bar](/docs/studio/requests#the-address-bar).
+so type the full address. See [The address bar](/requests#the-address-bar).
 
 ## Networks
 
@@ -66,13 +66,13 @@ so type the full address. See [The address bar](/docs/studio/requests#the-addres
 
 Studio uses `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` from your environment. If Studio was started
 from somewhere those aren't set, such as the Dock, set the proxy in **Settings → Network**. See
-[Proxy](/docs/studio/network#proxy).
+[Proxy](/network#proxy).
 
 ### "Certificate" or "unknown issuer" errors
 
 The server's certificate comes from a CA your system doesn't trust, which is common for internal
 APIs. In **Settings → Network**, trust the CA's PEM bundle for that host. Skipping verification also
-works, but only use it when you have no bundle. See [Certificates](/docs/studio/network#certificates).
+works, but only use it when you have no bundle. See [Certificates](/network#certificates).
 
 ### Check for Updates fails at work
 
@@ -129,11 +129,11 @@ Studio refused it for one of these reasons, and tells the agent which:
 
 Agents can change only the drafts they created. Once you keep a draft, or for a collection you
 made, an agent can read and run it, or copy it into a new draft. See
-[Collections agents build](/docs/studio/mcp#collections-agents-build).
+[Collections agents build](/mcp#collections-agents-build).
 
 ### Agent chat doesn't find my agent, or it needs signing in
 
-See [Troubleshooting agent chat](/docs/studio/agent-chat/troubleshooting), which covers agents
+See [Troubleshooting agent chat](/agent-chat/troubleshooting), which covers agents
 Studio can't find, signing in, the Anthropic API key for Claude Agent, and chats that don't have
 Studio's tools.
 
@@ -141,19 +141,19 @@ Studio's tools.
 
 ### A step says the local mock isn't running
 
-Steps don't start mocks. Start the API's [local mock](/docs/studio/local-mocks), or pick another
+Steps don't start mocks. Start the API's [local mock](/local-mocks), or pick another
 target in the step's **Send to**.
 
 ### A step failed with a value that couldn't be found
 
-A [link](/docs/studio/collections/chaining) couldn't be filled: the earlier step failed, didn't
+A [link](/collections/chaining) couldn't be filled: the earlier step failed, didn't
 run, or its response didn't have that field. Open the run log to see which value, and the Chain
 view to fix the link.
 
 ### A step is marked "changed"
 
 Its spec changed since the step was made, and the step no longer matches it. The step says what
-changed. See [When a spec changes](/docs/studio/collections#when-a-spec-changes).
+changed. See [When a spec changes](/collections#when-a-spec-changes).
 
 ## Questions
 
@@ -164,7 +164,7 @@ No. Only hosted mocks, your organisation's catalog, and publishing need one.
 ### Does Studio send my data anywhere?
 
 No. It sends no telemetry, and your history, environments, secrets and collections stay on your
-computer. See [Privacy and security](/docs/studio/privacy).
+computer. See [Privacy and security](/privacy).
 
 ### Can I run a collection from CI?
 
@@ -172,7 +172,7 @@ Not yet. Collections run in Studio only.
 
 ### Does Studio run Postman scripts?
 
-No. When you [import from Postman](/docs/studio/collections/postman), status checks and
+No. When you [import from Postman](/collections/postman), status checks and
 saved response values are converted; other scripts are listed, not run.
 
 ### Is there support for GraphQL, gRPC or WebSockets?

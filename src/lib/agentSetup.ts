@@ -9,7 +9,7 @@ import type { AgentId, AgentInfo } from "./acpProcess";
  */
 
 /** The agent chat guide. */
-export const AGENT_CHAT_DOCS_URL = "https://docs.spec0.io/docs/studio/agent-chat";
+export const AGENT_CHAT_DOCS_URL = "https://spec-0.github.io/studio/agent-chat/";
 
 /** The agents the setup view offers. A custom ACP program is set up in Settings. */
 export type SetupAgentId = Exclude<AgentId, "custom">;

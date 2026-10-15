@@ -121,16 +121,17 @@ the plugin back.
 
 ## Improving the docs
 
-The user guide at [docs.spec0.io/docs/studio](https://docs.spec0.io/docs/studio)
-is written in [docs/user](docs/user/), next to the code. When a change alters
-what a user sees or does, update the page that describes it in the same pull
-request.
+The user guide at [spec-0.github.io/studio](https://spec-0.github.io/studio/)
+is written in [docs/user](docs/user/), next to the code, and [site/](site/)
+builds it into a static site. When a change alters what a user sees or does,
+update the page that describes it in the same pull request.
 
 [docs/user/README.md](docs/user/README.md) explains how pages map to the site,
-which components you can use and where images go. Run `npm run check:docs`
-before you push; CI runs the same check on any pull request that touches
-`docs/user`. The site picks up merged changes when it's next synced, normally
-with each release.
+which components you can use, where images go and how to preview the site on
+your computer. Run `npm run check:docs` before you push. On a pull request that
+touches `docs/user` or `site/`, CI checks the pages, builds the site and keeps
+the result as a preview you can download. The site is published when a release
+is, so it always describes the app people can download.
 
 ## Design rules, and why
 

@@ -1,0 +1,35 @@
+{
+  "name": "@spec0/studio-docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Spec0 Studio user guide, built from docs/user as a static site.",
+  "scripts": {
+    "predev": "node scripts/copy-assets.mjs",
+    "dev": "next dev",
+    "prebuild": "node scripts/copy-assets.mjs",
+    "build": "next build",
+    "postbuild": "node scripts/check-site.mjs",
+    "start": "serve out",
+    "types:check": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "fumadocs-core": "16.17.3",
+    "fumadocs-mdx": "15.4.7",
+    "fumadocs-ui": "npm:@fumadocs/base-ui@16.17.3",
+    "lucide-react": "^1.50.0",
+    "next": "16.3.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.28",
+    "serve": "^14.2.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}

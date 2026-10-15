@@ -14,13 +14,13 @@ panel opens on the right, and the page next to it gets narrower, so nothing is h
 
 ## What the agent can do in Studio
 
-When a chat starts, Studio connects the agent to its [local MCP server](/docs/studio/mcp), so the
+When a chat starts, Studio connects the agent to its [local MCP server](/mcp), so the
 agent can use your APIs the way you do:
 
 - look up the APIs in your library, their operations and their specs
 - send requests, with your environments and auth, and check each response against the spec
-- start a [local mock](/docs/studio/local-mocks) of an API and send requests to it
-- build [collections](/docs/studio/collections), run them and read their run logs
+- start a [local mock](/local-mocks) of an API and send requests to it
+- build [collections](/collections), run them and read their run logs
 - check a running server against its spec
 
 Studio asks you before the agent's first request to each host, before it starts a mock, and before
@@ -28,7 +28,7 @@ anything else that has an effect outside the chat. The agent never sees secret v
 `{{token}}` and Studio fills in the value when it sends the request.
 
 The agent also knows it's working inside Studio. The first message of each chat tells it what you
-have open, and Studio gives it a short set of [instructions](/docs/studio/agent-chat/instructions)
+have open, and Studio gives it a short set of [instructions](/agent-chat/instructions)
 on how to work here: start from the spec, use a local mock for anything that changes data, and
 build tests as collections you can keep.
 
@@ -54,21 +54,21 @@ you've kept, but they can't change it.
 What you type and attach goes to the agent you chose, and from there to its model provider. Secret
 values are replaced with their `{{name}}` first. Nothing else leaves your computer because of the
 chat, and Studio keeps your past chats on this computer only. See
-[Privacy and safety](/docs/studio/agent-chat/privacy-and-safety).
+[Privacy and safety](/agent-chat/privacy-and-safety).
 
 ## In this section
 
-- [Set up an agent](/docs/studio/agent-chat/setup): Codex, Claude Agent, Gemini CLI or another
+- [Set up an agent](/agent-chat/setup): Codex, Claude Agent, Gemini CLI or another
   agent, and the folder it works in.
-- [Working with the agent](/docs/studio/agent-chat/working-with-the-agent): attachments,
+- [Working with the agent](/agent-chat/working-with-the-agent): attachments,
   suggestions, approvals, runs and past chats.
-- [Studio's instructions](/docs/studio/agent-chat/instructions): exactly what the agent is told,
+- [Studio's instructions](/agent-chat/instructions): exactly what the agent is told,
   and how to change it.
-- [Privacy and safety](/docs/studio/agent-chat/privacy-and-safety): what leaves your computer, and
+- [Privacy and safety](/agent-chat/privacy-and-safety): what leaves your computer, and
   what the agent can and can't do.
-- [Troubleshooting](/docs/studio/agent-chat/troubleshooting): when an agent isn't found, isn't
+- [Troubleshooting](/agent-chat/troubleshooting): when an agent isn't found, isn't
   signed in, or doesn't use Studio's tools.
-- [Contributing](/docs/studio/agent-chat/contributing): suggest better instructions, or report
+- [Contributing](/agent-chat/contributing): suggest better instructions, or report
   something an agent did wrong.
 
 <Callout title="Good to know">

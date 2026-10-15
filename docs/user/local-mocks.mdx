@@ -30,7 +30,7 @@ The mock gets its own address, starting at `http://127.0.0.1:4010`. While it run
 Several APIs can each run a mock at once. Nothing starts by itself, and every local mock stops when
 you stop it or quit Studio.
 
-A coding agent using the [local MCP server](/docs/studio/mcp) can start and stop local mocks too,
+A coding agent using the [local MCP server](/mcp) can start and stop local mocks too,
 for example to test a frontend before the backend exists. Studio asks you before an agent starts
 one, and you can allow it once or for the rest of the session.
 
@@ -69,7 +69,7 @@ curl -i http://127.0.0.1:4010/orders/123 -H "Prefer: code=404"
 
 A request with a missing required parameter, a value of the wrong type, or a body that doesn't fit
 the schema still gets an answer. The problems are listed in the `X-Spec0-Mock-Warnings` response
-header, and in the [console](/docs/studio/console).
+header, and in the [console](/console).
 
 To reject those requests instead, choose **Answer 400 with the problems** in the Mocks tab, under
 **On this computer**.
@@ -93,5 +93,5 @@ working. If every port in that range is in use, Studio says so; stop another moc
   returns.
 - XML responses are sent as JSON.
 - It listens on `127.0.0.1` only, so other computers on your network can't reach it. To share a
-  mock, use a [hosted mock](/docs/studio/hosted-mocks).
+  mock, use a [hosted mock](/hosted-mocks).
 </Callout>
