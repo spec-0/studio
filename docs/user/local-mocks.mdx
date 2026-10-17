@@ -93,6 +93,7 @@ working. If every port in that range is in use, Studio says so; stop another moc
 - A local mock answers from examples, not from state. A `POST` doesn't change what the next `GET`
   returns.
 - XML responses are sent as JSON.
-- It listens on `127.0.0.1` only, so other computers on your network can't reach it. To share a
+- It listens on the loopback addresses only, `127.0.0.1` and `[::1]` (so `localhost` works
+  either way it resolves), and other computers on your network can't reach it. To share a
   mock, use a [hosted mock](/hosted-mocks).
 </Callout>

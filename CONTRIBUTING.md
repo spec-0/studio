@@ -374,7 +374,8 @@ the remote Spec0 MCP server already offers for the whole organisation; this one
 is for what only Studio knows.
 
 **A local mock listens only after the user starts it, and only for this
-computer.** Each mock is one API on its own port on `127.0.0.1` (4010 upwards,
+computer.** Each mock is one API on its own port on `127.0.0.1` (and `[::1]` where
+there is IPv6, so `localhost` reaches it however it resolves; 4010 upwards,
 remembered per API), so the spec's paths work unchanged under
 `http://127.0.0.1:<port>`; one shared port with a prefix per API would make
 every frontend rewrite its base path. There is no "start with Studio" setting,

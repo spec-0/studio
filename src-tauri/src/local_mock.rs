@@ -2,7 +2,10 @@
 //!
 //! Off until the user starts one, and gone when Studio quits. Each mock:
 //!
-//!  - listens on `127.0.0.1` only, never on another interface;
+//!  - listens on the loopback addresses only, `127.0.0.1` and, where the
+//!    computer has IPv6, `[::1]` on the same port, never on another interface.
+//!    `localhost` resolves to `::1` first on many systems, and a client that
+//!    doesn't fall back to IPv4 would otherwise be refused;
 //!  - answers only a `Host` that names the loopback address (`127.0.0.1`,
 //!    `localhost` or `[::1]`, any port), so a web page can't reach it by
 //!    rebinding its own DNS name to 127.0.0.1;
@@ -34,7 +37,7 @@ use crate::mcp::{read_request, HttpRequest};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::{ErrorKind, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
@@ -415,23 +418,32 @@ impl Answerer for WebviewAnswerer {
     }
 }
 
-fn try_bind(port: u16) -> Option<TcpListener> {
-    TcpListener::bind(("127.0.0.1", port)).ok()
+/// `127.0.0.1:port`, plus `[::1]:port` where IPv6 is available. A port whose IPv6
+/// side something else holds is skipped, so `localhost` can't reach a different
+/// server than `127.0.0.1` does.
+fn try_bind(port: u16) -> Option<Vec<TcpListener>> {
+    let v4 = TcpListener::bind(("127.0.0.1", port)).ok()?;
+    match TcpListener::bind(("::1", port)) {
+        Ok(v6) => Some(vec![v4, v6]),
+        Err(error) if error.kind() == ErrorKind::AddrInUse => None,
+        // No IPv6 loopback on this computer: IPv4 is all there is to listen on.
+        Err(_) => Some(vec![v4]),
+    }
 }
 
 /// The remembered port if it's free, else the first free one in the range.
-fn bind(preferred: Option<u16>, taken: &[u16]) -> Result<(TcpListener, u16), String> {
+fn bind(preferred: Option<u16>, taken: &[u16]) -> Result<(Vec<TcpListener>, u16), String> {
     if let Some(port) = preferred.filter(|port| *port >= 1024 && !taken.contains(port)) {
-        if let Some(listener) = try_bind(port) {
-            return Ok((listener, port));
+        if let Some(listeners) = try_bind(port) {
+            return Ok((listeners, port));
         }
     }
     for port in FIRST_PORT..=LAST_PORT {
         if taken.contains(&port) {
             continue;
         }
-        if let Some(listener) = try_bind(port) {
-            return Ok((listener, port));
+        if let Some(listeners) = try_bind(port) {
+            return Ok((listeners, port));
         }
     }
     Err(format!(
@@ -451,25 +463,30 @@ fn serve_connection(mut stream: TcpStream, mock: &str, answerer: &dyn Answerer) 
     let _ = stream.flush();
 }
 
-fn accept_loop(listener: TcpListener, stop: Arc<AtomicBool>, mock: Arc<String>, answerer: Arc<dyn Answerer>) {
+/// Polls each (nonblocking) listener in turn, and rests only when none had a
+/// connection waiting.
+fn accept_loop(listeners: Vec<TcpListener>, stop: Arc<AtomicBool>, mock: Arc<String>, answerer: Arc<dyn Answerer>) {
     while !stop.load(Ordering::Relaxed) {
-        match listener.accept() {
-            Ok((mut stream, _)) => {
-                if ACTIVE.load(Ordering::Relaxed) >= MAX_CONNECTIONS {
-                    let _ = stream.set_nonblocking(false);
-                    let busy = MockResponse::json(503, &json!({ "error": "Busy. Try again." }));
-                    let _ = stream.write_all(&busy.to_bytes(false));
-                    continue;
-                }
-                ACTIVE.fetch_add(1, Ordering::Relaxed);
-                let mock = Arc::clone(&mock);
-                let answerer = Arc::clone(&answerer);
-                std::thread::spawn(move || {
-                    serve_connection(stream, &mock, answerer.as_ref());
-                    ACTIVE.fetch_sub(1, Ordering::Relaxed);
-                });
+        let mut accepted = false;
+        for listener in &listeners {
+            let Ok((mut stream, _)) = listener.accept() else { continue };
+            accepted = true;
+            if ACTIVE.load(Ordering::Relaxed) >= MAX_CONNECTIONS {
+                let _ = stream.set_nonblocking(false);
+                let busy = MockResponse::json(503, &json!({ "error": "Busy. Try again." }));
+                let _ = stream.write_all(&busy.to_bytes(false));
+                continue;
             }
-            Err(_) => std::thread::sleep(Duration::from_millis(40)),
+            ACTIVE.fetch_add(1, Ordering::Relaxed);
+            let mock = Arc::clone(&mock);
+            let answerer = Arc::clone(&answerer);
+            std::thread::spawn(move || {
+                serve_connection(stream, &mock, answerer.as_ref());
+                ACTIVE.fetch_sub(1, Ordering::Relaxed);
+            });
+        }
+        if !accepted {
+            std::thread::sleep(Duration::from_millis(40));
         }
     }
 }
@@ -506,13 +523,15 @@ fn start(id: &str, preferred: Option<u16>, answerer: Arc<dyn Answerer>) -> Resul
             return Ok(LocalMockStatus { id: id.into(), port: running.port });
         }
         let taken: Vec<u16> = servers.values().map(|running| running.port).collect();
-        let (listener, port) = bind(preferred, &taken)?;
-        listener.set_nonblocking(true).map_err(|error| error.to_string())?;
+        let (listeners, port) = bind(preferred, &taken)?;
+        for listener in &listeners {
+            listener.set_nonblocking(true).map_err(|error| error.to_string())?;
+        }
         let stop = Arc::new(AtomicBool::new(false));
         let thread = {
             let stop = Arc::clone(&stop);
             let mock = Arc::new(id.to_string());
-            std::thread::spawn(move || accept_loop(listener, stop, mock, answerer))
+            std::thread::spawn(move || accept_loop(listeners, stop, mock, answerer))
         };
         servers.insert(id.into(), Running { port, stop, thread: Some(thread) });
         Ok(LocalMockStatus { id: id.into(), port })
@@ -834,13 +853,41 @@ mod tests {
     fn binds_loopback_prefers_the_remembered_port_and_skips_taken_ones() {
         let (first, port) = bind(Some(47_900), &[]).unwrap();
         assert_eq!(port, 47_900);
-        assert!(first.local_addr().unwrap().ip().is_loopback());
+        assert!(first.iter().all(|listener| listener.local_addr().unwrap().ip().is_loopback()));
         // Busy (held by `first`): falls back into the range.
         let (_second, next) = bind(Some(47_900), &[]).unwrap();
         assert!((FIRST_PORT..=LAST_PORT).contains(&next));
         // A port another mock holds is never tried.
         let (_third, other) = bind(Some(next), &[next]).unwrap();
         assert_ne!(other, next);
+    }
+
+    #[test]
+    fn skips_a_port_whose_ipv6_loopback_is_taken() {
+        // Only meaningful where this computer has an IPv6 loopback.
+        let Ok(squatter) = TcpListener::bind(("::1", 47_930)) else { return };
+        let (_listeners, port) = bind(Some(47_930), &[]).unwrap();
+        assert_ne!(port, 47_930);
+        drop(squatter);
+    }
+
+    #[test]
+    fn answers_over_ipv6_loopback_as_well() {
+        if TcpListener::bind(("::1", 0)).is_err() {
+            return; // No IPv6 loopback here.
+        }
+        let mock = start("test_ipv6", Some(47_940), Arc::new(Echo)).unwrap();
+        for (address, host) in [("127.0.0.1", "127.0.0.1"), ("::1", "[::1]")] {
+            let mut stream = TcpStream::connect((address, mock.port)).unwrap();
+            let raw = format!("GET /orders HTTP/1.1\r\nHost: {host}:{}\r\n\r\n", mock.port);
+            stream.write_all(raw.as_bytes()).unwrap();
+            let mut response = String::new();
+            stream.read_to_string(&mut response).unwrap();
+            assert!(response.starts_with("HTTP/1.1 200 OK"), "{address}: {response}");
+            assert!(response.contains("\"mock\":\"test_ipv6\""));
+        }
+        stop("test_ipv6");
+        assert!(TcpStream::connect(("::1", mock.port)).is_err());
     }
 
     #[test]
