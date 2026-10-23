@@ -1003,12 +1003,25 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
   font-family: var(--font-mono);
 }
 .api-card-stats strong { color: hsl(var(--ink)); font-weight: 600; }
+.api-card-stats > :not(.api-card-when) { flex-shrink: 0; white-space: nowrap; }
+/* When it was opened sits with the counts, so the footer is left to its buttons. */
+.api-card-when {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+}
 
-.api-card-foot { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.api-card-foot { display: flex; align-items: center; gap: 8px; }
 .api-card-foot .spacer { flex: 1; }
-/* The footer's text gives way to its buttons: it truncates, they never wrap. */
-.api-card-when { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.api-card-foot > :not(.api-card-when, .spacer) { flex-shrink: 0; white-space: nowrap; }
+/* An API card's footer holds only its mock buttons, which never wrap; a
+   local mock's error message is what gives way. */
+.api-card-buttons { justify-content: flex-end; min-width: 0; }
+.api-card-buttons:empty { display: none; }
+.api-card-buttons > :not(.local-mock-error) { flex-shrink: 0; white-space: nowrap; }
+.api-card-buttons > .local-mock-error { min-width: 0; }
 /* Hidden with visibility, not display, so their space is always held and
    nothing in the card moves when they appear. Hidden, they can't be clicked. */
 .api-card-actions { display: flex; flex-shrink: 0; gap: 5px; margin-left: auto; visibility: hidden; }

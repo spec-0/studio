@@ -316,6 +316,9 @@ export function Library({
               <span>
                 <strong>{entry.schemas}</strong> schemas
               </span>
+              <span className="meta api-card-when" title={openedLabel(entry)}>
+                {openedLabel(entry)}
+              </span>
             </div>
 
             {entry.update && (
@@ -342,11 +345,7 @@ export function Library({
               </button>
             )}
 
-            <div className="api-card-foot">
-              <span className="meta api-card-when" title={openedLabel(entry)}>
-                {openedLabel(entry)}
-              </span>
-              <span className="spacer" />
+            <div className="api-card-foot api-card-buttons">
               {localMock && (
                 <LocalMockControl
                   compact
