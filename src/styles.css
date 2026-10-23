@@ -954,6 +954,20 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 }
 .library.dragging { outline: 2px dashed hsl(var(--primary)); outline-offset: -12px; }
 
+/* Positioned against .app-main, not the scrolling list, and under everything
+   in it: a watermark, not content. */
+.library-mark {
+  position: absolute;
+  right: 5%;
+  bottom: 6%;
+  z-index: -1;
+  width: min(34vw, 46vh);
+  opacity: 0.05;
+  pointer-events: none;
+}
+.dark .library-mark { opacity: 0.08; }
+.library-mark svg { display: block; width: 100%; height: auto; }
+
 .library-head { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 20px; }
 .library-head h1 { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
 .library-head .spacer { flex: 1; }
