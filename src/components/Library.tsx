@@ -18,7 +18,7 @@ import { mockIsBehind } from "../lib/sync";
 import { relativeTime, sourceLabel, spec0ApiIdOf, type ApiSource, type LibraryEntry } from "../lib/library";
 import { journeyAvailable } from "../lib/mockJourney";
 import { LocalMockControl } from "./LocalMockControl";
-import { Wordmark } from "./Logo";
+import { LogoMark, Wordmark } from "./Logo";
 import { shortcut } from "../lib/platform";
 import { SWAGGER2_CONVERT_COMMAND } from "../lib/spec";
 
@@ -94,6 +94,19 @@ interface Props {
  * An engineer works across several APIs in a week, so the app's root is the set
  * of them, not whichever one was opened last.
  */
+/**
+ * The spec0 mark, large and faint, so the library isn't a bare page when it
+ * holds only a few APIs. It's pinned to the pane, not to the scrolling list,
+ * and sits under everything, so cards and the drop outline cover it.
+ */
+function LibraryMark() {
+  return (
+    <div className="library-mark" aria-hidden>
+      <LogoMark size={30} />
+    </div>
+  );
+}
+
 export function Library({
   entries,
   onOpen,
@@ -131,6 +144,7 @@ export function Library({
   if (!entries.length) {
     return (
       <div className={`empty${dragging ? " dragging" : ""}`}>
+        <LibraryMark />
         <div className="empty-brand">
           <Wordmark height={30} />
         </div>
@@ -159,6 +173,7 @@ export function Library({
 
   return (
     <div className={`library${dragging ? " dragging" : ""}`}>
+      <LibraryMark />
       <div className="library-head">
         <div>
           <h1>Your APIs</h1>
