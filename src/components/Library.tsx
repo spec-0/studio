@@ -53,6 +53,12 @@ function LoadError({ error, style }: { error: string; style?: CSSProperties }) {
   );
 }
 
+/** When an entry was last opened and pulled, as the card's footer says it. */
+function openedLabel(entry: LibraryEntry): string {
+  const pulled = entry.syncedAt ? ` · pulled ${relativeTime(entry.syncedAt)}` : "";
+  return `opened ${relativeTime(entry.openedAt)}${pulled}`;
+}
+
 interface Props {
   entries: LibraryEntry[];
   onOpen: (entry: LibraryEntry) => void;
@@ -255,6 +261,42 @@ export function Library({
                 </button>
               )}
               {entry.version && <span className="spec-version">{entry.version}</span>}
+              <div className="api-card-actions">
+                {entry.source.kind !== "sample" && (
+                  <button
+                    className="icon-btn tight"
+                    disabled={entry.source.kind === "spec0" && !connected}
+                    onClick={() => onRefresh(entry)}
+                    title={
+                      entry.source.kind === "spec0" && !connected
+                        ? "Connect to spec0 to re-pull this API"
+                        : "Re-read from source"
+                    }
+                    aria-label="Refresh"
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                )}
+                <button
+                  className="icon-btn tight"
+                  title="Rename"
+                  aria-label="Rename"
+                  onClick={() => {
+                    setRenaming(entry.id);
+                    setDraftName(entry.title);
+                  }}
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  className="icon-btn tight danger"
+                  onClick={() => onRemove(entry)}
+                  title="Remove from library"
+                  aria-label="Remove"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
 
             <div className="api-card-meta">
@@ -301,9 +343,8 @@ export function Library({
             )}
 
             <div className="api-card-foot">
-              <span className="meta">
-                opened {relativeTime(entry.openedAt)}
-                {entry.syncedAt ? ` · pulled ${relativeTime(entry.syncedAt)}` : ""}
+              <span className="meta api-card-when" title={openedLabel(entry)}>
+                {openedLabel(entry)}
               </span>
               <span className="spacer" />
               {localMock && (
@@ -335,42 +376,6 @@ export function Library({
                   </button>
                 )
               )}
-              <div className="api-card-actions">
-                {entry.source.kind !== "sample" && (
-                  <button
-                    className="icon-btn tight"
-                    disabled={entry.source.kind === "spec0" && !connected}
-                    onClick={() => onRefresh(entry)}
-                    title={
-                      entry.source.kind === "spec0" && !connected
-                        ? "Connect to spec0 to re-pull this API"
-                        : "Re-read from source"
-                    }
-                    aria-label="Refresh"
-                  >
-                    <RefreshCw size={13} />
-                  </button>
-                )}
-                <button
-                  className="icon-btn tight"
-                  title="Rename"
-                  aria-label="Rename"
-                  onClick={() => {
-                    setRenaming(entry.id);
-                    setDraftName(entry.title);
-                  }}
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
-                  className="icon-btn tight danger"
-                  onClick={() => onRemove(entry)}
-                  title="Remove from library"
-                  aria-label="Remove"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
             </div>
 
             <button className="api-card-open" onClick={() => onOpen(entry)}>

@@ -978,8 +978,10 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 }
 .api-card:hover { border-color: hsl(var(--border-strong)); }
 
-.api-card-top { display: flex; align-items: center; gap: 8px; }
+.api-card-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.api-card-top input { flex: 1; min-width: 0; }
 .api-title {
+  min-width: 0;
   font-size: 14px;
   font-weight: 600;
   text-align: left;
@@ -1002,11 +1004,16 @@ table.fields td.desc { color: hsl(var(--ink-2)); }
 }
 .api-card-stats strong { color: hsl(var(--ink)); font-weight: 600; }
 
-.api-card-foot { display: flex; align-items: center; gap: 8px; }
+.api-card-foot { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .api-card-foot .spacer { flex: 1; }
-.api-card-actions { display: none; gap: 5px; }
-.api-card:hover .api-card-actions { display: flex; }
-.api-card-actions .btn { padding: 2px 7px; font-size: 11px; }
+/* The footer's text gives way to its buttons: it truncates, they never wrap. */
+.api-card-when { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.api-card-foot > :not(.api-card-when, .spacer) { flex-shrink: 0; white-space: nowrap; }
+/* Hidden with visibility, not display, so their space is always held and
+   nothing in the card moves when they appear. Hidden, they can't be clicked. */
+.api-card-actions { display: flex; flex-shrink: 0; gap: 5px; margin-left: auto; visibility: hidden; }
+.api-card:hover .api-card-actions,
+.api-card:focus-within .api-card-actions { visibility: visible; }
 
 .api-card-open {
   position: absolute;
