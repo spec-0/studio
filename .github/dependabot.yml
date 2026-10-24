@@ -25,6 +25,12 @@ updates:
     ignore:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # fumadocs-ui is installed under an npm alias (npm:@fumadocs/base-ui),
+      # which Dependabot can't update, and it requires the exact same
+      # fumadocs-core version. Update fumadocs-core, fumadocs-mdx and the alias
+      # together by hand instead, or the site stops installing.
+      - dependency-name: "fumadocs-core"
+      - dependency-name: "fumadocs-mdx"
     groups:
       docs-site-minor-and-patch:
         update-types: [minor, patch]
