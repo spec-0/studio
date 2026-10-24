@@ -107,6 +107,9 @@ export function useWorkspace(
         null;
       setOperation(restoredOperation);
       setSchemaName(parsed.schemas[0]?.name ?? null);
+      // The graph starts on this spec's most-connected schema, not on whatever
+      // was clicked in the last API's graph.
+      setGraphFocus(null);
       // A request tab lands on its operation, whichever view the API was left on.
       const sidebarTab = focused && state.tab === "schemas" ? "operations" : (state.tab ?? "operations");
       setTab(sidebarTab);

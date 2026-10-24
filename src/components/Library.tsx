@@ -18,7 +18,7 @@ import { mockIsBehind } from "../lib/sync";
 import { relativeTime, sourceLabel, spec0ApiIdOf, type ApiSource, type LibraryEntry } from "../lib/library";
 import { journeyAvailable } from "../lib/mockJourney";
 import { LocalMockControl } from "./LocalMockControl";
-import { Wordmark } from "./Logo";
+import { LogoMark, Wordmark } from "./Logo";
 import { shortcut } from "../lib/platform";
 import { SWAGGER2_CONVERT_COMMAND } from "../lib/spec";
 
@@ -51,6 +51,12 @@ function LoadError({ error, style }: { error: string; style?: CSSProperties }) {
       )}
     </div>
   );
+}
+
+/** When an entry was last opened and pulled, as the card's footer says it. */
+function openedLabel(entry: LibraryEntry): string {
+  const pulled = entry.syncedAt ? ` · pulled ${relativeTime(entry.syncedAt)}` : "";
+  return `opened ${relativeTime(entry.openedAt)}${pulled}`;
 }
 
 interface Props {
@@ -94,6 +100,19 @@ interface Props {
  * An engineer works across several APIs in a week, so the app's root is the set
  * of them, not whichever one was opened last.
  */
+/**
+ * The spec0 mark, large and faint, so the library isn't a bare page when it
+ * holds only a few APIs. It's pinned to the pane, not to the scrolling list,
+ * and sits under everything, so cards and the drop outline cover it.
+ */
+function LibraryMark() {
+  return (
+    <div className="library-mark" aria-hidden>
+      <LogoMark size={30} />
+    </div>
+  );
+}
+
 export function Library({
   entries,
   onOpen,
@@ -131,6 +150,7 @@ export function Library({
   if (!entries.length) {
     return (
       <div className={`empty${dragging ? " dragging" : ""}`}>
+        <LibraryMark />
         <div className="empty-brand">
           <Wordmark height={30} />
         </div>
@@ -159,6 +179,7 @@ export function Library({
 
   return (
     <div className={`library${dragging ? " dragging" : ""}`}>
+      <LibraryMark />
       <div className="library-head">
         <div>
           <h1>Your APIs</h1>
@@ -255,86 +276,6 @@ export function Library({
                 </button>
               )}
               {entry.version && <span className="spec-version">{entry.version}</span>}
-            </div>
-
-            <div className="api-card-meta">
-              <span className={`tag src-${entry.source.kind}`}>
-                <SourceIcon kind={entry.source.kind} />
-                {entry.source.kind}
-              </span>
-              <span className="meta" title={entry.source.ref}>
-                {sourceLabel(entry.source)}
-              </span>
-            </div>
-
-            <div className="api-card-stats">
-              <span>
-                <strong>{entry.operations}</strong> operations
-              </span>
-              <span>
-                <strong>{entry.schemas}</strong> schemas
-              </span>
-            </div>
-
-            {entry.update && (
-              <button className="update-pill" onClick={() => onApplyUpdate(entry)}>
-                <ArrowDownToLine size={11} />
-                Update available
-                {entry.update.version && entry.version
-                  ? ` · ${entry.version} → ${entry.update.version}`
-                  : ""}
-              </button>
-            )}
-
-            {onRefreshMock && mockIsBehind(entry) && (
-              <button
-                className="update-pill mock"
-                onClick={() => onRefreshMock(entry)}
-                title="The mock still serves an older version of this spec"
-              >
-                <ServerCog size={11} />
-                Mock is behind
-                {entry.mockSpecVersion && entry.version
-                  ? ` · ${entry.mockSpecVersion} → ${entry.version}`
-                  : ""}
-              </button>
-            )}
-
-            <div className="api-card-foot">
-              <span className="meta">
-                opened {relativeTime(entry.openedAt)}
-                {entry.syncedAt ? ` · pulled ${relativeTime(entry.syncedAt)}` : ""}
-              </span>
-              <span className="spacer" />
-              {localMock && (
-                <LocalMockControl
-                  compact
-                  port={localMock.running[entry.id] ?? null}
-                  busy={localMock.busy === entry.id}
-                  error={localMock.error?.id === entry.id ? localMock.error.message : null}
-                  onStart={() => localMock.onStart(entry)}
-                  onStop={() => localMock.onStop(entry.id)}
-                />
-              )}
-              {entry.mockUrl ? (
-                <button
-                  className="btn ghost card-mock"
-                  onClick={() => onMock(entry)}
-                  title="The mock's address and key; rebuild it"
-                >
-                  <ServerCog size={12} /> Mock
-                </button>
-              ) : (
-                journeyAvailable({ apiId: spec0ApiIdOf(entry), sourceKind: entry.source.kind }) && (
-                  <button
-                    className="btn card-mock"
-                    onClick={() => onMock(entry)}
-                    title="Create a hosted mock server for this API"
-                  >
-                    <Plus size={12} /> Create mock
-                  </button>
-                )
-              )}
               <div className="api-card-actions">
                 {entry.source.kind !== "sample" && (
                   <button
@@ -371,6 +312,84 @@ export function Library({
                   <Trash2 size={13} />
                 </button>
               </div>
+            </div>
+
+            <div className="api-card-meta">
+              <span className={`tag src-${entry.source.kind}`}>
+                <SourceIcon kind={entry.source.kind} />
+                {entry.source.kind}
+              </span>
+              <span className="meta" title={entry.source.ref}>
+                {sourceLabel(entry.source)}
+              </span>
+            </div>
+
+            <div className="api-card-stats">
+              <span>
+                <strong>{entry.operations}</strong> operations
+              </span>
+              <span>
+                <strong>{entry.schemas}</strong> schemas
+              </span>
+              <span className="meta api-card-when" title={openedLabel(entry)}>
+                {openedLabel(entry)}
+              </span>
+            </div>
+
+            {entry.update && (
+              <button className="update-pill" onClick={() => onApplyUpdate(entry)}>
+                <ArrowDownToLine size={11} />
+                Update available
+                {entry.update.version && entry.version
+                  ? ` · ${entry.version} → ${entry.update.version}`
+                  : ""}
+              </button>
+            )}
+
+            {onRefreshMock && mockIsBehind(entry) && (
+              <button
+                className="update-pill mock"
+                onClick={() => onRefreshMock(entry)}
+                title="The mock still serves an older version of this spec"
+              >
+                <ServerCog size={11} />
+                Mock is behind
+                {entry.mockSpecVersion && entry.version
+                  ? ` · ${entry.mockSpecVersion} → ${entry.version}`
+                  : ""}
+              </button>
+            )}
+
+            <div className="api-card-foot api-card-buttons">
+              {localMock && (
+                <LocalMockControl
+                  compact
+                  port={localMock.running[entry.id] ?? null}
+                  busy={localMock.busy === entry.id}
+                  error={localMock.error?.id === entry.id ? localMock.error.message : null}
+                  onStart={() => localMock.onStart(entry)}
+                  onStop={() => localMock.onStop(entry.id)}
+                />
+              )}
+              {entry.mockUrl ? (
+                <button
+                  className="btn ghost card-mock"
+                  onClick={() => onMock(entry)}
+                  title="The mock's address and key; rebuild it"
+                >
+                  <ServerCog size={12} /> Mock
+                </button>
+              ) : (
+                journeyAvailable({ apiId: spec0ApiIdOf(entry), sourceKind: entry.source.kind }) && (
+                  <button
+                    className="btn card-mock"
+                    onClick={() => onMock(entry)}
+                    title="Create a hosted mock server for this API"
+                  >
+                    <Plus size={12} /> Create mock
+                  </button>
+                )
+              )}
             </div>
 
             <button className="api-card-open" onClick={() => onOpen(entry)}>
