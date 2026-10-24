@@ -403,6 +403,23 @@ describe("signed-in tools", () => {
     expect(deps.setMock).not.toHaveBeenCalled();
   });
 
+  it("get_mock_server says a new key is needed when Spec0 can't show the old one", async () => {
+    const getMockApiKey = vi.fn(async () => {
+      throw new Spec0Error("conflict", 409, "u", JSON.stringify({ status: 409 }));
+    });
+    const deps = makeDeps({ loadSession: async () => SESSION, getMockApiKey }, [
+      entry("spec0_orders", "Orders", {
+        source: { kind: "spec0", ref: "spec0:api-1" },
+        mockServerId: "m1",
+        mockUrl: "https://api.example.com/mock/orders",
+      }),
+    ]);
+    const body = json(await runTool("get_mock_server", { api: "Orders" }, deps));
+    expect(body.apiKey).toBeNull();
+    expect(body.note).toMatch(/can't show this mock's key again/);
+    expect(body.note).toMatch(/Mocks tab/);
+  });
+
   it("create_mock_server uses the API a file was published as", async () => {
     const createMock = vi.fn(async () => ({ mockServerId: "m3", mockUrl: "https://api.example.com/mock/o", apiKey: "k" }));
     const deps = makeDeps({ loadSession: async () => SESSION, createMock }, [

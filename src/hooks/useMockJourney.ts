@@ -27,6 +27,7 @@ import {
   createMock,
   getEntitlements,
   getMockApiKey,
+  keyNeedsRegenerating,
   listMocks,
   listTeams,
   publishTeamApi,
@@ -198,8 +199,10 @@ export function useMockJourney({
         refreshEntries(await library.setMockKeyFor(key.mockServerId, key.apiKey), state.target.entryId);
         dispatch({ type: "keyChanged", apiKey: key.apiKey });
       })
-      .catch(() => {
-        /* the paste field stays on screen */
+      .catch((error: unknown) => {
+        // The paste field stays on screen; a key Spec0 can't show again also
+        // gets a way to make a new one.
+        if (!cancelled && keyNeedsRegenerating(error)) dispatch({ type: "keyNeedsNew" });
       });
     return () => {
       cancelled = true;
@@ -275,11 +278,21 @@ export function useMockJourney({
       const created = await createMock(session, state.apiId);
       if (!created.mockUrl) throw new Error("Spec0 didn't return the mock's address.");
       let apiKey = created.apiKey ?? null;
+      let needsNewKey = false;
       if (!apiKey && created.mockServerId) {
         // An existing mock doesn't return its key on create; ask for it.
-        apiKey = (await getMockApiKey(session, created.mockServerId).catch(() => null))?.apiKey ?? null;
+        const found = await getMockApiKey(session, created.mockServerId).catch((error: unknown) => {
+          needsNewKey = keyNeedsRegenerating(error);
+          return null;
+        });
+        apiKey = found?.apiKey ?? null;
       }
-      const mock: JourneyMock = { mockServerId: created.mockServerId ?? null, url: created.mockUrl, apiKey };
+      const mock: JourneyMock = {
+        mockServerId: created.mockServerId ?? null,
+        url: created.mockUrl,
+        apiKey,
+        needsNewKey,
+      };
       refreshEntries(
         await library.setMock(entryId, {
           mockUrl: mock.url,

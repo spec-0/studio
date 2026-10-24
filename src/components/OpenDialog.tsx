@@ -6,6 +6,7 @@ import {
   createMock,
   fetchTeamApiSpec,
   getMockApiKey,
+  keyNeedsRegenerating,
   loadCatalog as fetchCatalog,
   SignInCancelled,
   signInViaBrowser,
@@ -167,10 +168,16 @@ export function OpenDialog({
     try {
       const created = await createMock(session, entry.apiId);
       // An existing mock doesn't return its key on create; ask for it.
+      let needsNewKey = false;
       const apiKey =
         created.apiKey ??
         (created.mockServerId
-          ? ((await getMockApiKey(session, created.mockServerId).catch(() => null))?.apiKey ?? null)
+          ? ((
+              await getMockApiKey(session, created.mockServerId).catch((error: unknown) => {
+                needsNewKey = keyNeedsRegenerating(error);
+                return null;
+              })
+            )?.apiKey ?? null)
           : null);
       if (apiKey) setKeys((prev) => ({ ...prev, [entry.apiId]: apiKey }));
       setCatalog((prev) =>
@@ -188,7 +195,9 @@ export function OpenDialog({
       setCreated(
         apiKey
           ? `Mock ready at ${created.mockUrl}. Its key is saved and used when you open ${entry.apiName}.`
-          : `Mock ready at ${created.mockUrl}. Spec0 didn't return its key; Studio asks for it when you send a request to the mock.`,
+          : needsNewKey
+            ? `Mock ready at ${created.mockUrl}. Spec0 made its key before it could show keys again; make a new key from the Mocks tab (the current key stops working when you do).`
+            : `Mock ready at ${created.mockUrl}. Spec0 didn't return its key; Studio asks for it when you send a request to the mock.`,
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));

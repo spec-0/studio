@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   describeMocks,
   getMockApiKey,
+  keyNeedsRegenerating,
   listMocks,
   regenerateMockApiKey,
   type MockRow,
@@ -12,7 +13,9 @@ import {
 export type MockKeyState =
   | { status: "loading" }
   | { status: "known"; key: string }
-  | { status: "unavailable"; message: string };
+  | { status: "unavailable"; message: string }
+  /** Spec0 can't show it again; making a new key is the way through. */
+  | { status: "needsNewKey" };
 
 /**
  * The signed-in organisation's hosted mocks, for the Mocks tab, and their keys.
@@ -91,10 +94,9 @@ export function useMocks(
       } catch (caught) {
         setKeys((prev) => ({
           ...prev,
-          [mockServerId]: {
-            status: "unavailable",
-            message: caught instanceof Error ? caught.message : String(caught),
-          },
+          [mockServerId]: keyNeedsRegenerating(caught)
+            ? { status: "needsNewKey" }
+            : { status: "unavailable", message: caught instanceof Error ? caught.message : String(caught) },
         }));
         return null;
       }

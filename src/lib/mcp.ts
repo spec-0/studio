@@ -10,6 +10,7 @@ import {
   describeBody,
   MOCK_KEY_HEADER,
   Spec0Error,
+  keyNeedsRegenerating,
   type CreatedMock,
   type MockKey,
   type MockServer,
@@ -607,22 +608,30 @@ async function operationsOf(entry: LibraryEntry, deps: ToolDeps): Promise<Operat
 const NO_KEY_NOTE =
   "Studio doesn't have this mock's key and Spec0 didn't return it. The user can copy it from the Spec0 dashboard and paste it into Studio, which asks for it when a request is pointed at the mock.";
 
+const NEEDS_NEW_KEY_NOTE =
+  "Spec0 can't show this mock's key again: it was made before Spec0 kept keys in a form it can show. The user can make a new key from Studio's Mocks tab; the current key stops working when they do.";
+
 /**
- * Ask Spec0 for a key Studio doesn't have, and keep it. Null when Spec0 won't
+ * Ask Spec0 for a key Studio doesn't have, and keep it. No key when Spec0 won't
  * give it (404 or unreachable); the caller then falls back to the note above.
+ * `needsNewKey` when Spec0 can't show it again and only a new key will do.
  */
 async function fetchMissingKey(
   entry: LibraryEntry,
   mockServerId: string | undefined,
   session: Session,
   deps: ToolDeps,
-): Promise<string | undefined> {
-  if (!mockServerId) return undefined;
-  const found = await deps.getMockApiKey(session, mockServerId).catch(() => null);
-  if (!found) return undefined;
+): Promise<{ key?: string; needsNewKey: boolean }> {
+  if (!mockServerId) return { needsNewKey: false };
+  let needsNewKey = false;
+  const found = await deps.getMockApiKey(session, mockServerId).catch((error: unknown) => {
+    needsNewKey = keyNeedsRegenerating(error);
+    return null;
+  });
+  if (!found) return { needsNewKey };
   await deps.setMock(entry.id, { mockApiKey: found.apiKey, mockServerId });
   deps.libraryChanged();
-  return found.apiKey;
+  return { key: found.apiKey, needsNewKey: false };
 }
 
 const getMockServer: Tool = async (args, deps) => {
@@ -646,9 +655,10 @@ const getMockServer: Tool = async (args, deps) => {
       `${entry.title} has no hosted mock. Create one with create_mock_server (the API has to be published to Spec0).`,
     );
   }
-  const key =
-    entry.mockApiKey ??
-    (await fetchMissingKey(entry, entry.mockServerId ?? mock?.mockServerId, session, deps));
+  const fetched = entry.mockApiKey
+    ? { key: entry.mockApiKey, needsNewKey: false }
+    : await fetchMissingKey(entry, entry.mockServerId ?? mock?.mockServerId, session, deps);
+  const key = fetched.key;
   const specVersion = mock?.specVersion ?? entry.mockSpecVersion ?? null;
   return text({
     api: { id: entry.id, title: entry.title, versionInStudio: entry.version },
@@ -660,7 +670,7 @@ const getMockServer: Tool = async (args, deps) => {
       ? { versionNote: `The mock serves ${specVersion}; Studio holds ${entry.version}. refresh_mock_server rebuilds it from the latest published version.` }
       : {}),
     curl: curlExample(mockUrl, key, await operationsOf(entry, deps)),
-    ...(key ? {} : { note: NO_KEY_NOTE }),
+    ...(key ? {} : { note: fetched.needsNewKey ? NEEDS_NEW_KEY_NOTE : NO_KEY_NOTE }),
   });
 };
 
@@ -689,10 +699,9 @@ const createMockServer: Tool = async (args, deps) => {
   });
   deps.libraryChanged();
 
-  const key =
-    created.apiKey ??
-    entry.mockApiKey ??
-    (await fetchMissingKey(entry, created.mockServerId, session, deps));
+  const known = created.apiKey ?? entry.mockApiKey ?? undefined;
+  const fetched = known ? { key: known, needsNewKey: false } : await fetchMissingKey(entry, created.mockServerId, session, deps);
+  const key = fetched.key;
   return text({
     api: { id: entry.id, title: entry.title },
     ...(published.matchedByName ? { spec0Api: published.apiName } : {}),
@@ -703,7 +712,7 @@ const createMockServer: Tool = async (args, deps) => {
     ...(created.mockUrl ? { curl: curlExample(created.mockUrl, key, await operationsOf(entry, deps)) } : {}),
     ...(key
       ? { note: "Studio saved the mock and its key; get_mock_server returns them later." }
-      : { note: NO_KEY_NOTE }),
+      : { note: fetched.needsNewKey ? NEEDS_NEW_KEY_NOTE : NO_KEY_NOTE }),
   });
 };
 
