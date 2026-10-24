@@ -918,7 +918,8 @@ mod tests {
 
         stop("test_a");
         stop("test_b");
-        assert!(!list().iter().any(|status| status.id.starts_with("test_")));
+        // Only this test's mocks: other tests run their own at the same time.
+        assert!(!list().iter().any(|status| status.id == "test_a" || status.id == "test_b"));
         assert!(TcpStream::connect(("127.0.0.1", a.port)).is_err());
     }
 }
