@@ -78,6 +78,10 @@ and adds the header when you send a request to the mock. If Studio can't get the
 because you're signed out), it asks you to paste it, and you can copy it from the mock's page in
 Spec0.
 
+Spec0 can't show a key it made before it started keeping keys in a form it can show again. For a
+mock like that, Studio says so and offers **Make a new key**. The new key works straight away and
+the old one stops working, so anything else using the old key needs the new one too.
+
 <Callout type="warn">
 Treat the key like a password. Anyone with the address and the key can call the mock. If a key has
 been shared too widely, [regenerate it](#regenerate-the-key).
@@ -133,7 +137,10 @@ Your organisation's plan sets how many mock servers and APIs you can have.
   when Spec0 reports it.
 - If a limit is already reached, the dialog says so before you start, and suggests removing a mock
   or API you no longer need.
-- If a limit is reached part-way through, the dialog shows Spec0's message and a link to Spec0.
+- If a limit is reached part-way through, the dialog says how many you've used and on which plan,
+  for example "You've used 3 of 3 mock servers on the Free plan", with a link to Spec0.
+
+**Settings → Account & Spec0** shows which plan your organisation is on.
 
 ## If something goes wrong
 

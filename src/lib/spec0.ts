@@ -364,8 +364,9 @@ async function request(
     );
   }
   if (response.status === 402) {
-    // A limit reached. The server's own sentence is the message, as is.
-    throw new Spec0Error(detail ?? "Your organisation has reached a limit.", 402, url, body);
+    // A limit reached: said from the numbers when Spec0 sent them, else the
+    // server's own sentence, as is.
+    throw new Spec0Error(limitSentence(body) ?? detail ?? "Your organisation has reached a limit.", 402, url, body);
   }
   if (response.status === 404) {
     throw new Spec0Error(
@@ -744,7 +745,7 @@ export async function createMock(session: Session, apiId: string): Promise<Creat
     const body = await response.text().catch(() => "");
     if (response.status === 402) {
       throw new Spec0Error(
-        describeBody(body) ?? "Your organisation has reached a limit.",
+        limitSentence(body) ?? describeBody(body) ?? "Your organisation has reached a limit.",
         402,
         `${base}/api/v1/public/mocks`,
         body,
@@ -897,7 +898,8 @@ function toMockKey(json: Record<string, unknown>, mockServerId: string): MockKey
  *
  * Null when the platform won't give it: a 404 means the route isn't there yet,
  * the mock is unknown, or this token may not read it. The caller then falls back
- * to asking the user to paste the key.
+ * to asking the user to paste the key. A key Spec0 issued before it kept keys
+ * in a form it can show again is a 409, thrown as is: see `keyNeedsRegenerating`.
  */
 export async function getMockApiKey(session: Session, mockServerId: string): Promise<MockKey | null> {
   try {
@@ -932,6 +934,19 @@ export async function resolveMockKey(
   }
 }
 
+/**
+ * True when Spec0 can't show a mock's key because it was issued before keys
+ * were kept in a form that can be shown again (a 409 from the key route).
+ * Making a new key once fixes it; the old key then stops working.
+ */
+export function keyNeedsRegenerating(error: unknown): boolean {
+  return error instanceof Spec0Error && error.status === 409;
+}
+
+/** What to tell the user when `keyNeedsRegenerating` is true. */
+export const KEY_NEEDS_REGENERATING =
+  "Spec0 made this key before it could show keys again. Make a new key to use the mock from Studio; the current key stops working when you do.";
+
 /** Replace a mock's API key. The old key stops working straight away. */
 export async function regenerateMockApiKey(session: Session, mockServerId: string): Promise<MockKey> {
   const response = await request(
@@ -956,7 +971,21 @@ export interface Allowance {
 }
 
 export interface Entitlements {
+  /** The organisation's plan id as Spec0 reports it, such as `FREE`. Null or absent when not reported. */
+  plan?: string | null;
   features: Allowance[];
+}
+
+/**
+ * A plan id as a name: `FREE` becomes "Free", `TEAM_PLUS` "Team plus". Ids
+ * that aren't upper-case words are shown as given.
+ */
+export function planName(plan: string | null | undefined): string | null {
+  const id = plan?.trim();
+  if (!id) return null;
+  if (!/^[A-Z][A-Z0-9_]*$/.test(id)) return id;
+  const words = id.toLowerCase().split("_").filter(Boolean).join(" ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /**
@@ -971,6 +1000,7 @@ export async function getEntitlements(session: Session): Promise<Entitlements | 
     const json = await get<Record<string, unknown>>(session, "/api/v1/public/orgs/entitlements");
     const rows = Array.isArray(json.features) ? (json.features as Array<Record<string, unknown>>) : [];
     return {
+      plan: typeof json.plan === "string" && json.plan.trim() ? json.plan.trim() : null,
       features: rows
         .map((row) => ({
           key: String(row.key ?? ""),
@@ -986,22 +1016,83 @@ export async function getEntitlements(session: Session): Promise<Entitlements | 
   }
 }
 
+/** What each counted feature counts, in the singular and the plural. */
+export const FEATURE_NOUNS: Record<string, [string, string]> = {
+  max_mock_servers: ["mock server", "mock servers"],
+  max_internal_apis: ["API", "APIs"],
+  max_public_apis: ["public API", "public APIs"],
+};
+
+/** The thing a feature counts, for `count` of them. Unknown features read "item". */
+export function featureNoun(feature: string | null | undefined, count: number): string {
+  const [one, many] = (feature && FEATURE_NOUNS[feature]) || ["item", "items"];
+  return count === 1 ? one : many;
+}
+
 /** The fields of a limit-reached (402) Problem that Studio uses. */
 export interface PlanLimit {
+  /** The server's own sentence, or Studio's error message when there's none. */
   detail: string;
   feature: string | null;
+  limit: number | null;
+  used: number | null;
+  plan: string | null;
+  /** What to show: built from the numbers when Spec0 sent them, else `detail`. */
+  message: string;
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * "You've used 3 of 3 mock servers on the Free plan." Built from the numbers a
+ * 402 carries, so the sentence says what was counted and how far. Null when
+ * they're missing or the feature is one Studio doesn't know how to name.
+ */
+export function planLimitMessage(limit: Pick<PlanLimit, "feature" | "limit" | "used" | "plan">): string | null {
+  if (!limit.feature || !FEATURE_NOUNS[limit.feature] || limit.limit === null || limit.limit < 0) return null;
+  const plan = planName(limit.plan);
+  const on = plan ? ` on the ${plan} plan` : "";
+  if (limit.limit === 0) {
+    return `Your organisation can't create ${featureNoun(limit.feature, 2)}${on}.`;
+  }
+  if (limit.used === null) return null;
+  return `You've used ${limit.used} of ${limit.limit} ${featureNoun(limit.feature, limit.limit)}${on}.`;
+}
+
+/** The limit sentence for a 402 body, when it carries the numbers. */
+function limitSentence(body: string): string | null {
+  try {
+    const json = JSON.parse(body) as Record<string, unknown>;
+    if (!json || typeof json !== "object") return null;
+    return planLimitMessage({
+      feature: typeof json.feature === "string" ? json.feature : null,
+      limit: finiteNumber(json.limit),
+      used: finiteNumber(json.used),
+      plan: typeof json.plan === "string" ? json.plan : null,
+    });
+  } catch {
+    return null;
+  }
 }
 
 /** Read a 402 Problem body. Null when the error isn't one. */
 export function planLimitOf(error: unknown): PlanLimit | null {
   if (!(error instanceof Spec0Error) || error.status !== 402) return null;
+  let json: Record<string, unknown> = {};
   try {
-    const json = JSON.parse(error.body) as Record<string, unknown>;
-    return {
-      detail: typeof json.detail === "string" && json.detail.trim() ? json.detail.trim() : error.message,
-      feature: typeof json.feature === "string" ? json.feature : null,
-    };
+    const parsed: unknown = JSON.parse(error.body);
+    if (parsed && typeof parsed === "object") json = parsed as Record<string, unknown>;
   } catch {
-    return { detail: error.message, feature: null };
+    // Not JSON: only the message is left.
   }
+  const detail = typeof json.detail === "string" && json.detail.trim() ? json.detail.trim() : error.message;
+  const fields = {
+    feature: typeof json.feature === "string" && json.feature ? json.feature : null,
+    limit: finiteNumber(json.limit),
+    used: finiteNumber(json.used),
+    plan: typeof json.plan === "string" && json.plan.trim() ? json.plan.trim() : null,
+  };
+  return { detail, ...fields, message: planLimitMessage(fields) ?? detail };
 }

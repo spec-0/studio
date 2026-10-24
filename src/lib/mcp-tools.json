@@ -2,7 +2,7 @@
   {
     "name": "list_local_apis",
     "title": "List the APIs in Studio",
-    "description": "Lists the APIs in this Spec0 Studio library: specs the user opened from files, URLs or Spec0, including ones that aren't published anywhere. For each: id, title, version, where it came from, number of operations, base URLs from the spec's servers, and whether it has a hosted mock. Use the id or title with the other tools. To search every API in the user's organisation, use the remote Spec0 MCP server instead.",
+    "description": "Lists the APIs in this Spec0 Studio library: specs the user opened from files, URLs or Spec0, including ones that aren't published anywhere. For each: id, title, version, where it came from, number of operations, base URLs from the spec's servers, and whether it has a hosted mock. Use the id or title with the other tools. To search every API in the user's organisation, or to read a public API on the Spec0 registry by its orgSlug/apiSlug, use the remote Spec0 MCP server instead.",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
     "annotations": { "readOnlyHint": true, "openWorldHint": false },
     "requiresSignIn": false,

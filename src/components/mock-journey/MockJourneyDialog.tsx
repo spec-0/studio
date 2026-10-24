@@ -516,9 +516,19 @@ function DoneStep({
           </>
         ) : (
           <div className="journey-paste">
-            <span className="field-meta">
-              Studio couldn&apos;t get this key from Spec0. Paste it from the mock&apos;s page there.
-            </span>
+            {mock.needsNewKey && state.signedIn ? (
+              <span className="field-meta">
+                Spec0 made this key before it could show keys again.{" "}
+                <button className="btn tight" onClick={() => setConfirming(true)} disabled={busy || confirming}>
+                  <KeyRound size={12} /> Make a new key
+                </button>{" "}
+                or paste the current one if you have it.
+              </span>
+            ) : (
+              <span className="field-meta">
+                Studio couldn&apos;t get this key from Spec0. Paste it from the mock&apos;s page there.
+              </span>
+            )}
             <div className="mock-key-field">
               <KeyRound size={12} aria-hidden />
               <input

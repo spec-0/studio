@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import { ExternalLink, LogOut, Search } from "lucide-react";
 import { ConnectModes } from "../ConnectModes";
-import type { Session } from "../../lib/spec0";
+import { getEntitlements, planName, type Session } from "../../lib/spec0";
 
 interface Props {
   session: Session | null;
@@ -18,8 +19,35 @@ const SOURCE_LABEL: Record<Session["source"], string> = {
   manual: "a pasted token",
 };
 
+/**
+ * The organisation's plan, asked for while this page is open and signed in.
+ * Null until known, and when Spec0 doesn't say; the row is then left out.
+ */
+function useOrgPlan(session: Session | null): string | null {
+  const [plan, setPlan] = useState<string | null>(null);
+  useEffect(() => {
+    setPlan(null);
+    if (!session) return;
+    let cancelled = false;
+    void getEntitlements(session)
+      .then((value) => {
+        if (!cancelled) setPlan(planName(value?.plan));
+      })
+      .catch(() => {
+        /* No plan shown; nothing else on this page depends on it. */
+      });
+    return () => {
+      cancelled = true;
+    };
+    // The same org and token need no second request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.orgId, session?.token, session?.apiUrl]);
+  return plan;
+}
+
 /** Account & Spec0: whether you're signed in, to which org, and what that adds. */
 export function AccountSettings({ session, onSignIn, onBrowseCatalog, onSignOut, onOpenSpec0 }: Props) {
+  const plan = useOrgPlan(session);
   if (!session) {
     return (
       <>
@@ -44,6 +72,12 @@ export function AccountSettings({ session, onSignIn, onBrowseCatalog, onSignOut,
           <strong>{session.orgName}</strong>
         </div>
         <dl className="settings-facts">
+          {plan && (
+            <>
+              <dt>Plan</dt>
+              <dd>{plan}</dd>
+            </>
+          )}
           <dt>Signed in with</dt>
           <dd>{SOURCE_LABEL[session.source] ?? session.source}</dd>
           {!Number.isNaN(since.getTime()) && (

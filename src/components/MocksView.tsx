@@ -3,7 +3,7 @@ import { Check, Copy, Eye, EyeOff, KeyRound, Laptop, Plus, RefreshCw, Server, Sq
 import type { LibraryEntry } from "../lib/library";
 import type { InvalidRequests } from "../lib/localMock";
 import { localMockUrl } from "../lib/localMockServer";
-import type { MockRow } from "../lib/spec0";
+import { KEY_NEEDS_REGENERATING, type MockRow } from "../lib/spec0";
 import { maskKey } from "../lib/mockJourney";
 import type { MockKeyState } from "../hooks/useMocks";
 
@@ -384,6 +384,16 @@ function KeyCell({
         </button>
         <button className="btn ghost" onClick={onCancelRegenerate}>
           Keep
+        </button>
+      </div>
+    );
+  }
+  if (state?.status === "needsNewKey") {
+    return (
+      <div className="mock-key-confirm" role="status">
+        <span title={KEY_NEEDS_REGENERATING}>Spec0 can&apos;t show this key again.</span>
+        <button className="btn" onClick={onAskRegenerate}>
+          Make a new key
         </button>
       </div>
     );

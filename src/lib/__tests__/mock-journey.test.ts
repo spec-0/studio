@@ -124,17 +124,24 @@ describe("which step comes first", () => {
 });
 
 describe("limits", () => {
+  it("names the plan in the up-front message when Spec0 reports it", () => {
+    const value = { ...allowances([3, 3]), plan: "FREE" };
+    expect(upfrontBlock(run(initialJourney(FILE, true), { type: "entitlements", value }))).toBe(
+      "You've used 3 of 3 mock servers on the Free plan.",
+    );
+  });
+
   it("says up front when no more mocks can be created, before any step", () => {
     const state = run(initialJourney(FILE, true), { type: "entitlements", value: allowances([2, 2]) });
     expect(currentStep(state)).toBe("blocked");
-    expect(upfrontBlock(state)).toBe("Your organisation has reached its limit of 2 mock servers.");
+    expect(upfrontBlock(state)).toBe("You've used 2 of 2 mock servers.");
   });
 
   it("says up front when no more APIs can be published, only if publishing is needed", () => {
     const value = allowances([4, 1], [2, 2]);
     expect(currentStep(run(initialJourney(FILE, true), { type: "entitlements", value }))).toBe("blocked");
     expect(upfrontBlock(run(initialJourney(FILE, true), { type: "entitlements", value }))).toBe(
-      "Your organisation has reached its limit of 2 APIs.",
+      "You've used 2 of 2 APIs.",
     );
     // Already on Spec0: the API limit doesn't matter.
     expect(currentStep(run(initialJourney(ON_SPEC0, true), { type: "entitlements", value }))).toBe("mock");
@@ -186,15 +193,31 @@ describe("errors", () => {
     }
   });
 
-  it("402 shows the server's sentence as is, and stays on the step", () => {
+  it("402 says what was used and on which plan, and stays on the step", () => {
     const detail = "Your organisation has reached its limit of 2 mock servers.";
     const state = run(ready(), {
       type: "failed",
       step: "mock",
-      error: problem(402, { title: "Limit reached", detail, feature: "max_mock_servers", limit: 2, used: 2 }),
+      error: problem(402, { title: "Limit reached", detail, feature: "max_mock_servers", limit: 2, used: 2, plan: "FREE" }),
     });
-    expect(state.error).toEqual({ kind: "limit", message: detail });
+    expect(state.error).toEqual({ kind: "limit", message: "You've used 2 of 2 mock servers on the Free plan." });
     expect(currentStep(state)).toBe("mock");
+  });
+
+  it("402 without numbers shows the server's sentence as is", () => {
+    const detail = "Your organisation has reached a limit.";
+    const state = run(ready(), { type: "failed", step: "mock", error: problem(402, { title: "Limit reached", detail }) });
+    expect(state.error).toEqual({ kind: "limit", message: detail });
+  });
+
+  it("a key Spec0 can't show again asks for a new key, until one arrives", () => {
+    const mocked = run(ready(), { type: "mockReady", mock: { mockServerId: "m1", url: "https://m", apiKey: null } });
+    const flagged = run(mocked, { type: "keyNeedsNew" });
+    expect(flagged.mock?.needsNewKey).toBe(true);
+    const fixed = run(flagged, { type: "keyChanged", apiKey: "mk_new" });
+    expect(fixed.mock).toMatchObject({ apiKey: "mk_new", needsNewKey: false });
+    // A mock whose key is known is never flagged.
+    expect(run(fixed, { type: "keyNeedsNew" }).mock?.needsNewKey).toBe(false);
   });
 
   it("409 on publish explains breaking changes and suggests a new version", () => {

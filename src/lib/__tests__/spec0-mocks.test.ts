@@ -20,8 +20,11 @@ import {
   createMock,
   getEntitlements,
   getMockApiKey,
+  keyNeedsRegenerating,
   newSignInState,
+  planLimitMessage,
   planLimitOf,
+  planName,
   publishTeamApi,
   readSignInCallback,
   regenerateMockApiKey,
@@ -130,18 +133,53 @@ describe("sign-in callback", () => {
 });
 
 describe("limits reached", () => {
-  it("createMock reports a 402 with the server's sentence", async () => {
-    appFetch.mockResolvedValue(json(LIMIT, 402));
+  it("createMock reports a 402 from the numbers Spec0 sent", async () => {
+    appFetch.mockResolvedValue(json({ ...LIMIT, plan: "FREE" }, 402));
     const error = await createMock(session, "api-1").catch((e: unknown) => e);
     expect((error as Spec0Error).status).toBe(402);
-    expect((error as Spec0Error).message).toBe(LIMIT.detail);
-    expect(planLimitOf(error)).toEqual({ detail: LIMIT.detail, feature: "max_mock_servers" });
+    expect((error as Spec0Error).message).toBe("You've used 2 of 2 mock servers on the Free plan.");
+    expect(planLimitOf(error)).toEqual({
+      detail: LIMIT.detail,
+      feature: "max_mock_servers",
+      limit: 2,
+      used: 2,
+      plan: "FREE",
+      message: "You've used 2 of 2 mock servers on the Free plan.",
+    });
   });
 
   it("publishing reports a 402 the same way", async () => {
-    appFetch.mockResolvedValue(json({ ...LIMIT, feature: "max_internal_apis" }, 402));
+    appFetch.mockResolvedValue(json({ ...LIMIT, feature: "max_internal_apis", limit: 5, used: 5, plan: "FREE" }, 402));
     const error = await publishTeamApi(session, {}).catch((e: unknown) => e);
     expect(planLimitOf(error)?.feature).toBe("max_internal_apis");
+    expect((error as Spec0Error).message).toBe("You've used 5 of 5 APIs on the Free plan.");
+  });
+
+  it("falls back to the server's sentence when the numbers are missing or unknown", async () => {
+    appFetch.mockResolvedValue(json({ title: "Limit reached", status: 402, detail: LIMIT.detail }, 402));
+    const bare = await createMock(session, "api-1").catch((e: unknown) => e);
+    expect((bare as Spec0Error).message).toBe(LIMIT.detail);
+    expect(planLimitOf(bare)?.message).toBe(LIMIT.detail);
+
+    appFetch.mockResolvedValue(json({ ...LIMIT, feature: "max_widgets" }, 402));
+    const unknown = await createMock(session, "api-1").catch((e: unknown) => e);
+    expect(planLimitOf(unknown)?.message).toBe(LIMIT.detail);
+
+    const notJson = planLimitOf(new Spec0Error("Your organisation has reached a limit.", 402, "u", "<html>"));
+    expect(notJson).toMatchObject({ feature: null, limit: null, message: "Your organisation has reached a limit." });
+  });
+
+  it("words each counted feature, a zero allowance, and a missing plan", () => {
+    expect(planLimitMessage({ feature: "max_public_apis", limit: 1, used: 1, plan: "PRO" })).toBe(
+      "You've used 1 of 1 public API on the Pro plan.",
+    );
+    expect(planLimitMessage({ feature: "max_mock_servers", limit: 0, used: 0, plan: "FREE" })).toBe(
+      "Your organisation can't create mock servers on the Free plan.",
+    );
+    expect(planLimitMessage({ feature: "max_mock_servers", limit: 3, used: 3, plan: null })).toBe(
+      "You've used 3 of 3 mock servers.",
+    );
+    expect(planLimitMessage({ feature: "max_mock_servers", limit: -1, used: 3, plan: "FREE" })).toBeNull();
   });
 
   it("planLimitOf ignores other errors", () => {
@@ -162,9 +200,21 @@ describe("entitlements", () => {
       json({ features: [{ key: "max_mock_servers", limit: -1, used: 4, enabled: true }] }),
     );
     expect(await getEntitlements(session)).toEqual({
+      plan: null,
       features: [{ key: "max_mock_servers", limit: -1, used: 4, enabled: true }],
     });
     expect(appFetch.mock.calls[0][0]).toBe("https://api.example.com/api/v1/public/orgs/entitlements");
+  });
+
+  it("keeps the plan, and names it", async () => {
+    appFetch.mockResolvedValue(json({ plan: "FREE", features: [] }));
+    const entitlements = await getEntitlements(session);
+    expect(entitlements?.plan).toBe("FREE");
+    expect(planName(entitlements?.plan)).toBe("Free");
+    expect(planName("TEAM_PLUS")).toBe("Team plus");
+    expect(planName("Enterprise (trial)")).toBe("Enterprise (trial)");
+    expect(planName("")).toBeNull();
+    expect(planName(null)).toBeNull();
   });
 
   it("treats a 404 as unknown", async () => {
@@ -188,6 +238,19 @@ describe("mock keys", () => {
   it("returns null on 404, so the paste prompt is the fallback", async () => {
     appFetch.mockResolvedValue(new Response("", { status: 404 }));
     expect(await getMockApiKey(session, "m1")).toBeNull();
+  });
+
+  it("throws a 409 as its own case: a key Spec0 can't show again", async () => {
+    appFetch.mockResolvedValue(
+      json({ title: "Key not recoverable", status: 409, detail: "Regenerate the key to see it." }, 409),
+    );
+    const error = await getMockApiKey(session, "m1").catch((e: unknown) => e);
+    expect(keyNeedsRegenerating(error)).toBe(true);
+    expect(keyNeedsRegenerating(new Spec0Error("x", 404, "u", ""))).toBe(false);
+    expect(keyNeedsRegenerating(new Error("x"))).toBe(false);
+    // The lenient lookup still never throws.
+    appFetch.mockResolvedValue(json({ status: 409 }, 409));
+    expect(await resolveMockKey(session, { mockServerId: "m1", apiId: null })).toBeNull();
   });
 
   it("regenerates with a POST", async () => {

@@ -17,6 +17,8 @@
 import type { SourceKind } from "./library";
 import { canPublish } from "./publish";
 import {
+  featureNoun,
+  planLimitMessage,
   planLimitOf,
   Spec0Error,
   type Allowance,
@@ -34,6 +36,8 @@ export interface JourneyMock {
   url: string;
   /** Null while unknown; the dialog then offers to fetch it or paste it. */
   apiKey: string | null;
+  /** Spec0 can't show this key again (made before it kept keys that way); a new key is the way through. */
+  needsNewKey?: boolean;
 }
 
 /** The library entry the journey is for, as it was when the journey started. */
@@ -86,6 +90,7 @@ export type JourneyEvent =
   | { type: "published"; apiId: string }
   | { type: "mockReady"; mock: JourneyMock }
   | { type: "keyChanged"; apiKey: string | null }
+  | { type: "keyNeedsNew" }
   | { type: "failed"; step: StepId | "done"; error: unknown }
   | { type: "idle" };
 
@@ -133,25 +138,18 @@ export function isExhausted(allowance: Allowance | null): boolean {
   return allowance.limit >= 0 && allowance.used >= allowance.limit;
 }
 
-const NOUNS: Record<string, [string, string]> = {
-  [MOCK_FEATURE]: ["mock server", "mock servers"],
-  [API_FEATURE]: ["API", "APIs"],
-};
-
-function noun(key: string, count: number): string {
-  const [one, many] = NOUNS[key] ?? ["item", "items"];
-  return count === 1 ? one : many;
-}
-
 /**
- * The same sentence the server uses when a limit is hit, built from the
- * numbers it reported, so the answer is the same before and after trying.
+ * The same sentence Studio shows when Spec0 refuses with a limit, built from
+ * the numbers it reported, so the answer is the same before and after trying.
  */
-export function limitMessage(allowance: Allowance): string {
-  if (!allowance.enabled || allowance.limit === 0) {
-    return `Your organisation can't create ${noun(allowance.key, 2)}.`;
+export function limitMessage(allowance: Allowance, plan?: string | null): string {
+  if (!allowance.enabled) {
+    return `Your organisation can't create ${featureNoun(allowance.key, 2)}.`;
   }
-  return `Your organisation has reached its limit of ${allowance.limit} ${noun(allowance.key, allowance.limit)}.`;
+  return (
+    planLimitMessage({ feature: allowance.key, limit: allowance.limit, used: allowance.used, plan: plan ?? null }) ??
+    `Your organisation has reached its limit of ${allowance.limit} ${featureNoun(allowance.key, allowance.limit)}.`
+  );
 }
 
 /**
@@ -161,7 +159,7 @@ export function limitMessage(allowance: Allowance): string {
 export function usageLine(entitlements: Entitlements | null | undefined, key: string): string | null {
   const allowance = allowanceFor(entitlements, key);
   if (!allowance || !allowance.enabled || allowance.limit < 0) return null;
-  return `This uses 1 of your organisation's ${allowance.limit} ${noun(key, allowance.limit)} (${allowance.used} in use).`;
+  return `This uses 1 of your organisation's ${allowance.limit} ${featureNoun(key, allowance.limit)} (${allowance.used} in use).`;
 }
 
 /** Does the journey still have to publish? */
@@ -177,10 +175,10 @@ function needsPublish(state: JourneyState): boolean {
 export function upfrontBlock(state: JourneyState): string | null {
   if (state.mock) return null;
   const mockAllowance = allowanceFor(state.entitlements, MOCK_FEATURE);
-  if (isExhausted(mockAllowance)) return limitMessage(mockAllowance!);
+  if (isExhausted(mockAllowance)) return limitMessage(mockAllowance!, state.entitlements?.plan);
   if (needsPublish(state)) {
     const apiAllowance = allowanceFor(state.entitlements, API_FEATURE);
-    if (isExhausted(apiAllowance)) return limitMessage(apiAllowance!);
+    if (isExhausted(apiAllowance)) return limitMessage(apiAllowance!, state.entitlements?.plan);
   }
   return null;
 }
@@ -274,14 +272,14 @@ export function checklist(state: JourneyState, orgName?: string | null): Checkli
  * Turn a failed call into something the journey can act on.
  *
  * - 401: the sign-in has expired; go back to the sign-in step.
- * - 402: a limit; the server's own sentence is shown as is.
+ * - 402: a limit; said from the numbers Spec0 sent, else its own sentence.
  * - 409 while publishing: the spec breaks the version already published under
  *   this version tag; a new version tag is the way through.
  * - no status at all: Spec0 couldn't be reached.
  */
 export function classifyError(error: unknown, step: StepId | "done"): JourneyError {
   const limit = planLimitOf(error);
-  if (limit) return { kind: "limit", message: limit.detail };
+  if (limit) return { kind: "limit", message: limit.message };
 
   if (error instanceof Spec0Error) {
     if (error.status === 401) {
@@ -347,7 +345,11 @@ export function journeyReducer(state: JourneyState, event: JourneyEvent): Journe
     case "mockReady":
       return { ...state, mock: event.mock, busy: null, error: null };
     case "keyChanged":
-      return state.mock ? { ...state, mock: { ...state.mock, apiKey: event.apiKey }, busy: null } : state;
+      return state.mock
+        ? { ...state, mock: { ...state.mock, apiKey: event.apiKey, needsNewKey: false }, busy: null }
+        : state;
+    case "keyNeedsNew":
+      return state.mock && !state.mock.apiKey ? { ...state, mock: { ...state.mock, needsNewKey: true } } : state;
     case "failed": {
       const error = classifyError(event.error, event.step);
       if (error.kind === "session") {
