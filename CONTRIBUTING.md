@@ -7,6 +7,98 @@ the Mac build has had the most use so far.
 Most of this file is a list of rules, each with the reason behind it. The reason
 is the useful part: it tells you when a rule applies and when it doesn't.
 
+## Sending a change
+
+You don't need any access to this repository to contribute. Like most projects
+on GitHub, changes come in as pull requests from your own copy of it, called a
+fork. The repository shows you as read-only; that's expected, and you can
+still open a pull request.
+
+1. **Find or open an issue.** Issues labelled
+   [good first issue](https://github.com/spec-0/studio/labels/good%20first%20issue)
+   are a good place to start. For anything bigger than a small fix, say on the
+   issue what you plan to do before you start, so we can agree on the approach
+   first.
+2. **Fork the repository.** Press **Fork** at the top of
+   [github.com/spec-0/studio](https://github.com/spec-0/studio). You get your own
+   copy at `github.com/<your-username>/studio`.
+3. **Clone your fork and make a branch:**
+
+   ```bash
+   git clone https://github.com/<your-username>/studio.git
+   cd studio
+   git remote add upstream https://github.com/spec-0/studio.git
+   git checkout -b fix-null-drift
+   ```
+
+4. **Set up and run Studio** (see [Setting up](#setting-up) below), then make
+   your change. New logic needs tests, and if the change alters what a user
+   sees or does, update the page in [docs/user](docs/user/) that describes it.
+5. **Run the checks** in [Before you open a pull request](#before-you-open-a-pull-request).
+6. **Push the branch to your fork and open the pull request:**
+
+   ```bash
+   git push -u origin fix-null-drift
+   ```
+
+   GitHub then shows a **Compare & pull request** button, on your fork and on
+   this repository. Fill in the template, and write `Closes #123` with the
+   issue number so the issue closes when the change is merged.
+
+If `main` moves on while you work, bring your branch up to date with:
+
+```bash
+git fetch upstream
+git rebase upstream/main
+git push --force-with-lease
+```
+
+### What happens after you open it
+
+- **The checks wait for a maintainer the first time.** GitHub doesn't run a
+  first-time contributor's code in our CI until a maintainer presses **Approve
+  and run**. After your first pull request is merged, checks start by
+  themselves.
+- **CI runs the same checks as below,** plus the Rust tests on macOS, Linux and
+  Windows. If one fails, the log is linked from the pull request.
+- **A maintainer reviews it.** We may suggest changes, or push a small fix to
+  your branch ourselves if you left **Allow edits by maintainers** ticked.
+- **It's merged as one commit** (a squash merge), and goes out in the next
+  release.
+
+We're a small team, so a review can take a few days. If a pull request has had
+no reply for a week, a comment on it is welcome.
+
+## Setting up
+
+You need:
+
+- **Node.js 24** (22.12 at the least), with npm.
+- **Rust 1.90 or later**, installed with [rustup](https://rustup.rs).
+- **The system libraries Tauri needs on your operating system.** Tauri's
+  [prerequisites page](https://v2.tauri.app/start/prerequisites/) lists them:
+  the Xcode Command Line Tools on macOS, the Microsoft C++ Build Tools and
+  WebView2 on Windows, and WebKitGTK and a few build packages on Linux.
+
+Then, from the repository folder:
+
+```bash
+npm ci        # install the interface's dependencies
+npm run app   # build and open Studio, reloading as you edit
+```
+
+The first `npm run app` compiles the Rust side and takes a few minutes; later
+runs are quick.
+
+A development build uses the same settings and library folder as an installed
+Studio, and on Windows and Linux it registers itself for `spec0://` links. If
+you also use Studio day to day, run the development build under its own name and
+link scheme so the two don't get mixed up:
+
+```bash
+npm run app -- --config '{"identifier":"io.spec0.studio.dev","productName":"Studio Dev","plugins":{"deep-link":{"desktop":{"schemes":["spec0-dev"]}}}}'
+```
+
 ## Reporting bugs and asking for features
 
 Questions, ideas and general feedback are best in
@@ -47,8 +139,8 @@ A passing type-check shows the code compiles, not that it works. `npm run dev`
 gives a quicker browser preview for styling, but requests to other sites will be
 blocked by CORS there. That's expected; the status bar shows which mode you're in.
 
-For larger changes, it helps to open an issue first so we can agree on the
-approach before you spend time on it.
+Changes to the user guide also need `npm run check:docs` (see
+[Improving the docs](#improving-the-docs)).
 
 ## The two main rules
 
