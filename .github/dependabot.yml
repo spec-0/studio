@@ -33,6 +33,14 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # tauri-plugin-deep-link 2.6.2 doesn't compile on Linux against rust-ini
+      # 0.21.3 (it builds ini::ParseOption with two of its four fields), and
+      # single-instance 2.5.4 requires it. Take the next releases instead.
+      - dependency-name: tauri-plugin-deep-link
+        versions: ["2.6.2"]
+      - dependency-name: tauri-plugin-single-instance
+        versions: ["2.5.4"]
     groups:
       cargo-minor-and-patch:
         update-types: [minor, patch]
