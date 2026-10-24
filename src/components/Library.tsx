@@ -59,6 +59,19 @@ function openedLabel(entry: LibraryEntry): string {
   return `opened ${relativeTime(entry.openedAt)}${pulled}`;
 }
 
+/**
+ * The spec0 mark, large and faint, so the library isn't a bare page when it
+ * holds only a few APIs. It's pinned to the pane, not to the scrolling list,
+ * and sits under everything, so cards and the drop outline cover it.
+ */
+function LibraryMark() {
+  return (
+    <div className="library-mark" aria-hidden>
+      <LogoMark size={30} />
+    </div>
+  );
+}
+
 interface Props {
   entries: LibraryEntry[];
   onOpen: (entry: LibraryEntry) => void;
@@ -100,18 +113,6 @@ interface Props {
  * An engineer works across several APIs in a week, so the app's root is the set
  * of them, not whichever one was opened last.
  */
-/**
- * The spec0 mark, large and faint, so the library isn't a bare page when it
- * holds only a few APIs. It's pinned to the pane, not to the scrolling list,
- * and sits under everything, so cards and the drop outline cover it.
- */
-function LibraryMark() {
-  return (
-    <div className="library-mark" aria-hidden>
-      <LogoMark size={30} />
-    </div>
-  );
-}
 
 export function Library({
   entries,
