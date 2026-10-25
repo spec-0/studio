@@ -37,8 +37,9 @@ Download [spec0-studio-windows-x64-setup.exe](https://github.com/spec-0/studio/r
 and run it. It works on Windows 10 and 11 (x64), and installs for your user only, so it doesn't
 need admin rights.
 
-The installer isn't code-signed yet, so Windows SmartScreen will probably say "Windows protected
-your PC". Click **More info**, then **Run anyway**. To check the file first, compare its hash with
+The installer isn't code-signed yet, because there's no Windows code-signing certificate for it.
+Windows SmartScreen will probably say "Windows protected your PC" and call the publisher unknown.
+Click **More info**, then **Run anyway**. To check the file first, compare its hash with
 `SHA256SUMS.txt`. In PowerShell:
 
 ```powershell
@@ -47,6 +48,8 @@ Get-FileHash .\spec0-studio-windows-x64-setup.exe
 
 Studio uses Microsoft's WebView2 to draw its window. Windows 11 and current Windows 10 already have
 it. If yours doesn't, the installer downloads it from Microsoft.
+
+If you'd rather not run an unsigned installer, you can [build Studio from source](#building-from-source).
 
   </Tab>
   <Tab value="Linux">
@@ -121,5 +124,16 @@ authority, the check may fail. Download the new version from the releases page i
 
 ## Building from source
 
-You need Node 20 or later and a Rust toolchain. The
-[repository's README](https://github.com/spec-0/studio#build-from-source) has the steps.
+You need Node 22.12 or later and Rust 1.90 or later. On Linux you also need
+[Tauri's system packages](https://v2.tauri.app/start/prerequisites/#linux), which include
+WebKitGTK 4.1. Then, in a copy of the [repository](https://github.com/spec-0/studio):
+
+```bash
+npm install
+npm run app            # run the desktop app
+npm run app:build      # build the installers for your system (.dmg, .AppImage and .deb, or .exe)
+```
+
+`npm run dev` shows the interface in a browser at `localhost:5173` instead. That's handy for
+styling, but requests to other sites are blocked by CORS there, because it's a web page. In the
+desktop app they're sent by the app itself. The status bar says which one you're in.

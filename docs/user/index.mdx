@@ -84,8 +84,12 @@ If you use Postman, Insomnia, Bruno or Yaak:
   it. A collection's steps point at operations in your specs instead of copying them.
 - **It checks responses against the spec.** Other clients show you the response. Studio also tells
   you whether it matches the contract.
-- **It's younger and does less.** There are no scripts, no shared team workspace, and no gRPC or
-  WebSocket support. Studio can import a Postman collection, but it doesn't run its scripts.
+- **It works with no account and sends no telemetry.** History and environments stay on your
+  computer, and secrets go in your operating system's credential store.
+- **It's younger and does less.** There are no scripts, no shared team workspace, no command-line
+  runner, and no gRPC or WebSocket support. Studio can import a Postman collection, but it doesn't
+  run its scripts. Insomnia and Bruno files can't be imported yet. Mocks run on your computer; a
+  [hosted mock](/hosted-mocks) you can share needs a [Spec0 account](/connect).
 
 ## Finding your way around
 
