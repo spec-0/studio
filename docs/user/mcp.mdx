@@ -139,8 +139,8 @@ Tools marked **sign-in** work only while Studio is signed in to Spec0.
 
 | Tool | What it does | |
 |---|---|---|
-| `send_request` | Sends one request for an operation through Studio and returns the status, headers, body and the schema check. Credential headers are hidden in what comes back, and the request is added to History. | asks |
-| `check_contract` | Sends a request for each operation to a base URL, such as `http://localhost:8080`, and reports the status and the schema check for each. Only `GET`, `HEAD` and `OPTIONS` run unless the agent asks for the others. | asks |
+| `send_request` | Sends one request for an operation, or to any URL, through Studio and returns the status, headers, body and the schema check. Studio fills in `{{variables}}` from the active environment, secret ones too. Credential headers are hidden in what comes back, and the request is added to History. | asks |
+| `check_contract` | Sends a request for each operation to a base URL, such as `http://localhost:8080`, and reports the status and the schema check for each. Values come from the active environment. Only `GET`, `HEAD` and `OPTIONS` run unless the agent asks for the others. | asks |
 
 ### Local mocks
 
@@ -178,6 +178,9 @@ Tools marked **sign-in** work only while Studio is signed in to Spec0.
 | `get_mock_server` | For one API: the hosted mock's address, its key (if Studio has it), the header to send it in, and a curl command. | sign-in |
 | `create_mock_server` | Creates a hosted mock for an API that is already published to Spec0. If the API already has one, returns that one. | sign-in |
 | `refresh_mock_server` | Rebuilds an API's hosted mock from the latest version on Spec0. The address and key stay the same. | sign-in |
+
+An operation that uses OAuth 2.0 uses the token Studio already holds for that API and environment.
+Get one from the API's [Auth section](/auth-environments#oauth-20) first.
 
 An API that is only on your computer has to be [published from Studio](/document#publishing-a-local-spec-to-spec0)
 before an agent can create a hosted mock for it. See [Hosted mock servers](/hosted-mocks).
@@ -237,6 +240,7 @@ The **Agents** section of the MCP tab shows:
 
 - the agents that connected since Studio started, by the name their client gives, such as Claude
   Code
+- the hosts you allowed this session
 - an **Activity** log: each tool call, and each request with what was sent and what came back,
   with secret values replaced. It covers this session only.
 

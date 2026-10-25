@@ -31,6 +31,25 @@ to choose another agent.
 
 The panel also says, in one line, where your messages go, and links to Settings and to this guide.
 
+## What Studio runs
+
+| Agent | What Studio runs |
+|---|---|
+| Codex | Its ACP adapter, `@agentclientprotocol/codex-acp`: installed, or fetched with `npx` |
+| Claude Agent | Anthropic's Claude Agent SDK through its ACP adapter, `@agentclientprotocol/claude-agent-acp`: installed, or fetched with `npx` |
+| Gemini CLI | `gemini --acp`. Gemini CLI must be installed. |
+| Another agent | Any program you choose that speaks ACP |
+
+Fetching an adapter with `npx` needs [Node.js](https://nodejs.org). Adapters fetched that way are
+pinned to a version Studio was tested with.
+
+## Signing in, and your provider's terms
+
+Signing in happens in the agent, not in Studio. Each provider has its own rules for apps that host
+its agent. Anthropic asks apps built on its Agent SDK to use an API key rather than a claude.ai
+sign-in. Google doesn't allow its Gemini CLI sign-in to be used by other software to reach its
+services. Check your provider's terms before you use a subscription here.
+
 ## Codex
 
 Studio runs Codex through its ACP adapter.
@@ -75,9 +94,13 @@ Manager, or the Secret Service on Linux. It gives the key only to the Claude age
 `ANTHROPIC_API_KEY`, when a chat starts. Once it's saved, Studio's window can't read it back. Paste a
 new key to replace it, or press **Remove**.
 
-Studio uses an API key for Claude Agent, never a claude.ai or Claude Code sign-in. If no key is
+Studio uses an API key for Claude Agent, never a claude.ai or Claude Code subscription. If no key is
 saved, Studio uses an `ANTHROPIC_API_KEY` it was started with, from a terminal for example. With
 neither, Claude Agent doesn't start, and the panel says where to add a key.
+
+Studio also starts the adapter with `--hide-claude-auth`, which makes it refuse any turn a
+subscription would pay for, and removes Claude Code's OAuth token variables from its environment.
+If the key ever appears in what the agent writes, Studio shows `[hidden]` in its place.
 
 <Callout>
 A key set only in your shell profile doesn't reach Studio when you open it from the Dock or a
