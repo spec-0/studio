@@ -4114,3 +4114,7 @@ select.fchip { padding-right: 24px; background-position: right 7px center; }
 .warn-ink { color: hsl(var(--warning)); }
 .history-row .summary { font-size: var(--t-small); }
 .sidebar .history-row { align-items: center; }
+.run-line { display: inline-flex; align-items: center; gap: 5px; font-size: var(--t-small); font-weight: 500; }
+.run-line.ok { color: hsl(var(--success)); }
+.run-line.bad { color: hsl(var(--danger)); }
+.collections-actions { padding: 0; }
