@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { sourceLabel, type LibraryEntry } from "../lib/library";
+import { FileText, Search } from "lucide-react";
 import { plural } from "../lib/plural";
+import { shortcut } from "../lib/platform";
 
 interface Props {
   entries: LibraryEntry[];
@@ -32,61 +34,67 @@ export function ApiSwitcher({ entries, currentId, onPick, onGoLibrary, onClose }
 
   return (
     <div className="scrim top" onClick={onClose}>
-      <div className="palette" onClick={(event) => event.stopPropagation()}>
-        <input
-          ref={input}
-          value={filter}
-          placeholder="Switch to an API…"
-          onChange={(event) => setFilter(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              setCursor((c) => Math.min(c + 1, shown.length - 1));
-            } else if (event.key === "ArrowUp") {
-              event.preventDefault();
-              setCursor((c) => Math.max(c - 1, 0));
-            } else if (event.key === "Enter") {
-              event.preventDefault();
-              if (shown[cursor]) onPick(shown[cursor]);
-            }
-          }}
-        />
+      <div className="palette" role="dialog" aria-modal="true" aria-label="Switch API" onClick={(event) => event.stopPropagation()}>
+        <div className="palette-query">
+          <Search size={15} aria-hidden />
+          <input
+            ref={input}
+            value={filter}
+            placeholder="Switch to an API…"
+            aria-label="Find an API"
+            onChange={(event) => setFilter(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setCursor((c) => Math.min(c + 1, shown.length - 1));
+              } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setCursor((c) => Math.max(c - 1, 0));
+              } else if (event.key === "Enter") {
+                event.preventDefault();
+                if (shown[cursor]) onPick(shown[cursor]);
+              }
+            }}
+          />
+          <span className="kbd">esc</span>
+        </div>
 
-        <div className="palette-list">
+        <div className="palette-list" role="listbox" aria-label="APIs">
+          <div className="palette-group">APIs</div>
           {shown.map((entry, index) => (
             <button
               key={entry.id}
-              className="row"
+              className="palette-row"
+              role="option"
               aria-selected={index === cursor}
               onMouseEnter={() => setCursor(index)}
               onClick={() => onPick(entry)}
+              title={sourceLabel(entry.source)}
             >
-              <span style={{ minWidth: 0, display: "grid", flex: 1 }}>
-                <span className="path">
-                  {entry.title}
-                  {entry.id === currentId && <span className="meta"> · current</span>}
-                </span>
-                <span className="summary">
-                  {plural(entry.operations, "operation")} · {sourceLabel(entry.source)}
-                </span>
-              </span>
+              <FileText size={14} aria-hidden className="palette-icon" />
+              <span className="palette-title">{entry.title}</span>
+              <span className="meta">{plural(entry.operations, "operation")}</span>
+              <span className="spacer" />
               {entry.update && (
-                <span className="tag update" title="A newer version is available">
-                  update
+                <span className="chip sans warn" title="A newer version is available">
+                  Update
                 </span>
               )}
-              <span className={`tag src-${entry.source.kind}`}>{entry.source.kind}</span>
+              {entry.version && <span className="chip">{entry.version}</span>}
+              {entry.id === currentId && <span className="meta">current</span>}
             </button>
           ))}
-          {shown.length === 0 && <div className="group-label">No matching API</div>}
+          {shown.length === 0 && <div className="palette-none">No matching API</div>}
         </div>
 
         <div className="palette-foot">
-          <button className="btn" onClick={onGoLibrary}>
-            All APIs
-          </button>
+          <span className="meta">
+            <span className="kbd">↑↓</span> move <span className="kbd">↵</span> open <span className="kbd">esc</span> close
+          </span>
           <span className="spacer" />
-          <span className="meta">↑↓ move · ↵ open · esc close</span>
+          <button className="btn ghost sm" onClick={onGoLibrary}>
+            All APIs <span className="kbd">{shortcut("L")}</span>
+          </button>
         </div>
       </div>
     </div>

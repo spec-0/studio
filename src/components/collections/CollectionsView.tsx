@@ -674,6 +674,8 @@ function CollectionDetail({
           <label className="history-check" title="Stop at the first step that fails">
             <input
               type="checkbox"
+              className="switch"
+              role="switch"
               checked={collection.stopOnFailure}
               onChange={(event) => api.setStopOnFailure(collection.id, event.target.checked)}
             />

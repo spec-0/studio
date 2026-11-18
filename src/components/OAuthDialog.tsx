@@ -116,7 +116,7 @@ export function OAuthDialog({
         <h3>Endpoints</h3>
         <div className="field">
           <div className="field-label">
-            <div className="field-name">token URL</div>
+            <div className="field-label-text">Token URL</div>
           </div>
           <input
             value={draft.tokenUrl}
@@ -127,7 +127,7 @@ export function OAuthDialog({
         {draft.grant === "authorization_code" && (
           <div className="field">
             <div className="field-label">
-              <div className="field-name">authorize URL</div>
+              <div className="field-label-text">Authorize URL</div>
             </div>
             <input
               value={draft.authorizationUrl ?? ""}
@@ -138,7 +138,7 @@ export function OAuthDialog({
         )}
         <div className="field">
           <div className="field-label">
-            <div className="field-name">audience</div>
+            <div className="field-label-text">Audience</div>
             <div className="field-meta">optional</div>
           </div>
           <input
@@ -153,7 +153,7 @@ export function OAuthDialog({
         <h3>Client</h3>
         <div className="field">
           <div className="field-label">
-            <div className="field-name">client id</div>
+            <div className="field-label-text">Client ID</div>
           </div>
           <input
             value={draft.clientId}
@@ -162,7 +162,7 @@ export function OAuthDialog({
         </div>
         <div className="field">
           <div className="field-label">
-            <div className="field-name">client secret</div>
+            <div className="field-label-text">Client secret</div>
           </div>
           <input
             value={draft.clientSecretRef}
@@ -185,7 +185,7 @@ export function OAuthDialog({
 
         <div className="field" style={{ marginTop: 10 }}>
           <div className="field-label">
-            <div className="field-name">send credentials</div>
+            <div className="field-label-text">Send credentials</div>
           </div>
           <select
             value={draft.clientAuth}

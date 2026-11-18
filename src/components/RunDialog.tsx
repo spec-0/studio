@@ -111,7 +111,7 @@ export function RunDialog({
       <section className="section">
         <div className="field">
           <div className="field-label">
-            <div className="field-name">scope</div>
+            <div className="field-label-text">Operations</div>
           </div>
           <select value={scope} onChange={(e) => setScope(e.target.value)} disabled={running}>
             <option value="__all__">Every operation ({operations.length})</option>
@@ -126,6 +126,8 @@ export function RunDialog({
         <label className="check">
           <input
             type="checkbox"
+            className="switch"
+            role="switch"
             checked={includeMutating}
             disabled={running || mutatingCount === 0}
             onChange={(e) => setIncludeMutating(e.target.checked)}

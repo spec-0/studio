@@ -125,7 +125,7 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
             <>
               <div className="field">
                 <div className="field-label">
-                  <div className="field-name">name</div>
+                  <div className="field-label-text">Name</div>
                 </div>
                 <input
                   value={selected.name}
@@ -162,7 +162,8 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
                       <td style={{ textAlign: "center" }}>
                         <input
                           type="checkbox"
-                          style={{ width: "auto" }}
+                          className="switch"
+                          role="switch"
                           checked={variable.secret}
                           onChange={(event) =>
                             setVariable(index, { secret: event.target.checked })

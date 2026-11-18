@@ -159,7 +159,7 @@ export function AgentChatSettings() {
                 <div className="agent-edit">
                   <div className="field">
                     <div className="field-label">
-                      <div className="field-name">program</div>
+                      <div className="field-label-text">Program</div>
                       <div className="field-meta">full path</div>
                     </div>
                     <input
@@ -173,7 +173,7 @@ export function AgentChatSettings() {
                   </div>
                   <div className="field">
                     <div className="field-label">
-                      <div className="field-name">arguments</div>
+                      <div className="field-label-text">Arguments</div>
                     </div>
                     <input
                       value={args}
@@ -233,6 +233,8 @@ export function AgentChatSettings() {
         <label className="check">
           <input
             type="checkbox"
+            className="switch"
+            role="switch"
             checked={prefs.studioTools}
             onChange={(event) => void settings.setPrefs({ studioTools: event.target.checked })}
           />
@@ -251,6 +253,8 @@ export function AgentChatSettings() {
         <label className="check">
           <input
             type="checkbox"
+            className="switch"
+            role="switch"
             checked={prefs.instructions}
             onChange={(event) => void settings.setPrefs({ instructions: event.target.checked })}
           />

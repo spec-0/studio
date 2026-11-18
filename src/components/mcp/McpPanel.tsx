@@ -149,6 +149,8 @@ export function McpPanel({ signedIn }: Props) {
       <label className="check">
         <input
           type="checkbox"
+          className="switch"
+          role="switch"
           checked={prefs.startOnLaunch}
           onChange={(event) => void mcp.setStartOnLaunch(event.target.checked)}
         />
