@@ -539,8 +539,7 @@ pre.code {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--t-small);
   color: hsl(var(--warning));
   padding-left: 2px;
 }
@@ -1879,8 +1878,8 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 
 /* The open API: which one, its four views, its actions. */
 .apibar {
-  height: 40px;
-  flex: 0 0 40px;
+  height: 44px;
+  flex: 0 0 44px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1890,10 +1889,8 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   min-width: 0;
 }
 .apibar .api-switch { min-width: 0; max-width: 260px; }
-.apibar .btn { padding: 4px 10px; }
 .apibar > .tag { flex: none; }
 
-/* A segmented control: neutral, so the one accent in this bar stays on Add API. */
 /*
  * Tabs come in two kinds. A segmented control (`.segmented` / `.segment`)
  * switches the view of one thing, in a header or a toolbar. Underline tabs
@@ -2203,30 +2200,14 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .modal.journey:focus { outline: none; }
 
 /* The open API's name gets a row of its own, above its views and actions. */
-.apihead { flex: none; display: flex; flex-direction: column; min-width: 0; }
-.apibar-title {
-  height: 34px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 12px 0 8px;
-  background: hsl(var(--bg));
-  min-width: 0;
+.apibar .api-switch { min-width: 0; max-width: 340px; flex: 0 1 auto; gap: 6px; }
+.apibar .spec-name { font-weight: 600; font-size: 13.5px; letter-spacing: -0.005em; }
+.apibar .api-switch .chip { margin-right: 0; flex: none; }
+.apibar .segmented { margin-left: 6px; }
+/* Under 1280px the API bar's ghost buttons keep their icon and tooltip, not their label. */
+@media (max-width: 1280px) {
+  .apibar .btn.ghost .lbl { display: none; }
 }
-.apibar-title .api-switch { min-width: 0; max-width: none; flex: 0 1 auto; }
-.apibar-title .spec-name { font-weight: 600; font-size: 13.5px; letter-spacing: -0.005em; }
-.apibar-title .spec-version {
-  flex: none;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: hsl(var(--ink-3));
-  border: 1px solid hsl(var(--border));
-  border-radius: 4px;
-  padding: 1px 5px;
-}
-.apibar-title .tag { flex: none; }
-.apibar.tools { height: 38px; flex-basis: 38px; padding-left: 12px; }
-.apibar.tools .segmented { margin-left: 0; }
 /* Anchored near the top rather than centred, so the buttons don't move under
    the pointer when a result appears above them. */
 .scrim.journey-scrim { align-items: start; padding-top: min(12vh, 96px); }
@@ -2307,18 +2288,21 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 1px 2px 1px 8px;
-  border: 1px solid hsl(var(--success) / 0.45);
-  border-radius: 999px;
-  color: hsl(var(--success));
-  font-size: 12px;
+  height: 28px;
+  padding: 0 4px 0 10px;
+  border: 1px solid hsl(var(--success) / 0.35);
+  border-radius: 6px;
+  background: hsl(var(--success) / 0.08);
+  color: hsl(var(--ink));
+  font-size: 12.5px;
+  font-weight: 500;
   white-space: nowrap;
 }
-.local-mock-live.compact { font-size: 11px; }
+.local-mock-live.compact { height: 24px; font-size: 11.5px; }
 .local-mock-label {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
   padding: 0;
   border: 0;
   background: none;
@@ -2326,8 +2310,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   font: inherit;
   cursor: copy;
 }
-.local-mock-state { color: hsl(var(--ink-2)); }
-.local-mock-state::before { content: "·"; margin-right: 5px; color: hsl(var(--ink-3)); }
+.local-mock-port { font-size: 11.5px; font-weight: 400; color: hsl(var(--ink-2)); }
 .local-mock-live .icon-btn { color: hsl(var(--ink-2)); }
 .local-mock-error {
   color: hsl(var(--danger));
@@ -2627,13 +2610,14 @@ table.fields .json-value { color: inherit; text-align: left; }
 
 /* Request tabs */
 
-/* The open requests, across APIs, under the API bar. */
+/* The open requests, across APIs, above the API bar. */
 .request-tabs {
   flex: none;
-  height: 32px;
+  height: 36px;
   display: flex;
   min-width: 0;
-  border-bottom: 1px solid hsl(var(--border));
+  /* An inset line rather than a border, so the active tab can cover it. */
+  box-shadow: inset 0 -1px 0 hsl(var(--border));
   background: hsl(var(--surface));
 }
 .request-tabs-strip {
@@ -2655,13 +2639,13 @@ table.fields .json-value { color: inherit; text-align: left; }
 }
 .request-tab:hover { background: hsl(var(--surface-hover)); color: hsl(var(--ink)); }
 .request-tab.active { background: hsl(var(--bg)); color: hsl(var(--ink)); }
-/* The active tab joins the editor below it. */
-.request-tab.active::after {
+/* The active tab opens into the page below it: the workspace's colour, a line on top. */
+.request-tab.active::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -1px;
+  top: 0;
   height: 2px;
   background: hsl(var(--primary));
 }
@@ -2671,10 +2655,13 @@ table.fields .json-value { color: inherit; text-align: left; }
   gap: 6px;
   min-width: 0;
   height: 100%;
-  padding: 0 4px 0 10px;
+  padding: 0 4px 0 12px;
   font-size: 12px;
   color: inherit;
 }
+.request-tab { max-width: 236px; }
+.request-tabs-new { flex: none; width: 36px; display: grid; place-items: center; color: hsl(var(--ink-3)); }
+.request-tabs-new:hover { color: hsl(var(--ink)); background: hsl(var(--surface-hover)); }
 .request-tab-open .method { flex: none; text-align: left; }
 .request-tab-path {
   min-width: 0;
@@ -3779,3 +3766,237 @@ input[type="checkbox"] { accent-color: hsl(var(--primary)); }
 .settings-elsewhere .label { padding: 0 10px 4px; color: hsl(var(--ink-3)); }
 .settings-elsewhere .settings-tab { display: flex; align-items: center; gap: 6px; }
 .field-label-text { font-size: 12.5px; font-weight: 500; color: hsl(var(--ink)); }
+
+/* The address: one box with the method, the target and the path. A known
+   target shows its name (and a local mock's port); its address is in the
+   tooltip and the menu, so it isn't said three times. */
+.addr {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 7px;
+  background: hsl(var(--panel));
+  overflow: hidden;
+}
+.addr:focus-within { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18); }
+.addr .addr-method {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid hsl(var(--border));
+  border-radius: 0;
+  font-size: 11.5px;
+}
+.addr-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  max-width: 260px;
+  padding: 0 8px 0 10px;
+  border-right: 1px solid hsl(var(--border));
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.addr-target:hover { background: hsl(var(--surface-hover)); }
+.addr-target > svg { color: hsl(var(--ink-3)); flex: none; }
+.addr-target-name { overflow: hidden; text-overflow: ellipsis; }
+.target-port { font-size: 11.5px; color: hsl(var(--ink-3)); font-weight: 400; }
+.addr .url-field { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.addr .url-field:focus-within { box-shadow: none; }
+.addr .url-field.known .url-path { padding-left: 10px; max-width: none; color: hsl(var(--ink)); }
+.addr .url-field .url-path { flex: 1; min-width: 0; }
+.addr .url-field input + datalist + .url-path { flex: 0 1 auto; }
+.path-param { color: hsl(var(--primary)); }
+.dark .path-param { color: hsl(var(--syn-key)); }
+.dot.env { background: hsl(var(--primary)); }
+
+/* The target menu: each target with its address underneath. */
+.target-item { display: flex; align-items: center; gap: 8px; min-width: 260px; }
+.target-item-check { width: 13px; flex: none; color: hsl(var(--primary)); display: inline-grid; }
+.target-item-text { display: grid; gap: 1px; min-width: 0; }
+.target-item-url { font-size: 11px; color: hsl(var(--ink-3)); }
+/* A typed URL: the path follows the text (the input is sized in ch, see UrlBar). */
+.addr .url-field input { flex: 0 1 auto; min-width: 60px; max-width: 72%; padding-right: 0; }
+.addr .url-field input + datalist + .url-path { padding-left: 0; }
+.dot.none { visibility: hidden; }
+.addr-target > .dot.none { display: none; }
+
+/* Code: dark in both themes, from the --code-* and --syn-* tokens. */
+.code-block {
+  border: 1px solid hsl(var(--code-border));
+  border-radius: var(--radius);
+  background: hsl(var(--code-bg));
+  color: hsl(var(--code-ink));
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-size: 12px;
+  line-height: 20px;
+  padding: 8px 0;
+  overflow: auto;
+  user-select: text;
+}
+.code-line { display: grid; grid-template-columns: 44px minmax(0, 1fr); }
+.code-num {
+  padding-right: 12px;
+  text-align: right;
+  color: hsl(var(--code-faint));
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.code-text { padding: 0 14px 0 2px; white-space: pre; }
+.code-block.wrap .code-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.code-block:not(.wrap) .code-line { width: max-content; min-width: 100%; }
+.syn-key { color: hsl(var(--syn-key)); }
+.syn-string { color: hsl(var(--syn-str)); }
+.syn-number { color: hsl(var(--syn-num)); }
+.syn-literal { color: hsl(var(--syn-lit)); }
+.syn-punct, .syn-comment { color: hsl(var(--code-faint)); }
+.syn-comment { font-style: italic; }
+.syn-anchor { color: hsl(var(--syn-key)); }
+
+/* The response header: status, time, size, where it came from, and the verdict in one line. */
+.res-head { min-height: 44px; gap: 10px; }
+.res-head .metric { font-size: 12px; color: hsl(var(--ink-3)); white-space: nowrap; }
+.res-head .res-target { margin-right: 0; }
+.res-head .spacer { flex: 1; min-width: 4px; }
+.verdict-line { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; white-space: nowrap; min-width: 0; }
+.verdict-line.ok { color: hsl(var(--success)); }
+.verdict-line.bad { color: hsl(var(--danger)); }
+.verdict-line.none { color: hsl(var(--ink-3)); font-weight: 400; }
+.verdict-schema {
+  font-size: 11.5px;
+  color: hsl(var(--ink-2));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--border-strong));
+  text-underline-offset: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+button.verdict-schema:hover { color: hsl(var(--ink)); text-decoration-color: currentColor; }
+.findings { margin-bottom: 4px; }
+
+/* The body editor: a transparent text area over its highlighted copy. */
+.code-editor {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  border: 1px solid hsl(var(--code-border));
+  border-radius: var(--radius);
+  background: hsl(var(--code-bg));
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-size: 12px;
+  line-height: 20px;
+}
+.code-editor:focus-within { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18); }
+.code-editor-gutter {
+  overflow: hidden;
+  padding: 8px 12px 8px 0;
+  text-align: right;
+  color: hsl(var(--code-faint));
+  background: hsl(var(--code-gutter));
+  border-right: 1px solid hsl(var(--code-border));
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.code-editor-main { position: relative; min-width: 0; }
+.code-editor-back, .code-editor-input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 8px 12px;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+.code-editor-back { color: hsl(var(--code-ink)); pointer-events: none; scrollbar-width: none; }
+.code-editor-back::-webkit-scrollbar { display: none; }
+.code-editor-back > div { min-height: 20px; }
+textarea.code-editor-input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: hsl(var(--code-ink));
+  resize: none;
+  box-shadow: none;
+  min-height: 0;
+}
+textarea.code-editor-input:focus { border: 0; }
+textarea.code-editor-input::selection { background: hsl(var(--primary) / 0.35); color: transparent; }
+
+/* The request editor: a header, then its sections as tabs. */
+.op-head { border-bottom: 0; padding: 12px 16px 4px; }
+.op-summary-text { font-size: var(--t-title); }
+.op-sub { display: flex; align-items: baseline; gap: 4px; min-width: 0; margin-top: 2px; font-size: var(--t-small); color: hsl(var(--ink-3)); white-space: nowrap; overflow: hidden; }
+.op-sub .mono { font-size: 11px; flex: none; }
+.op-sub-text { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ptabs.request-tabs-list { padding: 0 8px; }
+.ptab .req-dot { width: 5px; height: 5px; border-radius: 50%; background: hsl(var(--primary)); }
+.op-body { padding: 12px 16px 24px; }
+.tab-pane > .field:first-child { padding-top: 0; }
+.pane-toolbar { display: flex; align-items: center; gap: 6px; min-height: 28px; margin-bottom: 8px; font-size: var(--t-small); color: hsl(var(--ink-3)); white-space: nowrap; }
+.pane-toolbar .mono { font-size: 11px; }
+.pane-toolbar .spacer { flex: 1; }
+.required-word { margin-left: 6px; font-family: var(--font-sans); font-size: var(--t-micro); font-weight: 500; color: hsl(var(--warning)); }
+.field.derived input { color: hsl(var(--ink-3)); }
+.type-cell { color: hsl(var(--primary)); white-space: nowrap; }
+.dark .type-cell { color: hsl(var(--syn-key)); }
+
+/* A disclosure row: the body's schema under the editor. */
+.disc { margin-top: 10px; border: 1px solid hsl(var(--border)); border-radius: var(--radius); overflow: hidden; }
+.disc-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 10px; text-align: left; font-weight: 500; color: hsl(var(--ink-2)); }
+.disc-head:hover { background: hsl(var(--surface-hover)); }
+.disc-head .mono { font-size: 12px; color: hsl(var(--ink)); }
+.disc-chev { transition: transform var(--fast); color: hsl(var(--ink-3)); }
+.disc-chev.open { transform: rotate(90deg); }
+.disc .tbl.disc-body { border: 0; border-top: 1px solid hsl(var(--border)); border-radius: 0; }
+
+/* A filter field with its key. */
+.filter-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px 0 9px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  background: hsl(var(--bg));
+  color: hsl(var(--ink-3));
+}
+:root:not(.dark) .filter-field { background: hsl(var(--panel)); }
+.filter-field:focus-within { border-color: hsl(var(--primary)); }
+.filter-field input { flex: 1; min-width: 0; border: 0; padding: 0; background: none; box-shadow: none; }
+.sidebar .search { padding: 0 10px 8px; border-bottom: 0; }
+
+/* The operation list: groups that collapse, and a method column every path starts after. */
+.sidebar .list { padding: 0 6px 12px; }
+.sidebar .list-group { padding: 10px 6px 4px; border-radius: 6px; }
+.sidebar .list-group:hover { color: hsl(var(--ink)); }
+.group-chev { color: hsl(var(--ink-3)); transition: transform var(--fast); }
+.group-chev.shut { transform: rotate(-90deg); }
+.sidebar .row { padding: 5px 8px; border-radius: 6px; }
+.sidebar .row .method { flex: 0 0 36px; text-align: left; font-size: var(--t-micro); font-weight: 600; }
+
+/* Send and its menu: one button in two parts. */
+.send-split { display: inline-flex; flex: none; }
+.send-split .btn.send { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.send-split .btn.send-more {
+  padding: 0 7px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid hsl(0 0% 100% / 0.22);
+}
+.send-split .btn.send:only-child { border-radius: 6px; }
+.send-split .btn { min-height: 32px; }

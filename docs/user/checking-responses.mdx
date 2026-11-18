@@ -10,16 +10,19 @@ the results, and how to run a whole tag or spec against a server in one go.
 ## The check on each response
 
 When a response comes back, Studio looks up the schema the spec declares for the status code you
-actually got, and compares the body with it. The status code is matched the way OpenAPI describes:
+actually got, and compares the body with it. The result is one line at the right of the response's
+header, next to the status, time, size and where the answer came from: **Matches Order**, or
+**2 differences from Order**, with the differences listed under it. The schema's name opens it in
+the Schemas view. The status code is matched the way OpenAPI describes:
 the exact code first (`404`), then its range (`4XX`), then `default`.
 
 | Result | What it means |
 |---|---|
-| **Matches the declared schema** | The body fits what the spec promises. |
+| **Matches** the schema | The body fits what the spec promises. |
 | **Extra fields** | The body has a field the spec never mentions. This is drift. |
 | **Missing required fields** | The body leaves out a field the schema marks as required. |
 | **Type mismatches** | A field is there, but has the wrong type. |
-| **No schema declared** | The spec doesn't describe this response, so there's nothing to check against. |
+| **Not checked** | The spec doesn't describe this response, so there's nothing to check against. |
 
 Each finding points at the exact JSON path, such as `items[0].sku`.
 

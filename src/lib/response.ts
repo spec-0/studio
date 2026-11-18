@@ -88,3 +88,19 @@ export function suggestedFileName(contentDisposition: string, contentType: strin
   const named = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(contentDisposition)?.[1];
   return named ?? `response${extensionFor(contentType)}`;
 }
+
+/**
+ * The name of the schema a response is checked against, for saying "Matches
+ * Order": the `$ref` it points at, or `Order[]` for an array of them. Null when
+ * the schema is written inline or there is none.
+ */
+export function declaredSchemaName(schema: unknown): string | null {
+  if (!schema || typeof schema !== "object") return null;
+  const node = schema as { $ref?: unknown; type?: unknown; items?: unknown };
+  if (typeof node.$ref === "string") return node.$ref.split("/").pop() || null;
+  if (node.type === "array") {
+    const item = declaredSchemaName(node.items);
+    return item ? `${item}[]` : null;
+  }
+  return null;
+}

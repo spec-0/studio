@@ -67,3 +67,13 @@ export function isConsoleShortcut(press: KeyPress, { mac }: { mac: boolean }): b
 export function consoleShortcutLabel(mac: boolean): string {
   return mac ? "⇧⌘Y" : "Ctrl+Shift+Y";
 }
+
+/** ⇧⌘C / Ctrl+Shift+C: copy the request on screen as a cURL command. */
+export function isCopyCurlShortcut(event: { key: string; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }, { mac }: { mac: boolean }): boolean {
+  const modifier = mac ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+  return modifier && event.shiftKey && !event.altKey && event.key.toLowerCase() === "c";
+}
+
+export function copyCurlShortcutLabel(mac: boolean): string {
+  return mac ? "⇧⌘C" : "Ctrl+Shift+C";
+}

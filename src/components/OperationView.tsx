@@ -14,6 +14,9 @@ import type { LinkTarget } from "../lib/chainLinks";
 import { plural } from "../lib/plural";
 import { Description } from "./Description";
 import { descriptionText } from "../lib/markdown";
+import { AlignLeft, ChevronRight, Plus, RotateCcw, X } from "lucide-react";
+import { CodeEditor } from "./CodeEditor";
+import { TabList } from "./TabList";
 
 interface Props {
   spec: ParsedSpec;
@@ -177,6 +180,107 @@ export function OperationView({
   const bag = (where: "path" | "query" | "header") =>
     where === "path" ? pathParams : where === "query" ? queryParams : headerParams;
 
+  // Which section is on screen. Opening an operation goes to the first one
+  // that needs input; after that, the choice is remembered for the session.
+  const tabKey = `${spec.title}|${op.id}`;
+  const firstTab = (): RequestTab =>
+    op.parameters.some((p) => p.in === "path" && p.required)
+      ? "params"
+      : op.requestBody
+        ? "body"
+        : "params";
+  const [tab, setTabState] = useState<RequestTab>(() => chosenTabs.get(tabKey) ?? firstTab());
+  useEffect(() => setTabState(chosenTabs.get(tabKey) ?? firstTab()), [tabKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setTab = (next: RequestTab) => {
+    chosenTabs.set(tabKey, next);
+    setTabState(next);
+  };
+
+  const paramCount = grouped.path.length + grouped.query.length;
+  const headerCount = grouped.header.length + custom.filter((row) => row.key.trim()).length;
+  const authLabel = auth?.schemeName
+    ? auth.type === "oauth2"
+      ? "OAuth 2"
+      : auth.httpScheme === "basic"
+        ? "basic"
+        : auth.type === "apiKey"
+          ? "key"
+          : "bearer"
+    : "none";
+  const summaryLine = op.description ? descriptionText(op.description).split(/(?<=[.!?])\s/)[0] : "";
+  const exampleBody = () => seedEditor(spec, op, null, editableExtraHeaders).body;
+
+  const tabs: Array<{ id: RequestTab; label: ReactNode }> = [
+    ...(op.requestBody
+      ? [
+          {
+            id: "body" as const,
+            label: (
+              <>
+                Body{op.requestBody.required && <span className="req-dot" aria-label="required" />}
+              </>
+            ),
+          },
+        ]
+      : []),
+    { id: "params", label: <>Params <span className="c">{paramCount}</span></> },
+    { id: "headers", label: <>Headers <span className="c">{headerCount}</span></> },
+    { id: "auth", label: <>Auth <span className="c">{authLabel}</span></> },
+    { id: "docs", label: "Docs" },
+  ];
+  const shown = tab === "body" && !op.requestBody ? "params" : tab;
+
+  const paramRows = (where: "path" | "query" | "header") =>
+    grouped[where].map((p) => {
+      const resolved = deref(spec.doc, p.schema);
+      const enumValues: unknown[] | undefined = resolved.enum;
+      return (
+        <div className="field" key={`${where}:${p.name}`}>
+          <div className="field-label">
+            <div className="field-name">
+              {p.name}
+              {p.required && <span className="required-word">required</span>}
+            </div>
+            <div className="field-meta">
+              {where === "path" ? "path" : where === "query" ? "query" : "header"} · {typeLabel(spec.doc, p.schema)}
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {slot({ in: where, name: p.name }, bag(where)[p.name] ?? "", enumValues ? (
+              <select
+                value={bag(where)[p.name] ?? ""}
+                onChange={(e) => setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))}
+              >
+                <option value="">–</option>
+                {enumValues.map((value) => (
+                  <option key={String(value)} value={String(value)}>
+                    {String(value)}
+                  </option>
+                ))}
+              </select>
+            ) : resolved.type === "boolean" ? (
+              <select
+                value={bag(where)[p.name] ?? ""}
+                onChange={(e) => setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))}
+              >
+                <option value="">–</option>
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+            ) : (
+              <input
+                type={mode === "request" && (resolved.type === "integer" || resolved.type === "number") ? "number" : "text"}
+                value={bag(where)[p.name] ?? ""}
+                placeholder={p.description ? descriptionText(p.description) : ""}
+                onChange={(e) => setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))}
+              />
+            ))}
+            {p.description && <Description text={p.description} className="field-meta" />}
+          </div>
+        </div>
+      );
+    });
+
   return (
     <>
       {/* Method and path live in the address bar above. This header carries the
@@ -184,18 +288,14 @@ export function OperationView({
       <div className="op-head">
         <div className="op-title">
           <span className="op-summary-text">{op.summary ?? op.operationId ?? "Operation"}</span>
-          {op.deprecated && (
-            <span className="tag" style={{ color: "hsl(var(--danger))" }}>
-              deprecated
-            </span>
-          )}
+          {op.deprecated && <span className="chip sans bad">Deprecated</span>}
           {unsent && (
             <span className="unsent-note">
               <span className="dirty-dot" aria-hidden="true" />
               Unsent changes
               <button
                 type="button"
-                className="btn ghost"
+                className="btn ghost sm"
                 onClick={unsent.onDiscard}
                 title="Go back to the values the spec suggests"
               >
@@ -204,110 +304,75 @@ export function OperationView({
             </span>
           )}
         </div>
-        {op.operationId && <div className="meta mono">{op.operationId}</div>}
-      </div>
-
-      <div className="op-body">
-        {op.description && (
-          <div className="section">
-            <h3>Description</h3>
-            <Description text={op.description} className="op-description" />
+        {(op.operationId || summaryLine) && (
+          <div className="op-sub">
+            {op.operationId && <span className="mono">{op.operationId}</span>}
+            {op.operationId && summaryLine && <span aria-hidden> · </span>}
+            {summaryLine && <span className="op-sub-text">{summaryLine}</span>}
           </div>
         )}
+      </div>
 
-        {(["path", "query", "header"] as const).map((where) =>
-          grouped[where].length ? (
-            <div className="section" key={where}>
-              <h3>{where} parameters</h3>
-              {grouped[where].map((p) => {
-                const resolved = deref(spec.doc, p.schema);
-                const enumValues: unknown[] | undefined = resolved.enum;
-                return (
-                  <div className="field" key={`${where}:${p.name}`}>
-                    <div className="field-label">
-                      <div className="field-name">
-                        {p.name}
-                        {p.required && <span className="required">*</span>}
-                      </div>
-                      <div className="field-meta">{typeLabel(spec.doc, p.schema)}</div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {slot({ in: where, name: p.name }, bag(where)[p.name] ?? "", enumValues ? (
-                        <select
-                          value={bag(where)[p.name] ?? ""}
-                          onChange={(e) =>
-                            setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))
-                          }
-                        >
-                          <option value="">–</option>
-                          {enumValues.map((value) => (
-                            <option key={String(value)} value={String(value)}>
-                              {String(value)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : resolved.type === "boolean" ? (
-                        <select
-                          value={bag(where)[p.name] ?? ""}
-                          onChange={(e) =>
-                            setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))
-                          }
-                        >
-                          <option value="">–</option>
-                          <option value="true">true</option>
-                          <option value="false">false</option>
-                        </select>
-                      ) : (
-                        <input
-                          type={
-                            mode === "request" &&
-                            (resolved.type === "integer" || resolved.type === "number")
-                              ? "number"
-                              : "text"
-                          }
-                          value={bag(where)[p.name] ?? ""}
-                          placeholder={p.description ? descriptionText(p.description) : ""}
-                          onChange={(e) =>
-                            setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))
-                          }
-                        />
-                      ))}
-                      {p.description && <Description text={p.description} className="field-meta" />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null,
-        )}
+      <TabList<RequestTab>
+        className="ptabs request-tabs-list"
+        tabClassName="ptab"
+        label="Request"
+        tabs={tabs}
+        selected={shown}
+        onSelect={setTab}
+      />
 
-        {op.requestBody && (
-          <div className="section">
-            <h3>
-              Request body
-              <span className="meta" style={{ marginLeft: 8, textTransform: "none" }}>
-                {op.requestBody.contentType}
-                {op.requestBody.required ? " · required" : ""}
-              </span>
-            </h3>
+      <div className="op-body">
+        {shown === "body" && op.requestBody && (
+          <div className="tab-pane">
             {bodyMode === "text" ? (
               <>
-                <textarea
-                  className="editor"
-                  value={body}
-                  spellCheck={false}
-                  onChange={(e) => setBody(e.target.value)}
-                />
-                <div className="field-meta" style={{ marginTop: 4 }}>
-                  {bodyError ? (
-                    <span style={{ color: "hsl(var(--danger))" }}>Invalid JSON: {bodyError}</span>
-                  ) : (
-                    <>Pre-filled from <code>{typeLabel(spec.doc, op.requestBody.schema)}</code>.</>
+                <div className="pane-toolbar">
+                  <span className="mono">{op.requestBody.contentType}</span>
+                  {op.requestBody.required && <span>· required</span>}
+                  {typeLabel(spec.doc, op.requestBody.schema) && (
+                    <span>
+                      · from <span className="mono">{typeLabel(spec.doc, op.requestBody.schema)}</span> example
+                    </span>
                   )}
+                  <span className="spacer" />
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    disabled={Boolean(bodyError) || !body.trim()}
+                    title={bodyError ? "Fix the JSON first" : "Indent the JSON"}
+                    onClick={() => {
+                      try {
+                        setBody(JSON.stringify(JSON.parse(body), null, 2));
+                      } catch {
+                        /* not JSON: nothing to format */
+                      }
+                    }}
+                  >
+                    <AlignLeft size={13} /> Format
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    title="Replace the body with the spec's example"
+                    onClick={() => setBody(exampleBody())}
+                  >
+                    <RotateCcw size={13} /> Reset to example
+                  </button>
                 </div>
+                <CodeEditor value={body} onChange={setBody} label="Request body" />
+                {bodyError && (
+                  <div className="field-meta" style={{ marginTop: 6, color: "hsl(var(--danger))" }}>
+                    Invalid JSON: {bodyError}
+                  </div>
+                )}
               </>
             ) : bodyMode === "form" ? (
               <>
+                <div className="pane-toolbar">
+                  <span className="mono">application/x-www-form-urlencoded</span>
+                  <span>· repeated keys are kept</span>
+                </div>
                 {formFields.map((row, index) => (
                   <div className="field" key={index}>
                     <div className="field-label">
@@ -315,9 +380,7 @@ export function OperationView({
                         value={row.key}
                         placeholder="field"
                         onChange={(e) =>
-                          setFormFields((prev) =>
-                            prev.map((r, i) => (i === index ? { ...r, key: e.target.value } : r)),
-                          )
+                          setFormFields((prev) => prev.map((r, i) => (i === index ? { ...r, key: e.target.value } : r)))
                         }
                       />
                     </div>
@@ -334,12 +397,12 @@ export function OperationView({
                         />
                       ))}
                       <button
-                        className="btn"
-                        style={{ padding: "2px 8px" }}
+                        className="icon-btn"
                         aria-label="Remove field"
+                        title="Remove field"
                         onClick={() => setFormFields((prev) => prev.filter((_, i) => i !== index))}
                       >
-                        ×
+                        <X size={13} />
                       </button>
                     </div>
                   </div>
@@ -349,14 +412,15 @@ export function OperationView({
                   style={{ marginTop: formFields.length ? 8 : 0 }}
                   onClick={() => setFormFields((prev) => [...prev, { key: "", value: "" }])}
                 >
-                  + Add field
+                  <Plus size={13} /> Add field
                 </button>
-                <div className="field-meta" style={{ marginTop: 6 }}>
-                  Encoded as <code>application/x-www-form-urlencoded</code>. Repeated keys are kept.
-                </div>
               </>
             ) : (
               <>
+                <div className="pane-toolbar">
+                  <span className="mono">multipart/form-data</span>
+                  <span>· files are read from disk when it's sent</span>
+                </div>
                 {parts.map((part, index) => (
                   <div className="field" key={index}>
                     <div className="field-label">
@@ -364,9 +428,7 @@ export function OperationView({
                         value={part.name}
                         placeholder="part"
                         onChange={(e) =>
-                          setParts((prev) =>
-                            prev.map((p, i) => (i === index ? { ...p, name: e.target.value } : p)),
-                          )
+                          setParts((prev) => prev.map((p, i) => (i === index ? { ...p, name: e.target.value } : p)))
                         }
                       />
                     </div>
@@ -380,9 +442,7 @@ export function OperationView({
                           value={part.value ?? ""}
                           placeholder="value ({{vars}} work here)"
                           onChange={(e) =>
-                            setParts((prev) =>
-                              prev.map((p, i) => (i === index ? { ...p, value: e.target.value } : p)),
-                            )
+                            setParts((prev) => prev.map((p, i) => (i === index ? { ...p, value: e.target.value } : p)))
                           }
                         />
                       )}
@@ -394,9 +454,7 @@ export function OperationView({
                           if (!picked) return;
                           setParts((prev) =>
                             prev.map((p, i) =>
-                              i === index
-                                ? { ...p, path: picked.path, fileName: picked.name, value: undefined }
-                                : p,
+                              i === index ? { ...p, path: picked.path, fileName: picked.name, value: undefined } : p,
                             ),
                           );
                         }}
@@ -405,18 +463,16 @@ export function OperationView({
                       </button>
                       {part.path && (
                         <button
-                          className="btn"
-                          style={{ padding: "2px 8px" }}
+                          className="icon-btn"
+                          aria-label="Send as a text part instead"
                           title="Send as a text part instead"
                           onClick={() =>
                             setParts((prev) =>
-                              prev.map((p, i) =>
-                                i === index ? { ...p, path: undefined, fileName: undefined, value: "" } : p,
-                              ),
+                              prev.map((p, i) => (i === index ? { ...p, path: undefined, fileName: undefined, value: "" } : p)),
                             )
                           }
                         >
-                          ×
+                          <X size={13} />
                         </button>
                       )}
                     </div>
@@ -427,12 +483,8 @@ export function OperationView({
                   style={{ marginTop: parts.length ? 8 : 0 }}
                   onClick={() => setParts((prev) => [...prev, { name: "", value: "" }])}
                 >
-                  + Add part
+                  <Plus size={13} /> Add part
                 </button>
-                <div className="field-meta" style={{ marginTop: 6 }}>
-                  Sent as <code>multipart/form-data</code>. The boundary is generated at send time,
-                  and files are read from disk rather than held in memory.
-                </div>
               </>
             )}
             {bodyExtra}
@@ -440,184 +492,218 @@ export function OperationView({
           </div>
         )}
 
-        {/* Auth is always here, not just when the spec declares securitySchemes.
-            A mock, a staging box behind a shared header, or a spec that simply
-            omits security all need credentials the document never mentions. */}
-        <div className="section">
-          <h3>Auth</h3>
-          <div className="field">
-            <div className="field-label">
-              <div className="field-name">scheme</div>
-              <div className="field-meta">
-                {op.security?.length ? op.security.join(", ") : "none declared"}
+        {shown === "params" && (
+          <div className="tab-pane">
+            {paramCount === 0 ? (
+              <p className="meta">This operation takes no path or query parameters.</p>
+            ) : (
+              <>
+                {paramRows("path")}
+                {paramRows("query")}
+              </>
+            )}
+          </div>
+        )}
+
+        {shown === "headers" && (
+          <div className="tab-pane">
+            {paramRows("header")}
+            {op.requestBody?.contentType && bodyMode === "text" && (
+              <div className="field derived">
+                <div className="field-label">
+                  <div className="field-name">Content-Type</div>
+                  <div className="field-meta">from the body</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <input value={op.requestBody.contentType} disabled aria-label="Content-Type, set from the body" />
+                </div>
               </div>
-            </div>
-            <div style={{ flex: 1, display: "grid", gap: 6 }}>
-              <select
-                value={auth?.schemeName ?? ""}
-                onChange={(e) => {
-                  const picked = e.target.value;
-                  const declared = spec.securitySchemes.find((x) => x.name === picked);
-                  if (declared) {
-                    onAuthChange({
-                      schemeName: declared.name,
-                      value: declared.type === "oauth2" ? "" : (auth?.value ?? ""),
-                      type: declared.type,
-                      httpScheme: declared.scheme,
-                      in: declared.in,
-                      paramName: declared.paramName,
-                    });
-                    // A declared oauth2 scheme carries its own token URL and
-                    // scopes, so offer to set it up rather than leaving a text box
-                    // the user is expected to paste a token into.
-                    if (declared.type === "oauth2") onConfigureOAuth?.(declared.name);
-                  } else if (picked === "__bearer") {
-                    onAuthChange({ schemeName: picked, value: auth?.value ?? "", type: "http", httpScheme: "bearer" });
-                  } else if (picked === "__basic") {
-                    onAuthChange({ schemeName: picked, value: auth?.value ?? "", type: "http", httpScheme: "basic" });
-                  } else if (picked === "__oauth2") {
-                    // The value isn't typed here. It's the acquired access
-                    // token, filled in at send time from the token cache.
-                    onAuthChange({ schemeName: picked, value: "", type: "oauth2" });
-                    onConfigureOAuth?.();
-                  } else if (picked === "__header") {
-                    onAuthChange({
-                      schemeName: picked,
-                      value: auth?.value ?? "",
-                      type: "apiKey",
-                      in: "header",
-                      paramName: auth?.paramName || "X-API-Key",
-                    });
-                  } else {
-                    onAuthChange({ schemeName: null, value: "" });
-                  }
-                }}
-              >
-                <option value="">None</option>
-                {spec.securitySchemes.map((x) => (
-                  <option key={x.name} value={x.name}>
-                    {x.name} ({x.type}
-                    {x.scheme ? ` · ${x.scheme}` : ""}
-                    {x.in ? ` · ${x.in}` : ""})
-                  </option>
-                ))}
-                <option value="__bearer">Bearer token</option>
-                <option value="__basic">Basic (user:password)</option>
-                <option value="__header">API key header</option>
-                <option value="__oauth2">OAuth 2.0 (Studio gets the token)</option>
-              </select>
-
-              {auth?.schemeName === "__header" && (
-                <input
-                  value={auth.paramName ?? ""}
-                  placeholder="Header name, e.g. X-API-Key"
-                  onChange={(e) => onAuthChange({ ...auth, paramName: e.target.value })}
-                />
-              )}
-
-              {auth?.type === "oauth2" && (
-                <div className="oauth-status">
-                  <span className={oauthStatus?.ok ? "ok-ink" : "meta"}>
-                    {oauthStatus?.label ?? "Not configured"}
-                  </span>
-                  <span className="spacer" />
-                  <button className="btn" onClick={() => onConfigureOAuth?.()}>
-                    {oauthStatus?.ok ? "Manage" : "Set up"}
+            )}
+            {custom.map((row, index) => (
+              <div className="field" key={index}>
+                <div className="field-label">
+                  <input
+                    value={row.key}
+                    placeholder="Header"
+                    onChange={(e) =>
+                      setCustom((prev) => prev.map((r, i) => (i === index ? { ...r, key: e.target.value } : r)))
+                    }
+                  />
+                </div>
+                <div style={{ flex: 1, display: "flex", gap: 6, minWidth: 0 }}>
+                  {slot({ in: "header", name: row.key.trim() }, row.value, (
+                    <input
+                      value={row.value}
+                      placeholder="Value ({{vars}} work here)"
+                      onChange={(e) =>
+                        setCustom((prev) => prev.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)))
+                      }
+                    />
+                  ))}
+                  <button
+                    className="icon-btn"
+                    aria-label="Remove header"
+                    title="Remove header"
+                    onClick={() => setCustom((prev) => prev.filter((_, i) => i !== index))}
+                  >
+                    <X size={13} />
                   </button>
                 </div>
-              )}
-
-              {auth?.schemeName && auth.type !== "oauth2" && (
-                <>
-                  <input
-                    type="password"
-                    value={auth.value}
-                    placeholder={
-                      auth.httpScheme === "basic"
-                        ? "user:password"
-                        : auth.type === "apiKey"
-                          ? `value for ${auth.paramName ?? "the key"}`
-                          : "token, or {{token}} from an environment"
-                    }
-                    onChange={(e) => onAuthChange({ ...auth, value: e.target.value })}
-                  />
-                  <div className="field-meta">
-                    Not stored with the API. Put it in an environment as a secret variable and
-                    reference it here as <code>{"{{token}}"}</code>.
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="section">
-          <h3>
-            Headers
-            {custom.length > 0 && <span className="meta"> · {custom.length} custom</span>}
-          </h3>
-          {custom.map((row, index) => (
-            <div className="field" key={index}>
-              <div className="field-label">
-                <input
-                  value={row.key}
-                  placeholder="Header"
-                  onChange={(e) =>
-                    setCustom((prev) =>
-                      prev.map((r, i) => (i === index ? { ...r, key: e.target.value } : r)),
-                    )
-                  }
-                />
               </div>
-              <div style={{ flex: 1, display: "flex", gap: 6, minWidth: 0 }}>
-                {slot({ in: "header", name: row.key.trim() }, row.value, (
-                  <input
-                    value={row.value}
-                    placeholder="Value ({{vars}} work here)"
-                    onChange={(e) =>
-                      setCustom((prev) =>
-                        prev.map((r, i) => (i === index ? { ...r, value: e.target.value } : r)),
-                      )
-                    }
-                  />
-                ))}
-                <button
-                  className="btn"
-                  style={{ padding: "2px 8px" }}
-                  onClick={() => setCustom((prev) => prev.filter((_, i) => i !== index))}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
-          <button
-            className="btn"
-            style={{ marginTop: custom.length ? 8 : 0 }}
-            onClick={() => setCustom((prev) => [...prev, { key: "", value: "" }])}
-          >
-            + Add header
-          </button>
-        </div>
-
-        <div className="section">
-          <h3>Responses declared</h3>
-          <div>
-            {op.responses.map((r) => (
-              <span className="chip" key={r.status}>
-                {r.status}
-                {r.schema ? ` · ${typeLabel(spec.doc, r.schema)}` : " · no schema"}
-              </span>
             ))}
+            <button
+              className="btn"
+              style={{ marginTop: 8 }}
+              onClick={() => setCustom((prev) => [...prev, { key: "", value: "" }])}
+            >
+              <Plus size={13} /> Add header
+            </button>
+            <p className="meta" style={{ marginTop: 10 }}>
+              Secrets go in an environment, as <span className="mono">{"{{name}}"}</span>, not here.
+            </p>
           </div>
-        </div>
+        )}
+
+        {shown === "auth" && (
+          <div className="tab-pane">
+            {/* Auth is always here, not just when the spec declares securitySchemes.
+                A mock, a staging box behind a shared header, or a spec that simply
+                omits security all need credentials the document never mentions. */}
+            <div className="field">
+              <div className="field-label">
+                <div className="field-label-text">Scheme</div>
+                <div className="field-meta">
+                  {op.security?.length ? `the spec asks for ${op.security.join(", ")}` : "none declared"}
+                </div>
+              </div>
+              <div style={{ flex: 1, display: "grid", gap: 6, maxWidth: 420 }}>
+                <select
+                  value={auth?.schemeName ?? ""}
+                  onChange={(e) => {
+                    const picked = e.target.value;
+                    const declared = spec.securitySchemes.find((x) => x.name === picked);
+                    if (declared) {
+                      onAuthChange({
+                        schemeName: declared.name,
+                        value: declared.type === "oauth2" ? "" : (auth?.value ?? ""),
+                        type: declared.type,
+                        httpScheme: declared.scheme,
+                        in: declared.in,
+                        paramName: declared.paramName,
+                      });
+                      // A declared oauth2 scheme carries its own token URL and
+                      // scopes, so offer to set it up rather than leaving a text box
+                      // the user is expected to paste a token into.
+                      if (declared.type === "oauth2") onConfigureOAuth?.(declared.name);
+                    } else if (picked === "__bearer") {
+                      onAuthChange({ schemeName: picked, value: auth?.value ?? "", type: "http", httpScheme: "bearer" });
+                    } else if (picked === "__basic") {
+                      onAuthChange({ schemeName: picked, value: auth?.value ?? "", type: "http", httpScheme: "basic" });
+                    } else if (picked === "__oauth2") {
+                      // The value isn't typed here. It's the acquired access
+                      // token, filled in at send time from the token cache.
+                      onAuthChange({ schemeName: picked, value: "", type: "oauth2" });
+                      onConfigureOAuth?.();
+                    } else if (picked === "__header") {
+                      onAuthChange({
+                        schemeName: picked,
+                        value: auth?.value ?? "",
+                        type: "apiKey",
+                        in: "header",
+                        paramName: auth?.paramName || "X-API-Key",
+                      });
+                    } else {
+                      onAuthChange({ schemeName: null, value: "" });
+                    }
+                  }}
+                >
+                  <option value="">None</option>
+                  {spec.securitySchemes.map((x) => (
+                    <option key={x.name} value={x.name}>
+                      {x.name} ({x.type}
+                      {x.scheme ? ` · ${x.scheme}` : ""}
+                      {x.in ? ` · ${x.in}` : ""})
+                    </option>
+                  ))}
+                  <option value="__bearer">Bearer token</option>
+                  <option value="__basic">Basic (user:password)</option>
+                  <option value="__header">API key header</option>
+                  <option value="__oauth2">OAuth 2.0 (Studio gets the token)</option>
+                </select>
+
+                {auth?.schemeName === "__header" && (
+                  <input
+                    value={auth.paramName ?? ""}
+                    placeholder="Header name, e.g. X-API-Key"
+                    onChange={(e) => onAuthChange({ ...auth, paramName: e.target.value })}
+                  />
+                )}
+
+                {auth?.type === "oauth2" && (
+                  <div className="oauth-status">
+                    <span className={oauthStatus?.ok ? "ok-ink" : "meta"}>{oauthStatus?.label ?? "Not configured"}</span>
+                    <span className="spacer" />
+                    <button className="btn" onClick={() => onConfigureOAuth?.()}>
+                      {oauthStatus?.ok ? "Manage" : "Set up"}
+                    </button>
+                  </div>
+                )}
+
+                {auth?.schemeName && auth.type !== "oauth2" && (
+                  <>
+                    <input
+                      type="password"
+                      value={auth.value}
+                      placeholder={
+                        auth.httpScheme === "basic"
+                          ? "user:password"
+                          : auth.type === "apiKey"
+                            ? `value for ${auth.paramName ?? "the key"}`
+                            : "token, or {{token}} from an environment"
+                      }
+                      onChange={(e) => onAuthChange({ ...auth, value: e.target.value })}
+                    />
+                    <div className="field-meta">
+                      Not stored with the API. Put it in an environment as a secret variable and reference it here as{" "}
+                      <code>{"{{token}}"}</code>.
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            {!spec.securitySchemes.length && (
+              <p className="meta" style={{ marginTop: 6 }}>
+                This API declares no auth scheme. Pick one above if the server needs it anyway.
+              </p>
+            )}
+          </div>
+        )}
+
+        {shown === "docs" && (
+          <div className="tab-pane">
+            {op.description ? (
+              <Description text={op.description} className="op-description" />
+            ) : (
+              <p className="meta">The spec has no description for this operation.</p>
+            )}
+            <div className="label" style={{ marginTop: 16, marginBottom: 6 }}>
+              Responses declared
+            </div>
+            <div>
+              {op.responses.map((r) => (
+                <span className="chip" key={r.status}>
+                  {r.status}
+                  {r.schema ? ` ${typeLabel(spec.doc, r.schema)}` : " no schema"}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {missingRequired.length > 0 && (
           <div className="verdict warn" style={{ marginTop: 16 }}>
             <span className="glyph">⚠</span>
-            <span>
-              Required and still empty: {missingRequired.map((name) => `\`${name}\``).join(", ")}
-            </span>
+            <span>Required and still empty: {missingRequired.map((name) => `\`${name}\``).join(", ")}</span>
           </div>
         )}
       </div>
@@ -625,21 +711,32 @@ export function OperationView({
   );
 }
 
-/** The schema next to the editor, so you never leave the request to learn the shape. */
+type RequestTab = "body" | "params" | "headers" | "auth" | "docs";
+
+/** The section chosen for each operation, for the session. */
+const chosenTabs = new Map<string, RequestTab>();
+
+/** The schema under the editor, so you never leave the request to learn the shape. */
 function BodySchema({ doc, schema }: { doc: Json; schema: Json | undefined }) {
   const [open, setOpen] = useState(false);
   const resolved = deref(doc, schema);
   const properties = Object.entries<Json>(resolved.properties ?? {});
   if (!properties.length) return null;
   const required: string[] = resolved.required ?? [];
+  const name = typeLabel(doc, schema);
 
   return (
-    <div style={{ marginTop: 10 }}>
-      <button className="btn" onClick={() => setOpen((v) => !v)}>
-        {open ? "Hide" : "Show"} schema · {plural(properties.length, "field")}
+    <div className="disc">
+      <button type="button" className="disc-head" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <ChevronRight size={13} className={`disc-chev${open ? " open" : ""}`} aria-hidden />
+        <span className="mono">{name}</span>
+        <span className="meta">
+          · {plural(properties.length, "field")}
+          {required.length ? `, ${required.length} required` : ""}
+        </span>
       </button>
       {open && (
-        <table className="fields" style={{ marginTop: 8 }}>
+        <table className="tbl disc-body">
           <thead>
             <tr>
               <th>Field</th>
@@ -648,14 +745,14 @@ function BodySchema({ doc, schema }: { doc: Json; schema: Json | undefined }) {
             </tr>
           </thead>
           <tbody>
-            {properties.map(([name, prop]) => (
-              <tr key={name}>
-                <td className="name">
-                  {name}
-                  {required.includes(name) && <span className="required">*</span>}
+            {properties.map(([field, prop]) => (
+              <tr key={field}>
+                <td className="mono top">
+                  {field}
+                  {required.includes(field) && <span className="required-word">required</span>}
                 </td>
-                <td className="type">{typeLabel(doc, prop)}</td>
-                <td className="desc">{deref(doc, prop).description ?? ""}</td>
+                <td className="mono top type-cell">{typeLabel(doc, prop)}</td>
+                <td className="top">{deref(doc, prop).description ? <Description text={deref(doc, prop).description} /> : "—"}</td>
               </tr>
             ))}
           </tbody>

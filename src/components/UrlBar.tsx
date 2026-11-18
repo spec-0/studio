@@ -1,13 +1,13 @@
-import { useMemo, useRef } from "react";
-import { BookmarkPlus, CornerDownLeft, Loader2, Send, ShieldAlert, TriangleAlert } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BookmarkPlus, Check, ChevronDown, Loader2, Send, ShieldAlert, TriangleAlert } from "lucide-react";
 import { interpolate, unresolved } from "../lib/env";
 import type { OperationSpec } from "../lib/spec";
 import type { Target } from "../lib/targets";
+import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { isMac, shortcut } from "../lib/platform";
+import { copyCurlShortcutLabel } from "../lib/shortcuts";
 
 export type { Target };
-
-/** Sentinel for the "type your own" option; "" would be indistinguishable from unset. */
-const CUSTOM = "__custom__";
 
 interface Props {
   op: OperationSpec;
@@ -39,6 +39,10 @@ interface Props {
    * host still running 1.4.0 can fail in ways that look like the client's fault.
    */
   envSkew?: { name: string; live: string; held: string } | null;
+  /** Send's menu: the request as a cURL command (⇧⌘C). */
+  onCopyCurl?: () => Promise<boolean>;
+  /** Send's menu: add the request on screen to a collection, from where the menu is. */
+  onAddToCollection?: (position: { x: number; y: number }) => void;
 }
 
 /**
@@ -64,8 +68,19 @@ export function UrlBar({
   unverified = false,
   onOpenConnection,
   envSkew,
+  onCopyCurl,
+  onAddToCollection,
 }: Props) {
   const urlInput = useRef<HTMLInputElement>(null);
+  const picker = useRef<HTMLButtonElement>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  // "Custom URL…" was chosen: the base URL is shown for editing even when it
+  // happens to equal one of the targets.
+  const [custom, setCustom] = useState(false);
+  const sendMore = useRef<HTMLButtonElement>(null);
+  const [sendMenu, setSendMenu] = useState<{ x: number; y: number } | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => setCustom(false), [op.id]);
 
   const suggestions = useMemo(() => {
     const all = [
@@ -79,104 +94,215 @@ export function UrlBar({
 
   const resolved = interpolate(value, vars);
   const missing = unresolved(value, vars);
-  const isMock = Boolean(mockUrl && resolved.replace(/\/$/, "") === mockUrl.replace(/\/$/, ""));
-  const resolvedTarget = targets.find(
-    (t) => t.url.replace(/\/$/, "") === resolved.replace(/\/$/, ""),
-  );
-  const isKnown = Boolean(resolvedTarget);
+  // A target is recognised from the address as written, so a `{{baseUrl}}` stays
+  // visible and editable rather than hiding behind the target it resolves to.
+  const knownTarget = custom ? undefined : targetFor(targets, value);
   const malformed = value.trim() !== "" && missing.length === 0 && !/^https?:\/\//i.test(resolved);
   const blocked = sending || !value.trim() || malformed || missing.length > 0;
 
+  const pick = (target: Target | null) => {
+    setMenu(null);
+    if (target) {
+      setCustom(false);
+      onChange(target.url);
+      return;
+    }
+    // Custom keeps what's there, so a known address can be edited rather than retyped.
+    setCustom(true);
+    requestAnimationFrame(() => {
+      urlInput.current?.focus();
+      urlInput.current?.select();
+    });
+  };
+
+  const openMenu = () => {
+    const rect = picker.current?.getBoundingClientRect();
+    if (rect) setMenu({ x: rect.left, y: rect.bottom + 4 });
+  };
+
+  const items: MenuItem[] = [
+    ...targets.map((target) => ({
+      text: `${targetLabel(target).name} ${target.url}`,
+      label: (
+        <span className="target-item">
+          <span className="target-item-check" aria-hidden>
+            {knownTarget?.url === target.url ? <Check size={13} /> : null}
+          </span>
+          <TargetDot kind={target.kind} />
+          <span className="target-item-text">
+            <span>
+              {targetLabel(target).name}
+              {targetLabel(target).port && <span className="mono target-port">{targetLabel(target).port}</span>}
+            </span>
+            {/* A server's name is already its address; say the address only when it adds something. */}
+            {target.url.replace(/^https?:\/\//, "").replace(/\/$/, "") !== targetLabel(target).name && (
+              <span className="mono target-item-url">{target.url}</span>
+            )}
+          </span>
+        </span>
+      ),
+      onSelect: () => pick(target),
+    })),
+    {
+      text: "Custom URL…",
+      separator: targets.length > 0,
+      label: (
+        <span className="target-item">
+          <span className="target-item-check" aria-hidden>
+            {!knownTarget ? <Check size={13} /> : null}
+          </span>
+          <span className="dot none" aria-hidden />
+          <span className="target-item-text">Custom URL…</span>
+        </span>
+      ),
+      onSelect: () => pick(null),
+    },
+  ];
+
+  const current = knownTarget ? targetLabel(knownTarget) : null;
+
   return (
     <div className="urlbar">
-      <span className={`method-chip ${op.method.toLowerCase()}`}>{op.method}</span>
+      <div className={`addr${unverified ? " unverified" : ""}`}>
+        <span className={`addr-method method-chip ${op.method.toLowerCase()}`}>{op.method}</span>
 
-      {/* One-click switch between the spec's servers and the hosted mock. E7 is
-          explicit that a developer must never be unsure which one they just hit,
-          so the mock is labelled here and tagged in the field and in history. */}
-      {targets.length > 0 && (
-        <select
-          className="target-select"
-          value={isKnown ? resolvedTarget!.url : CUSTOM}
-          onChange={(event) => {
-            // Picking "Custom" clears the field and puts the cursor in it. It has
-            // its own sentinel value so the choice isn't mistaken for "unset".
-            if (event.target.value === CUSTOM) {
-              onChange("");
-              requestAnimationFrame(() => urlInput.current?.focus());
-              return;
-            }
-            onChange(event.target.value);
-          }}
-          title="Target"
-        >
-          {targets.map((target) => (
-            <option key={target.url} value={target.url}>
-              {target.kind === "mock" ? "◆ " : target.kind === "local-mock" ? "◇ " : target.kind === "env" ? "● " : ""}
-              {target.label}
-            </option>
-          ))}
-          <option value={CUSTOM}>Custom…</option>
-        </select>
-      )}
-
-      <div className="url-field">
-        <input
-          ref={urlInput}
-          value={value}
-          list="server-suggestions"
-          spellCheck={false}
-          placeholder="https://api.example.com  ·  or {{baseUrl}}"
-          onChange={(event) => onChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") onSend();
-          }}
-        />
-        <datalist id="server-suggestions">
-          {suggestions.map((server) => (
-            <option key={server} value={server} />
-          ))}
-        </datalist>
-        <span className="url-path" title={op.path}>
-          {op.path}
-        </span>
-        {isMock && <span className="tag mock">mock</span>}
-        {resolvedTarget?.kind === "local-mock" && <span className="tag mock">local mock</span>}
-        {unverified && (
+        {/* A developer must never be unsure which target they just hit, so the
+            target is named here, in words, and its address is a hover away. */}
+        {targets.length > 0 && (
           <button
-            className="tag unverified"
-            onClick={onOpenConnection}
-            title="Certificate verification is off for this host. Click to review."
+            ref={picker}
+            type="button"
+            className="addr-target"
+            aria-haspopup="menu"
+            aria-expanded={Boolean(menu)}
+            title={knownTarget ? knownTarget.url : "Choose where this request goes"}
+            onClick={() => (menu ? setMenu(null) : openMenu())}
           >
-            <ShieldAlert size={10} /> unverified
+            {knownTarget && <TargetDot kind={knownTarget.kind} />}
+            <span className="addr-target-name">{current ? current.name : "Custom URL"}</span>
+            {current?.port && <span className="mono target-port">{current.port}</span>}
+            <ChevronDown size={13} aria-hidden />
           </button>
         )}
-        {resolvedTarget?.kind === "env" && <span className="tag env">{resolvedTarget.label}</span>}
-        {/* A URL you typed is a perfectly good target. This just makes keeping it
-            a single click, so ad-hoc testing doesn't require setting anything up. */}
-        {!isKnown && !malformed && value.trim() !== "" && (
-          <button
-            className="icon-btn tight save-target"
-            title="Save as an environment variable"
-            aria-label="Save this base URL"
-            onClick={() => onSaveTarget(resolved)}
-          >
-            <BookmarkPlus size={13} />
-          </button>
-        )}
+
+        <div className={`url-field${knownTarget ? " known" : ""}`}>
+          {!knownTarget && (
+            <>
+              <input
+                ref={urlInput}
+                value={value}
+                list="server-suggestions"
+                spellCheck={false}
+                placeholder="https://api.example.com  ·  or {{baseUrl}}"
+                // Mono, so the width in characters is the text's width: the path
+                // then follows what was typed instead of sitting at the far end.
+                style={{ width: `calc(${value ? value.length + 1 : 44}ch + 14px)` }}
+                onChange={(event) => onChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") onSend();
+                }}
+              />
+              <datalist id="server-suggestions">
+                {suggestions.map((server) => (
+                  <option key={server} value={server} />
+                ))}
+              </datalist>
+            </>
+          )}
+          <span className="url-path" title={knownTarget ? `${knownTarget.url}${op.path}` : op.path}>
+            <PathText path={op.path} />
+          </span>
+          {unverified && (
+            <button
+              className="tag unverified"
+              onClick={onOpenConnection}
+              title="Certificate verification is off for this host. Click to review."
+            >
+              <ShieldAlert size={10} /> unverified
+            </button>
+          )}
+          {/* A URL you typed is a perfectly good target. This just makes keeping it
+              a single click, so ad-hoc testing doesn't require setting anything up. */}
+          {!knownTarget && !malformed && value.trim() !== "" && (
+            <button
+              className="icon-btn tight save-target"
+              title="Save as an environment variable"
+              aria-label="Save this base URL"
+              onClick={() => onSaveTarget(resolved)}
+            >
+              <BookmarkPlus size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
-      <button className="btn primary send" disabled={blocked} onClick={onSend}>
-        {sending ? (
-          <Loader2 size={13} className="spin" />
-        ) : (
-          <Send size={13} />
+      <span className="send-split">
+        <button className="btn primary send" disabled={blocked} onClick={onSend} title={`Send (${shortcut("↵")})`}>
+          {sending ? <Loader2 size={13} className="spin" /> : <Send size={13} />}
+          {sending ? "Sending…" : "Send"}
+          <span className="kbd">{shortcut("↵")}</span>
+        </button>
+        {(onCopyCurl || onAddToCollection) && (
+          <button
+            ref={sendMore}
+            className="btn primary send-more"
+            aria-label="More ways to send"
+            aria-haspopup="menu"
+            aria-expanded={Boolean(sendMenu)}
+            onClick={() => {
+              const rect = sendMore.current?.getBoundingClientRect();
+              if (rect) setSendMenu({ x: rect.right - 240, y: rect.bottom + 4 });
+            }}
+          >
+            <ChevronDown size={14} />
+          </button>
         )}
-        {sending ? "Sending" : "Send"}
-        <span className="kbd">
-          <CornerDownLeft size={9} />
-        </span>
-      </button>
+      </span>
+
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={items} label="Target" onClose={() => setMenu(null)} />}
+      {sendMenu && (
+        <ContextMenu
+          x={sendMenu.x}
+          y={sendMenu.y}
+          label="Send"
+          onClose={() => setSendMenu(null)}
+          items={[
+            ...(onCopyCurl
+              ? [
+                  {
+                    label: "Copy as cURL",
+                    hint: copyCurlShortcutLabel(isMac),
+                    onSelect: () => {
+                      setSendMenu(null);
+                      void onCopyCurl().then((ok) => {
+                        if (!ok) return;
+                        setCopied(true);
+                        window.setTimeout(() => setCopied(false), 2000);
+                      });
+                    },
+                  },
+                ]
+              : []),
+            ...(onAddToCollection
+              ? [
+                  {
+                    label: "Add to collection…",
+                    onSelect: () => {
+                      const position = sendMenu;
+                      setSendMenu(null);
+                      onAddToCollection(position);
+                    },
+                  },
+                ]
+              : []),
+          ]}
+        />
+      )}
+      {copied && (
+        <div className="urlbar-note resolved" role="status">
+          Copied the request as a cURL command.
+        </div>
+      )}
 
       {envSkew && missing.length === 0 && !malformed && (
         <div className="urlbar-note">
@@ -200,5 +326,49 @@ export function UrlBar({
         </div>
       )}
     </div>
+  );
+}
+
+/** The target the address bar's base URL names, matched as written. */
+function targetFor(targets: Target[], value: string): Target | undefined {
+  const url = value.trim().replace(/\/$/, "");
+  if (!url) return undefined;
+  return targets.find((target) => target.url.replace(/\/$/, "") === url);
+}
+
+/** A target's name for the picker: "Local mock" and its port, "Hosted mock", an environment, or a server's host. */
+export function targetLabel(target: Target): { name: string; port?: string } {
+  switch (target.kind) {
+    case "local-mock": {
+      const port = /:(\d+)\/?$/.exec(target.url)?.[1];
+      return { name: "Local mock", ...(port ? { port: `:${port}` } : {}) };
+    }
+    case "mock":
+      return { name: "Hosted mock" };
+    default:
+      return { name: target.label };
+  }
+}
+
+function TargetDot({ kind }: { kind: Target["kind"] }) {
+  if (kind === "local-mock" || kind === "mock") return <span className="dot live" aria-hidden />;
+  if (kind === "env") return <span className="dot env" aria-hidden />;
+  return <span className="dot none" aria-hidden />;
+}
+
+/** The operation's path, with its `{params}` picked out. */
+function PathText({ path }: { path: string }) {
+  return (
+    <>
+      {path.split(/(\{[^}]+\})/).map((part, index) =>
+        part.startsWith("{") ? (
+          <span key={index} className="path-param">
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
   );
 }

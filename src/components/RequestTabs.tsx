@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import type { LibraryEntry } from "../lib/library";
 import { isMac, shortcut } from "../lib/platform";
 import type { RequestTab } from "../lib/tabs";
@@ -12,17 +12,26 @@ interface Props {
   hasUnsent: (key: string) => boolean;
   onActivate: (tab: RequestTab) => void;
   onClose: (key: string) => void;
+  /** "+": a new request, in the scratch pad. */
+  onNew: () => void;
 }
 
 const NEXT = isMac ? "⌃Tab or ⇧⌘]" : "Ctrl+Tab";
 const CLOSE = shortcut("W");
 
+/** DELETE is the one method that crowds a tab; the full name is in the tooltip. */
+const short = (method: string) => (method === "DELETE" ? "DEL" : method);
+
+/** An API's name, shortened to its first word for a tab. */
+const firstWord = (title: string) => title.split(/\s+/)[0] ?? title;
+
 /**
- * The open requests, across APIs, under the API bar. Click to switch, the ×
+ * The open requests, across APIs, above the API bar: like a browser's tabs,
+ * and the bar below describes the active tab's API. Click to switch, the ×
  * or a middle-click to close. Closing never loses unsent changes; they stay
  * with the operation, marked in the sidebar.
  */
-export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, onClose }: Props) {
+export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, onClose, onNew }: Props) {
   const strip = useRef<HTMLDivElement>(null);
 
   // Keep the active tab in view when it's chosen from somewhere else.
@@ -66,9 +75,9 @@ export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, o
                 title={`${method} ${tab.path} · ${apiTitle}${unsent ? " · unsent changes" : ""}\n${NEXT} for the next tab`}
                 onClick={() => onActivate(tab)}
               >
-                <span className={`method ${method.toLowerCase()}`}>{method}</span>
+                <span className={`method ${method.toLowerCase()}`}>{short(method)}</span>
                 <span className="request-tab-path">{tab.path}</span>
-                {manyApis && <span className="request-tab-api">{apiTitle}</span>}
+                {manyApis && <span className="request-tab-api">{firstWord(apiTitle)}</span>}
                 {unsent && (
                   <span className="dirty-dot" role="img" aria-label="Unsent changes" />
                 )}
@@ -86,6 +95,9 @@ export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, o
           );
         })}
       </div>
+      <button type="button" className="request-tabs-new" onClick={onNew} title="New request, without a spec (Scratch)" aria-label="New request">
+        <Plus size={14} aria-hidden />
+      </button>
     </nav>
   );
 }

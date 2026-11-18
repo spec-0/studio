@@ -51,15 +51,36 @@ function fromFormat(format: string): unknown | undefined {
   }
 }
 
-/** Last-resort inference from the property's name: `email`, `createdAt`, `count`… */
-function fromName(name: string, type: string | undefined): unknown | undefined {
+/** Schemas whose `name` is a person's name. */
+const PERSON = /user|person|customer|member|author|owner|contact|employee|account/i;
+
+/**
+ * Last-resort inference from the property's name: `email`, `createdAt`,
+ * `count`… `parent` is the name of the schema the property is in, so a
+ * `name` on a Customer is a person and a `name` on a Team isn't.
+ */
+function fromName(name: string, type: string | undefined, parent?: string): unknown | undefined {
   const n = name.toLowerCase();
   if (type && type !== "string" && type !== "integer" && type !== "number") return undefined;
-  if (n === "id" || n.endsWith("_id") || n.endsWith("Id")) return "id_7f3a92c1";
+  const numeric = type === "integer" || type === "number";
+  if (numeric && /(score|ratio|threshold|probability|confidence|similarity)$/.test(n)) return 0.82;
+  if (n === "operationid") return "listOrders";
+  if (n === "id" || n.endsWith("_id") || name.endsWith("Id")) return "id_7f3a92c1";
   if (n.includes("email")) return "ada@example.com";
   if (n.includes("url") || n.includes("uri") || n.includes("link")) return "https://example.com";
   if (n.includes("phone")) return "+1-555-0142";
-  if (n.includes("name")) return n.includes("first") ? "Ada" : n.includes("last") ? "Lovelace" : "Ada Lovelace";
+  if (!numeric && (n === "version" || n.endsWith("version"))) return "1.0.0";
+  if (!numeric && (n === "method" || n === "httpmethod")) return "GET";
+  if (!numeric && n === "path") return "/orders";
+  if (!numeric && (n === "status" || n === "state")) return "active";
+  if (n.endsWith("name")) {
+    if (n.includes("first")) return "Ada";
+    if (n.includes("last") || n.includes("sur") || n.includes("family")) return "Lovelace";
+    if (n === "fullname" || n === "displayname" || (n === "name" && parent && PERSON.test(parent))) return "Ada Lovelace";
+    if (/(api|service)name$/.test(n)) return "orders-api";
+    if (/(team|org|organisation|organization|company)name$/.test(n)) return "Payments";
+    return "example-name";
+  }
   if (n.includes("currency")) return "USD";
   if (n.includes("country")) return "US";
   if (n.includes("description") || n.includes("summary")) return "A short description.";
@@ -77,6 +98,8 @@ interface Ctx {
   seen: Set<string>;
   depth: number;
   direction: Direction;
+  /** The name of the nearest named schema this value is inside, if any. */
+  parent?: string;
 }
 
 /** The first value of a schema's `examples`: an array in JSON Schema, a map of Example objects in some specs. */
@@ -100,7 +123,8 @@ function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
   const s = deref(ctx.doc, schema);
   if (s["x-circular"] || s["x-unresolved"]) return null;
 
-  const next: Ctx = { ...ctx, seen, depth: ctx.depth + 1 };
+  const named = typeof schema.$ref === "string" ? schema.$ref.split("/").pop() : undefined;
+  const next: Ctx = { ...ctx, seen, depth: ctx.depth + 1, parent: named ?? ctx.parent };
 
   // The spec told us what this looks like, so always prefer it.
   if (s.example !== undefined) return s.example;
@@ -143,7 +167,7 @@ function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
       return true;
     case "integer":
     case "number": {
-      const named = fromName(name, type);
+      const named = fromName(name, type, ctx.parent);
       if (typeof named === "number") return named;
       if (typeof s.minimum === "number") return s.minimum;
       if (typeof s.maximum === "number" && s.maximum < 1) return s.maximum;
@@ -157,7 +181,7 @@ function build(schema: Json | undefined, name: string, ctx: Ctx): unknown {
         const byFormat = fromFormat(s.format);
         if (byFormat !== undefined) return byFormat;
       }
-      const named = fromName(name, "string");
+      const named = fromName(name, "string", ctx.parent);
       if (named !== undefined) return named;
       if (typeof s.minLength === "number" && s.minLength > 6) return "x".repeat(s.minLength);
       if (s.pattern) return `matches:${s.pattern}`;

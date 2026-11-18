@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import { seedEditor } from "../editor";
-import { exampleParam } from "../example";
+import { exampleFor, exampleParam } from "../example";
 import { parseSpec } from "../spec";
 
 const SPEC = JSON.stringify({
@@ -53,5 +53,59 @@ describe("exampleParam", () => {
     const state = seedEditor(spec, op, null, false);
     expect(state.pathParams).toEqual({ paymentId: "pay_8Hq2" });
     expect(state.queryParams).toMatchObject({ method: "card", limit: "20" });
+  });
+});
+
+describe("values guessed from a property's name", () => {
+  const SEARCH = JSON.stringify({
+    openapi: "3.0.3",
+    info: { title: "Search", version: "1" },
+    paths: {},
+    components: {
+      schemas: {
+        Result: {
+          type: "object",
+          properties: {
+            apiName: { type: "string" },
+            teamName: { type: "string" },
+            name: { type: "string" },
+            version: { type: "string" },
+            specVersion: { type: "string" },
+            score: { type: "number" },
+            method: { type: "string" },
+            path: { type: "string" },
+            operationId: { type: "string" },
+            status: { type: "string" },
+            ownerId: { type: "string" },
+          },
+        },
+        Customer: {
+          type: "object",
+          properties: { name: { type: "string" }, firstName: { type: "string" }, lastName: { type: "string" } },
+        },
+      },
+    },
+  });
+  const doc = parseSpec(SEARCH, "search.json").doc;
+  const example = (name: string) => exampleFor(doc, { $ref: `#/components/schemas/${name}` }, "body", "response");
+
+  it("doesn't call an API or a team Ada Lovelace", () => {
+    expect(example("Result")).toEqual({
+      apiName: "orders-api",
+      teamName: "Payments",
+      name: "example-name",
+      version: "1.0.0",
+      specVersion: "1.0.0",
+      score: 0.82,
+      method: "GET",
+      path: "/orders",
+      operationId: "listOrders",
+      status: "active",
+      ownerId: "id_7f3a92c1",
+    });
+  });
+
+  it("keeps a person's name for a person", () => {
+    expect(example("Customer")).toEqual({ name: "Ada Lovelace", firstName: "Ada", lastName: "Lovelace" });
   });
 });

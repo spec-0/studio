@@ -671,7 +671,7 @@ await shootBoth("26d-journey-done", "dark");
 const expectTestSend = async (what) => {
   const before = mockCalls.length;
   await clickByText(".journey-main .btn", "Send a test request");
-  await page.waitForSelector(".status-pill", { timeout: 10000 }).catch(() => {});
+  await page.waitForSelector(".res-head .status-badge", { timeout: 10000 }).catch(() => {});
   await wait(500);
   const call = mockCalls[before];
   if (!call) throw new Error(`${what}: no request reached the mock`);
@@ -683,13 +683,13 @@ await page.screenshot({ path: `${outDir}/26g-api-targets-mock-dark.png` });
 console.log("26g-api-targets-mock-dark");
 
 // Again from the API bar, where the address and operation already match.
-await clickByText(".apibar .btn", "Mock");
+await clickByText(".apibar .btn", "Hosted mock");
 await page.waitForSelector(".modal.journey", { timeout: 5000 });
 await wait(300);
 await expectTestSend("test request from the API bar");
 
 // Regenerating asks first.
-await clickByText(".apibar .btn", "Mock");
+await clickByText(".apibar .btn", "Hosted mock");
 await page.waitForSelector(".modal.journey", { timeout: 5000 });
 await wait(300);
 await clickByText(".journey-main .btn", "Regenerate key");
@@ -1360,7 +1360,7 @@ console.log("48-collections-list-dark");
   await openApi("Orders API");
   await pickOperation("GET", "/orders/{orderId}");
   await pickOperation("POST", "/orders");
-  await setField(".editor", edited);
+  await setField(".code-editor-input", edited);
   await wait(300);
   await pickOperation("GET", "/orders");
   await openApi("Payments API");
@@ -1368,7 +1368,7 @@ console.log("48-collections-list-dark");
 
   // Back to the edited request, in the other API, from its tab.
   await pickTab("POST", "/orders");
-  const restoredBody = await page.$eval(".editor", (el) => el.value);
+  const restoredBody = await page.$eval(".code-editor-input", (el) => el.value);
   if (restoredBody !== edited) throw new Error(`Unsent changes weren't restored: ${restoredBody}`);
   const markers = await page.evaluate(() => ({
     tab: Boolean(document.querySelector('.request-tab.active [aria-label="Unsent changes"]')),
@@ -1392,7 +1392,7 @@ console.log("48-collections-list-dark");
   await page.keyboard.down("Control");
   await page.keyboard.press("Enter");
   await page.keyboard.up("Control");
-  await page.waitForFunction(() => document.querySelector(".status-pill"), { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelector(".res-head .status-badge"), { timeout: 10000 });
   await wait(400);
   if (await page.$(".unsent-note")) throw new Error("A sent request still shows unsent changes");
   await pickTab("POST", "/payments");
@@ -1403,7 +1403,7 @@ console.log("48-collections-list-dark");
   await page.screenshot({ path: `${outDir}/50-restored-response-light.png` });
   console.log("50-restored-response-light");
   // Editing the request makes the kept answer say it no longer belongs to what's on screen.
-  await setField(".editor", '{ "customerId": "cus_7" }');
+  await setField(".code-editor-input", '{ "customerId": "cus_7" }');
   await wait(300);
   const note = await page.$eval(".restored-note", (el) => el.textContent ?? "");
   if (!note.includes("edited since")) throw new Error(`The restored answer didn't say the request changed: ${note}`);
@@ -1426,7 +1426,7 @@ console.log("48-collections-list-dark");
 
   // Tabs and unsent changes survive a restart.
   await pickTab("POST", "/orders");
-  await setField(".editor", "{}");
+  await setField(".code-editor-input", "{}");
   await wait(800);
   await page.reload({ waitUntil: "networkidle0" });
   await wait(500);
@@ -1434,7 +1434,7 @@ console.log("48-collections-list-dark");
   await pickTab("POST", "/orders");
   const afterRestart = await page.evaluate(() => ({
     tabs: document.querySelectorAll(".request-tab").length,
-    body: document.querySelector(".editor")?.value,
+    body: document.querySelector(".code-editor-input")?.value,
     marked: Boolean(document.querySelector('.request-tab.active [aria-label="Unsent changes"]')),
   }));
   if (afterRestart.tabs !== left || afterRestart.body !== "{}" || !afterRestart.marked) {

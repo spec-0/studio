@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, PanelRightClose, PanelRightOpen, Play, Plus, Server } from "lucide-react";
+import { ChevronDown, ChevronLeft, PanelRightClose, PanelRightOpen, Play, Server } from "lucide-react";
 import { LocalMockControl } from "./LocalMockControl";
 import { TabList } from "./TabList";
 import { API_SECTIONS, type ApiSection } from "../lib/navigation";
@@ -27,7 +27,6 @@ interface ApiProps extends CommonProps {
   onSection: (section: ApiSection) => void;
   onSwitchApi: () => void;
   onRun: () => void;
-  onAddApi: () => void;
   /**
    * The API's hosted mock: create one, or see it (address, key, rebuild).
    * Offered whether or not Studio has noticed drift.
@@ -88,12 +87,11 @@ export function ApiBar(props: Props) {
     );
   }
 
-  // Two rows: the API's name on its own, so it is never cropped to make room
-  // for the tabs and actions, and the views with their actions below it.
+  // One row: the API (name, version, source) with its views right after it,
+  // then its actions. Add API is the library's action, and ⌘O anywhere.
   const name = props.version ? `${props.title} ${props.version}` : props.title;
   return (
-    <div className="apihead">
-    <div className="apibar-title">
+    <div className="apibar">
       {back}
       <button
         className="api-switch"
@@ -102,19 +100,15 @@ export function ApiBar(props: Props) {
         aria-label={`${name}. Switch API`}
       >
         <span className="spec-name">{props.title}</span>
-        {props.version && <span className="spec-version">{props.version}</span>}
+        {props.version && <span className="chip">{props.version}</span>}
+        {props.source && props.source !== "sample" && <span className="chip">{props.source}</span>}
         <ChevronDown size={13} className="chev" />
       </button>
-      {props.source && props.source !== "sample" && (
-        <span className={`tag src-${props.source}`}>{props.source === "spec0" ? "spec0" : props.source}</span>
-      )}
       {props.converted && (
         <span className="meta converted-note" title={describeConversion(props.converted.notes)}>
           {CONVERTED_LABEL}
         </span>
       )}
-    </div>
-    <div className="apibar tools">
       <TabList
         className="segmented"
         tabClassName="segment"
@@ -137,19 +131,15 @@ export function ApiBar(props: Props) {
         <button
           className="btn ghost"
           onClick={props.mock.onOpen}
-          title={props.mock.has ? "The mock's address and key; rebuild it" : "Create a hosted mock server for this API"}
+          title={props.mock.has ? "The hosted mock's address and key; rebuild it" : "Create a hosted mock server for this API"}
         >
-          <Server size={13} /> {props.mock.has ? "Mock" : "Create mock"}
+          <Server size={13} /> <span className="lbl">{props.mock.has ? "Hosted mock" : "Create mock"}</span>
         </button>
       )}
       <button className="btn ghost" onClick={props.onRun} title="Run operations against the spec and check each response">
-        <Play size={13} /> Run
+        <Play size={13} /> <span className="lbl">Run</span>
       </button>
       {props.section === "operations" && responseToggle}
-      <button className="btn primary" onClick={props.onAddApi} title={`Add API (${shortcut("O")})`}>
-        <Plus size={13} /> Add API
-      </button>
-    </div>
     </div>
   );
 }

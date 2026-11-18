@@ -88,6 +88,7 @@ import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import { openapiText, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import { apiIdFromRef, apiUrl, consumersUrl, DEFAULT_API_URL, DEFAULT_APP_URL } from "./lib/spec0";
 import { openInBrowser } from "./lib/store";
+import { declaredResponse, declaredSchemaName } from "./lib/response";
 
 /**
  * The composition root: wires the hooks in `src/hooks` to the components in
@@ -193,6 +194,8 @@ export default function App() {
     validation,
     requestError,
     curl,
+    sentTo,
+    curlCommand,
     restored,
     onValuesChange,
     clearResponse,
@@ -465,6 +468,10 @@ export default function App() {
     toggleTheme: () => patchSettings({ dark: !settings.dark }),
     closeDialogs: closeOnEscape,
     toggleConsole,
+    copyCurl: () => {
+      if (route !== "api" || view !== "operation" || record) return;
+      void copyCurl();
+    },
     requestTab: (action) => {
       // Only where the tabs are on screen, and never from behind a dialog.
       if (route !== "api" || showOpen || showEnvs || showRun || showOAuth || showSwitcher || showPublish) return;
@@ -473,6 +480,18 @@ export default function App() {
       else if (requestTabs.activeKey) requestTabs.close(requestTabs.activeKey);
     },
   });
+
+  /** The request on screen, as cURL, on the clipboard. False when there's nothing to copy. */
+  const copyCurl = async (): Promise<boolean> => {
+    const command = await curlCommand();
+    if (!command) return false;
+    try {
+      await navigator.clipboard.writeText(command);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   /** Jump to an operation by id from a schema view. */
   const showOperation = (id: string) => {
@@ -633,6 +652,17 @@ export default function App() {
         <div className="app-main">
           <RunNotices />
           {onApi && (
+            <RequestTabs
+              tabs={requestTabs.tabs}
+              activeKey={requestTabs.activeKey}
+              entries={entries}
+              hasUnsent={drafts.hasUnsent}
+              onActivate={requestTabs.activate}
+              onClose={requestTabs.close}
+              onNew={openScratch}
+            />
+          )}
+          {onApi && (
             <ApiBar
               kind="api"
               title={spec!.title || current?.title || "Untitled API"}
@@ -663,19 +693,8 @@ export default function App() {
               onGoLibrary={goLibrary}
               onSwitchApi={() => setShowSwitcher(true)}
               onRun={() => setShowRun(true)}
-              onAddApi={() => setShowOpen(true)}
               inspectorOpen={settings.inspectorOpen}
               onToggleInspector={() => patchSettings({ inspectorOpen: !settings.inspectorOpen })}
-            />
-          )}
-          {onApi && (
-            <RequestTabs
-              tabs={requestTabs.tabs}
-              activeKey={requestTabs.activeKey}
-              entries={entries}
-              hasUnsent={drafts.hasUnsent}
-              onActivate={requestTabs.activate}
-              onClose={requestTabs.close}
             />
           )}
           {onScratch && (
@@ -972,6 +991,16 @@ export default function App() {
                           unverified={unverifiedTarget}
                           onOpenConnection={openNetworkFor}
                           envSkew={envVersionSkew}
+                          onCopyCurl={copyCurl}
+                          onAddToCollection={(position) =>
+                            current &&
+                            collections.openOperationMenu(position, {
+                              entry: current,
+                              spec: spec!,
+                              op: operation,
+                              editor: { values: currentValues(), address: server, mockUrl, auth },
+                            })
+                          }
                         />
                         {askForMockKey && (
                           <MockKeyBar
@@ -1019,7 +1048,16 @@ export default function App() {
                                 result={result}
                                 validation={validation}
                                 error={requestError}
-                                curl={curl}
+                                sentTo={sentTo}
+                                schemaName={
+                                  result && operation
+                                    ? declaredSchemaName(declaredResponse(operation.responses, result.status)?.schema)
+                                    : null
+                                }
+                                onShowSchema={(name) => {
+                                  setSchemaName(name);
+                                  showView("schema");
+                                }}
                                 restored={
                                   restored
                                     ? { sentAt: restored.sentAt, editedSince: drafts.editedSince(restored.fingerprint) }
@@ -1093,6 +1131,10 @@ export default function App() {
             void openEntry(entry);
           }}
           onGoLibrary={goLibrary}
+          onAddApi={() => {
+            setShowSwitcher(false);
+            setShowOpen(true);
+          }}
           onClose={() => setShowSwitcher(false)}
         />
       )}

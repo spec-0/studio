@@ -31,6 +31,8 @@ export interface ResponsePane {
   validation: ValidationResult | null;
   error: string | null;
   curl: string | null;
+  /** Where it went, in words ("Local mock · 127.0.0.1:4011"), so the answer says where it came from. */
+  sentTo: string | null;
   /** When the request whose answer this is was sent. */
   sentAt: string | null;
   /** What the editor held when it was sent (see `editorFingerprint`), to tell if it changed since. */
@@ -42,7 +44,7 @@ export interface ResponsePane {
 }
 
 /** An answer kept while its request is off screen. */
-export type KeptResponse = Pick<ResponsePane, "result" | "validation" | "error" | "curl" | "sentAt" | "fingerprint">;
+export type KeptResponse = Pick<ResponsePane, "result" | "validation" | "error" | "curl" | "sentTo" | "sentAt" | "fingerprint">;
 
 /** How many off-screen answers are kept; about one per tab. The oldest go first. */
 export const KEPT_LIMIT = 20;
@@ -55,6 +57,7 @@ export const EMPTY_PANE: ResponsePane = {
   validation: null,
   error: null,
   curl: null,
+  sentTo: null,
   sentAt: null,
   fingerprint: null,
   restored: false,
@@ -69,6 +72,7 @@ const BLANK = {
   validation: null,
   error: null,
   curl: null,
+  sentTo: null,
   sentAt: null,
   fingerprint: null,
   restored: false,
@@ -85,6 +89,7 @@ function keep(kept: Record<string, KeptResponse>, owner: string, pane: ResponseP
       validation: pane.validation,
       error: pane.error,
       curl: pane.curl,
+      sentTo: pane.sentTo,
       sentAt: pane.sentAt,
       fingerprint: pane.fingerprint,
     };
@@ -128,7 +133,7 @@ export type PaneAction =
   | { type: "clear"; curl?: boolean; owner?: string | null }
   /** A send started. `sendId` is unique per send; the steps below carry it. */
   | { type: "start"; sendId: number; sentAt?: string; fingerprint?: string | null }
-  | { type: "curl"; sendId: number; curl: string }
+  | { type: "curl"; sendId: number; curl: string; sentTo?: string | null }
   | { type: "response"; sendId: number; result: ResponseResult; validation: ValidationResult | null }
   | { type: "fail"; sendId: number; error: string }
   | { type: "done"; sendId: number }
@@ -173,7 +178,7 @@ export function paneReducer(pane: ResponsePane, action: PaneAction): ResponsePan
   if (action.sendId !== pane.sendId) return pane;
   switch (action.type) {
     case "curl":
-      return { ...pane, curl: action.curl };
+      return { ...pane, curl: action.curl, sentTo: action.sentTo ?? null };
     case "response":
       return { ...pane, result: action.result, validation: action.validation };
     case "fail":

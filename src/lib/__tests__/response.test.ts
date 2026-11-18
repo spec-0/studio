@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  declaredSchemaName,
   declaredResponse,
   describeSendError,
   responseFromHistory,
@@ -117,5 +118,17 @@ describe("suggestedFileName", () => {
   it("falls back to response plus an extension", () => {
     expect(suggestedFileName("", "image/png")).toBe("response.png");
     expect(suggestedFileName("inline", "text/x-unknown")).toBe("response");
+  });
+});
+
+describe("declaredSchemaName", () => {
+  it("names a referenced schema, or an array of one", () => {
+    expect(declaredSchemaName({ $ref: "#/components/schemas/Order" })).toBe("Order");
+    expect(declaredSchemaName({ type: "array", items: { $ref: "#/components/schemas/Order" } })).toBe("Order[]");
+  });
+
+  it("is null for an inline schema or none", () => {
+    expect(declaredSchemaName({ type: "object", properties: {} })).toBeNull();
+    expect(declaredSchemaName(undefined)).toBeNull();
   });
 });

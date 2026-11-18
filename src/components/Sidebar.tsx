@@ -1,7 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { tagLabel } from "../lib/tags";
 import type { OperationSpec, ParsedSpec, SchemaEntry } from "../lib/spec";
 import { search as searchHistory, type HistoryEntry } from "../lib/history";
 import { HistoryList } from "./HistoryList";
+import { Search } from "lucide-react";
 import { TabList } from "./TabList";
 
 export type SidebarTab = "operations" | "schemas" | "history";
@@ -82,6 +85,16 @@ export function Sidebar({
     return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [spec.operations, query]);
 
+  // Collapsed groups, by tag. A search shows every match, collapsed or not.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const toggleGroup = (tag: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+
   const schemas: SchemaEntry[] = useMemo(
     () => spec.schemas.filter((s) => fuzzy(s.name, query)),
     [spec.schemas, query],
@@ -125,26 +138,38 @@ export function Sidebar({
       )}
 
       <div className="search">
-        <input
-          id="sidebar-search"
-          value={query}
-          placeholder={
-            tab === "operations"
-              ? "Search operations…"
-              : tab === "schemas"
-                ? "Search schemas…"
-                : "Search history…"
-          }
-          onChange={(event) => onQueryChange(event.target.value)}
-        />
+        <label className="filter-field">
+          <Search size={13} aria-hidden />
+          <input
+            id="sidebar-search"
+            value={query}
+            placeholder={
+              tab === "operations" ? "Filter operations" : tab === "schemas" ? "Filter schemas" : "Filter history"
+            }
+            onChange={(event) => onQueryChange(event.target.value)}
+          />
+          <span className="kbd" title="Press / to filter">
+            /
+          </span>
+        </label>
       </div>
 
       <div className="list">
         {tab === "operations" &&
           groupedOperations.map(([tag, ops]) => (
             <div key={tag}>
-              <div className="group-label">{tag}</div>
-              {ops.map((op) => (
+              <button
+                type="button"
+                className="list-group"
+                aria-expanded={query ? true : !collapsed.has(tag)}
+                title={tag}
+                onClick={() => toggleGroup(tag)}
+              >
+                <ChevronDown size={13} className={`group-chev${!query && collapsed.has(tag) ? " shut" : ""}`} aria-hidden />
+                {tagLabel(tag)}
+                <span className="n">{ops.length}</span>
+              </button>
+              {(query || !collapsed.has(tag)) && ops.map((op) => (
                 <button
                   key={op.id}
                   className={`row${op.deprecated ? " deprecated" : ""}`}
@@ -173,7 +198,7 @@ export function Sidebar({
                   aria-haspopup={onOperationMenu ? "menu" : undefined}
                   title={unsent?.has(op.id) ? `${op.summary ?? op.path} · unsent changes` : op.summary}
                 >
-                  <span className={`method ${op.method.toLowerCase()}`}>{op.method}</span>
+                  <span className={`method ${op.method.toLowerCase()}`}>{op.method === "DELETE" ? "DEL" : op.method}</span>
                   <span style={{ minWidth: 0, display: "grid" }}>
                     <span className="path">{op.path}</span>
                     {op.summary && <span className="summary">{op.summary}</span>}
