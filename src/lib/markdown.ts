@@ -208,6 +208,9 @@ function decodeEntities(text: string): string {
 }
 
 const HAS_TAG = /<\/?[a-z][^>]*>/i;
+const TAG = /<(\/?)([a-z][a-z0-9]*)\b([^>]*)>/iy;
+const HREF = /\bhref\s*=\s*(["'])(.*?)\1/i;
+const BLOCK_TAGS = new Set(["p", "div", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6"]);
 
 /**
  * A spec description as Markdown.
@@ -221,19 +224,58 @@ const HAS_TAG = /<\/?[a-z][^>]*>/i;
  */
 export function descriptionMarkdown(source: string): string {
   if (!HAS_TAG.test(source)) return source;
-  const text = source
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
-    .replace(/<a\b[^>]*?\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a\s*>/gi, (_, _quote, href: string, label: string) =>
-      `[${label}](${href.replace(/\s/g, "%20")})`,
-    )
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/?(p|div|ul|ol|h[1-6])\b[^>]*>/gi, "\n\n")
-    .replace(/<li\b[^>]*>/gi, "\n- ")
-    .replace(/<\/?(strong|b)\b[^>]*>/gi, "**")
-    .replace(/<\/?(em|i)\b[^>]*>/gi, "*")
-    .replace(/<\/?code\b[^>]*>/gi, "`")
-    .replace(/<[^>]*>/g, "");
-  return decodeEntities(text)
+  // One pass, left to right: text is copied (entities decoded), each tag is
+  // replaced or dropped, and nothing already written is read again.
+  let out = "";
+  let at = 0;
+  let skipping: string | null = null;
+  let link: { href: string; start: number } | null = null;
+  while (at < source.length) {
+    const open = source.indexOf("<", at);
+    const textEnd = open === -1 ? source.length : open;
+    if (!skipping) out += decodeEntities(source.slice(at, textEnd));
+    if (open === -1) break;
+    TAG.lastIndex = open;
+    const tag = TAG.exec(source);
+    if (!tag) {
+      // A "<" that doesn't start a tag is text.
+      if (!skipping) out += "<";
+      at = open + 1;
+      continue;
+    }
+    at = TAG.lastIndex;
+    const closing = tag[1] === "/";
+    const name = tag[2].toLowerCase();
+    if (skipping) {
+      if (closing && name === skipping) skipping = null;
+      continue;
+    }
+    if (name === "script" || name === "style") {
+      if (!closing) skipping = name;
+    } else if (name === "br") {
+      out += "\n";
+    } else if (BLOCK_TAGS.has(name)) {
+      out += "\n\n";
+    } else if (name === "li") {
+      if (!closing) out += "\n- ";
+    } else if (name === "strong" || name === "b") {
+      out += "**";
+    } else if (name === "em" || name === "i") {
+      out += "*";
+    } else if (name === "code") {
+      out += "`";
+    } else if (name === "a") {
+      if (!closing) {
+        const href = HREF.exec(tag[3]);
+        link = href ? { href: decodeEntities(href[2]).replace(/\s/g, "%20"), start: out.length } : null;
+      } else if (link) {
+        out = `${out.slice(0, link.start)}[${out.slice(link.start)}](${link.href})`;
+        link = null;
+      }
+    }
+    // Any other tag is dropped.
+  }
+  return out
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

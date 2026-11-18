@@ -114,6 +114,13 @@ describe("descriptionMarkdown", () => {
     expect(descriptionMarkdown("<p>1 &lt; 2 &#8212; ok</p>")).toBe("1 < 2 — ok");
   });
 
+  it("never lets tags rebuild themselves, and keeps escaped markup as text", () => {
+    expect(descriptionMarkdown("<scr<script>x</script>ipt>alert(1)</p>")).toBe("xipt>alert(1)");
+    const escaped = descriptionMarkdown("<p>Send &lt;script&gt; as text</p>");
+    expect(escaped).toBe("Send <script> as text");
+    expect(parseMarkdown(escaped)).toEqual([{ type: "paragraph", children: [{ type: "text", text: "Send <script> as text" }] }]);
+  });
+
   it("turns lists into Markdown lists", () => {
     expect(descriptionMarkdown("<ul><li>one</li><li>two</li></ul>")).toBe("- one\n- two");
   });
