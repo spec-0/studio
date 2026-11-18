@@ -387,10 +387,10 @@ console.log("15-history-drift-filter-dark");
 await must(clickTab(".nav-tab", "APIs"), "the APIs tab");
 await wait(600);
 await clickByText(".api-title", SAMPLE);
-await page.waitForSelector(".sidebar .tab", { timeout: 15000 });
+await page.waitForSelector(".sidebar .segment", { timeout: 15000 });
 await wait(600);
 await page.evaluate(() => {
-  const tab = [...document.querySelectorAll(".sidebar .tab")].find((t) =>
+  const tab = [...document.querySelectorAll(".sidebar .segment")].find((t) =>
     t.textContent?.startsWith("History"),
   );
   tab?.click();
@@ -416,7 +416,6 @@ const SECTIONS = [
   ["network", "Network"],
   ["updates", "Updates"],
   ["appearance", "Appearance"],
-  ["mcp", "MCP"],
   ["data", "Data & privacy"],
 ];
 const shootSettings = async (theme, n) => {
@@ -1067,7 +1066,7 @@ await collectionView("Steps");
   const segment = (text) =>
     must(
       page.evaluate((t) => {
-        const tab = [...document.querySelectorAll(".collection-views .segment")].find((el) => el.textContent?.startsWith(t));
+        const tab = [...document.querySelectorAll(".collection-views .ptab")].find((el) => el.textContent?.startsWith(t));
         tab?.click();
         return Boolean(tab);
       }, text),
@@ -1168,7 +1167,7 @@ await collectionView("Steps");
 
 // A value in step 1's response, clicked: use it in a later step.
 await selectStep(1);
-await must(clickTab(".step-tabs .tab", "Response"), "the Response tab");
+await must(clickTab(".step-tabs .ptab", "Response"), "the Response tab");
 await wait(300);
 await page.evaluate(() => document.querySelector(".json-tree .json-value")?.click());
 await page.waitForSelector(".context-menu", { timeout: 5000 });
@@ -1201,7 +1200,7 @@ await page.waitForSelector(".sidebar .row", { timeout: 15000 });
 await must(clickTab(".nav-tab", "Collections"), "the Collections tab");
 await page.waitForSelector(".step-row", { timeout: 5000 });
 await selectStep(3);
-await must(clickTab(".step-tabs .tab", "Request"), "the Request tab");
+await must(clickTab(".step-tabs .ptab", "Request"), "the Request tab");
 await page.waitForSelector(".step-marker.warn", { timeout: 5000 }).catch(async (error) => {
   await page.screenshot({ path: `${outDir}/debug-stale.png` });
   throw error;
@@ -1508,7 +1507,7 @@ const created = collectionCalls.find((c) => c.method === "POST" && c.url.endsWit
 if (created?.auth !== "Bearer demo-token-7f3a9c") throw new Error("The imported token didn't come from the environment");
 console.log("imported collection run: all pass, including an expected 404");
 await selectStep(4);
-await must(clickTab(".step-tabs .tab", "Response"), "the Response tab");
+await must(clickTab(".step-tabs .ptab", "Response"), "the Response tab");
 await wait(400);
 await page.screenshot({ path: `${outDir}/55-expected-404-light.png` });
 console.log("55-expected-404-light");
@@ -1516,7 +1515,7 @@ await toggleTheme();
 await page.screenshot({ path: `${outDir}/55-expected-404-dark.png` });
 console.log("55-expected-404-dark");
 await selectStep(8);
-await must(clickTab(".step-tabs .tab", "Request"), "the Request tab");
+await must(clickTab(".step-tabs .ptab", "Request"), "the Request tab");
 await wait(300);
 await page.screenshot({ path: `${outDir}/56-not-in-any-spec-dark.png` });
 console.log("56-not-in-any-spec-dark");

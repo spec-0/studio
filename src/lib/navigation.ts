@@ -39,17 +39,27 @@ export const API_SECTIONS: ReadonlyArray<{ id: ApiSection; label: string; key: s
 ];
 
 /** The sections of the Settings page, in the order they're listed. */
-export type SettingsSectionId = "account" | "network" | "updates" | "appearance" | "mcp" | "agent" | "data";
+export type SettingsSectionId = "account" | "network" | "updates" | "appearance" | "agent" | "data";
 
 export const SETTINGS_SECTIONS: ReadonlyArray<{ id: SettingsSectionId; label: string }> = [
   { id: "account", label: "Account & Spec0" },
   { id: "network", label: "Network" },
   { id: "updates", label: "Updates" },
   { id: "appearance", label: "Appearance" },
-  { id: "mcp", label: "MCP" },
   { id: "agent", label: "Agent chat" },
   { id: "data", label: "Data & privacy" },
 ];
+
+/**
+ * Where "open Settings at this section" goes. The MCP server has one home, the
+ * MCP tab, so a request for its old Settings section opens that tab instead.
+ */
+export function settingsDestination(
+  section: SettingsSectionId | "mcp" | undefined,
+): { route: "mcp" } | { route: "settings"; section?: SettingsSectionId } {
+  if (section === "mcp") return { route: "mcp" };
+  return { route: "settings", ...(section ? { section } : {}) };
+}
 
 /** The screens that belong to the APIs tab: the library, an open API, and the scratch pad. */
 export function isApisRoute(route: Route): boolean {

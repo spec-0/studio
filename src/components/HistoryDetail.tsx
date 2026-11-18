@@ -14,6 +14,7 @@ import {
 import { responseFromHistory } from "../lib/response";
 import type { ParsedSpec } from "../lib/spec";
 import type { Finding, ValidationResult } from "../lib/validate";
+import { TabList } from "./TabList";
 
 interface Props {
   entry: HistoryEntry;
@@ -116,7 +117,7 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
             <dt>API</dt>
             <dd>
               {entry.specTitle || "Untitled API"}
-              {entry.specVersion && <span className="meta"> {entry.specVersion}</span>}
+              {entry.specVersion && <span className="meta mono"> {entry.specVersion}</span>}
             </dd>
           </div>
           <div>
@@ -207,7 +208,7 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
           <div className="record-status">
             <span className={`status-pill s${family}`}>{entry.status}</span>
             {entry.statusText && <span className="meta">{entry.statusText}</span>}
-            <span className="meta" style={{ marginLeft: "auto" }}>
+            <span className="meta mono" style={{ marginLeft: "auto" }}>
               {entry.ms}ms · {formatBytes(entry.bytes)}
             </span>
           </div>
@@ -215,22 +216,17 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
           <h4 className="record-sub">
             Check
             {current !== null || showing === "current" ? (
-              <span className="record-seg" role="tablist" aria-label="Which check result">
-                <button
-                  role="tab"
-                  aria-selected={showing === "recorded"}
-                  onClick={() => setShowing("recorded")}
-                >
-                  At the time
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={showing === "current"}
-                  onClick={() => setShowing("current")}
-                >
-                  Current spec
-                </button>
-              </span>
+              <TabList<"recorded" | "current">
+                className="segmented sm record-seg"
+                tabClassName="segment"
+                label="Which check result"
+                tabs={[
+                  { id: "recorded", label: "At the time" },
+                  { id: "current", label: "Current spec" },
+                ]}
+                selected={showing}
+                onSelect={setShowing}
+              />
             ) : null}
           </h4>
 
@@ -381,7 +377,7 @@ function HeaderTable({ title, headers }: { title: string; headers: Record<string
   return (
     <details className="record-headers" open={rows.length > 0 && rows.length <= 8}>
       <summary>
-        {title} <span className="meta">{rows.length}</span>
+        {title} <span className="meta mono">{rows.length}</span>
       </summary>
       {rows.length ? (
         <table className="fields">

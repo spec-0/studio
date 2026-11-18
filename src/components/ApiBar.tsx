@@ -80,7 +80,7 @@ export function ApiBar(props: Props) {
         {back}
         <span className="api-switch static">
           <span className="spec-name">Scratch</span>
-          <span className="tag">no spec</span>
+          <span className="chip">no spec</span>
         </span>
         <span className="spacer" />
         {responseToggle}

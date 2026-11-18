@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { CornerDownLeft, Loader2, Send, TriangleAlert } from "lucide-react";
+import { CornerDownLeft, History, Loader2, Send, TriangleAlert } from "lucide-react";
 import { interpolate, unresolved } from "../lib/env";
 import type { HistoryEntry } from "../lib/history";
 import { HistoryList } from "./HistoryList";
 import { SCRATCH_METHODS, sendsBody, type ScratchPad } from "../lib/scratch";
+import { EmptyState } from "./EmptyState";
 
 interface Props {
   pad: ScratchPad;
@@ -58,7 +59,7 @@ export function ScratchView({
         <div className="side-head">
           <div className="tabs">
             <button className="tab" aria-selected>
-              History <span className="meta">{history.length}</span>
+              History <span className="meta mono">{history.length}</span>
             </button>
           </div>
         </div>
@@ -69,9 +70,7 @@ export function ScratchView({
             onOpen={onOpenRecord}
           />
           {history.length === 0 && (
-            <div className="group-label">
-              Nothing sent from here yet. History stays on this machine
-            </div>
+            <EmptyState icon={<History size={18} />} title="Nothing sent yet" body="Requests you send from here are kept in History, on this computer." />
           )}
         </div>
       </aside>
@@ -142,7 +141,7 @@ export function ScratchView({
               <div className="section">
                 <h3>
                   Headers
-                  {pad.headers.length > 0 && <span className="meta"> · {pad.headers.length}</span>}
+                  {pad.headers.length > 0 && <span className="meta mono"> · {pad.headers.length}</span>}
                 </h3>
                 {pad.headers.map((row, index) => (
                   <div className="field" key={index}>

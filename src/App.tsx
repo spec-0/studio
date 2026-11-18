@@ -27,7 +27,6 @@ import { ScratchView } from "./components/ScratchView";
 import { AccountSettings } from "./components/settings/AccountSettings";
 import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { DataSettings } from "./components/settings/DataSettings";
-import { McpSettings } from "./components/settings/McpSettings";
 import { NetworkSettings } from "./components/settings/NetworkSettings";
 import { UpdateSettings } from "./components/settings/UpdateSettings";
 import { SettingsView } from "./components/SettingsView";
@@ -89,7 +88,6 @@ import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import { openapiText, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import { apiIdFromRef, apiUrl, consumersUrl, DEFAULT_API_URL, DEFAULT_APP_URL } from "./lib/spec0";
 import { openInBrowser } from "./lib/store";
-import { plural } from "./lib/plural";
 
 /**
  * The composition root: wires the hooks in `src/hooks` to the components in
@@ -623,6 +621,7 @@ export default function App() {
         onSelectEnvironment={(activeId) => saveEnvFile({ ...envFile, activeId })}
         onEditEnvironments={() => setShowEnvs(true)}
         onOpenAccount={() => nav.openSettings("account")}
+        onSignIn={openSignIn}
         settingsOpen={route === "settings"}
         onOpenSettings={() => nav.openSettings()}
         localMocks={localMocks.count}
@@ -692,6 +691,7 @@ export default function App() {
             <>
               <SettingsView
                 section={nav.settingsSection}
+                onOpenMcp={() => onTopTab("mcp")}
                 onSection={nav.setSettingsSection}
                 content={{
                   account: (
@@ -726,21 +726,14 @@ export default function App() {
                       onInspectorOpen={(inspectorOpen) => patchSettings({ inspectorOpen })}
                     />
                   ),
-                  mcp: <McpSettings signedIn={Boolean(session)} />,
                   agent: <AgentChatSettings />,
                   data: <DataSettings historyCount={requests.length} onClearHistory={clearHistory} />,
                 }}
               />
-              <StatusBar summary="Settings · saved as you change them" envName={activeEnv?.name} result={null} />
             </>
           ) : route === "collections" ? (
             <>
               <CollectionsView api={collections} entries={entries} onGoLibrary={goLibrary} />
-              <StatusBar
-                summary="Collections · steps point at operations in your specs"
-                envName={activeEnv?.name}
-                result={null}
-              />
             </>
           ) : route === "mocks" ? (
             <>
@@ -768,20 +761,10 @@ export default function App() {
                   onStop: (id) => void localMocks.stop(id),
                 }}
               />
-              <StatusBar
-                summary={
-                  "Mocks · " +
-                  (localMocks.count ? `${localMocks.count} running on this computer · ` : "") +
-                  (session ? `hosted in ${session.orgName}` : "sign in to see hosted mocks")
-                }
-                envName={activeEnv?.name}
-                result={null}
-              />
             </>
           ) : route === "mcp" ? (
             <>
-              <McpView signedIn={Boolean(session)} onOpenSettings={() => nav.openSettings("mcp")} />
-              <StatusBar summary="MCP" envName={activeEnv?.name} result={null} />
+              <McpView signedIn={Boolean(session)} />
             </>
           ) : onHistory ? (
             <>
@@ -791,11 +774,6 @@ export default function App() {
                 onCopy={copyRecord}
                 onClear={clearHistory}
                 onAddToCollection={(entry, position, entrySpec) => collections.openRecordMenu(position, entry, entrySpec)}
-              />
-              <StatusBar
-                summary="History · kept 30 days, only on this machine"
-                envName={activeEnv?.name}
-                result={null}
               />
             </>
           ) : onScratch ? (
@@ -843,11 +821,6 @@ export default function App() {
                     </section>
                   )
                 }
-              />
-              <StatusBar
-                summary="Scratch · one ad-hoc request, not saved"
-                envName={activeEnv?.name}
-                result={result}
               />
             </>
           ) : !onApi ? (
@@ -1093,19 +1066,15 @@ export default function App() {
                   )}
                 </div>
               </div>
-
-              <StatusBar
-                summary={
-                  <>
-                    {plural(spec!.operations.length, "operation")} · {plural(spec!.schemas.length, "schema")} · {plural(spec!.tags.length, "tag")}
-                  </>
-                }
-                envName={activeEnv?.name}
-                orgName={session?.orgName}
-                result={result}
-              />
             </>
           )}
+          <StatusBar
+            envName={activeEnv?.name ?? null}
+            onEditEnvironments={() => setShowEnvs(true)}
+            localMocks={localMocks.count}
+            onOpenMocks={() => onTopTab("mocks")}
+            last={result ? { status: result.status, ms: result.ms, verdict: validation?.status ?? null } : null}
+          />
         </div>
         <AgentChatPanel
           mentionChoices={chatMentions}

@@ -143,7 +143,7 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
       <aside className="sidebar collections-side" aria-label="Collections">
         <div className="history-side-head">
           <h2>Collections</h2>
-          <span className="meta">{collections.length}</span>
+          <span className="meta mono">{collections.length}</span>
           <span className="spacer" />
           <button type="button" className="icon-btn tight" aria-label="New collection" title="New collection" onClick={() => api.requestNew()}>
             <Plus size={14} />
@@ -720,8 +720,8 @@ function CollectionDetail({
         </div>
         <div className="collection-meta">
           <TabList<View>
-            className="segmented collection-views"
-            tabClassName="segment"
+            className="ptabs collection-views"
+            tabClassName="ptab"
             label="Collection views"
             tabs={[
               { id: "steps", label: "Steps", title: "Each step's request and response" },
@@ -730,7 +730,7 @@ function CollectionDetail({
                 label: (
                   <>
                     Chain
-                    {views.length > 0 && <span className="segment-count">{views.length}</span>}
+                    {views.length > 0 && <span className="c">{views.length}</span>}
                     {brokenCount > 0 && <span className="segment-alert" aria-label={`${brokenCount} broken`} />}
                   </>
                 ),
@@ -741,7 +741,7 @@ function CollectionDetail({
                 label: (
                   <>
                     Runs
-                    {pastRuns.length > 0 && <span className="segment-count">{pastRuns.length}</span>}
+                    {pastRuns.length > 0 && <span className="c">{pastRuns.length}</span>}
                   </>
                 ),
                 title: "What each run did, step by step",
@@ -760,7 +760,7 @@ function CollectionDetail({
               {collection.file.dirty ? " · unsaved" : ""}
             </span>
           ) : (
-            <span className="tag">in Studio</span>
+            <span className="chip sans">Kept in Studio</span>
           )}
           {summary && (
             <span className={`meta ${summary.failed ? "warn" : ""}`} role="status">

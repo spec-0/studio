@@ -9,6 +9,8 @@ import {
 import type { ParsedSpec } from "../lib/spec";
 import { HistoryDetail } from "./HistoryDetail";
 import { HistoryList } from "./HistoryList";
+import { History as HistoryIcon } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 
 interface Props {
   entries: HistoryEntry[];
@@ -148,6 +150,7 @@ export function HistoryView({
             </button>
           )}
         </div>
+        <p className="meta list-foot">Kept 30 days, only on this computer. Never synced.</p>
       </aside>
 
       <div className="workarea">
@@ -166,12 +169,11 @@ export function HistoryView({
             onClose={() => setSelectedId(null)}
           />
         ) : (
-          <div className="empty">
-            <p>
-              Pick a request to see what was sent and what came back. History is kept for 30 days
-              and never leaves this machine.
-            </p>
-          </div>
+          <EmptyState
+            icon={<HistoryIcon size={18} />}
+            title="No request selected"
+            body="Pick a request to see what was sent and what came back."
+          />
         )}
       </div>
     </div>

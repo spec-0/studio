@@ -1,6 +1,8 @@
+import { Play } from "lucide-react";
 import type { ReactNode } from "react";
 import { referenceFor, type PathSegment } from "../../lib/chain";
 import type { StepResult } from "../../lib/collectionRun";
+import { EmptyState } from "../EmptyState";
 
 interface Props {
   stepKey: string;
@@ -19,9 +21,7 @@ export function StepResponse({ stepKey, result, running, onPick }: Props) {
   if (running && !result) return <div className="empty"><p>Running…</p></div>;
   if (!result) {
     return (
-      <div className="empty">
-        <p>This step hasn't run yet. Run the collection to see its response here.</p>
-      </div>
+      <EmptyState icon={<Play size={18} />} title="Not run yet" body="Run the collection to see this step's response here." />
     );
   }
   const family = result.status ? Math.floor(result.status / 100) : 0;
@@ -29,10 +29,10 @@ export function StepResponse({ stepKey, result, running, onPick }: Props) {
     <div className="step-response">
       <div className="step-result-head">
         {result.status !== undefined && <span className={`status-pill s${family}`}>{result.status}</span>}
-        {result.ms !== undefined && <span className="meta">{result.ms} ms</span>}
+        {result.ms !== undefined && <span className="meta mono">{result.ms} ms</span>}
         {result.mock && <span className="tag mock">mock</span>}
         {result.request && (
-          <span className="meta step-url" title={result.request.url}>
+          <span className="meta mono step-url" title={result.request.url}>
             {result.request.method} {result.request.url}
           </span>
         )}

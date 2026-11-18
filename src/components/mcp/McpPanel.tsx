@@ -185,13 +185,13 @@ export function McpPanel({ signedIn }: Props) {
               <code>{tool.name}</code>
               <span className="mcp-tool-title">{tool.title}</span>
               {tool.requiresSignIn && (
-                <span className="tag" title={unavailable ? "Sign in to Spec0 to use this" : "Uses your Spec0 sign-in"}>
-                  sign-in
+                <span className="chip sans" title={unavailable ? "Sign in to Spec0 to use this" : "Uses your Spec0 sign-in"}>
+                  Needs sign-in
                 </span>
               )}
               {tool.waitsForUser && (
-                <span className="tag" title="Studio asks you before this sends a request or writes a file">
-                  asks you
+                <span className="chip sans" title="Studio asks you before this sends a request or writes a file">
+                  Asks you
                 </span>
               )}
             </li>

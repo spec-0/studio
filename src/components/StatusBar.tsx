@@ -1,39 +1,65 @@
-import type { ReactNode } from "react";
-import { SquareTerminal } from "lucide-react";
+import { Layers, SquareTerminal } from "lucide-react";
 import { toggleConsole } from "../lib/appConsole";
 import { isMac } from "../lib/platform";
+import { plural } from "../lib/plural";
 import { inTauri } from "../lib/request";
 import { consoleShortcutLabel } from "../lib/shortcuts";
+import type { ValidationResult } from "../lib/validate";
 import { useAppConsole } from "../hooks/useAppConsole";
 import { useActiveRuns } from "../hooks/useRunActivity";
 import { describeActive, openRun, type ActiveRun } from "../lib/runActivity";
 
 interface Props {
-  /** The leading text: what is on screen. */
-  summary: ReactNode;
-  envName?: string | null;
-  /** The spec0 org, when signed in and the view shows it. */
-  orgName?: string | null;
-  /** The last response, for its status and time. */
-  result: { status: number; ms: number } | null;
+  envName: string | null;
+  onEditEnvironments: () => void;
+  /** How many local mocks are running. */
+  localMocks: number;
+  onOpenMocks: () => void;
+  /** The last response in the response pane: its status, time and check. */
+  last: { status: number; ms: number; verdict: ValidationResult["status"] | null } | null;
 }
 
-/** The bottom bar: what is open, the environment, how requests are sent, and the last result. */
-export function StatusBar({ summary, envName, orgName, result }: Props) {
+const VERDICT: Partial<Record<ValidationResult["status"], string>> = {
+  ok: "matched",
+  mismatch: "differs from the spec",
+  no_schema: "not checked",
+};
+
+/**
+ * The bottom bar, the same on every page. Left: local mocks running and the
+ * active environment. Right: a collection run in progress, how requests are
+ * sent, the last request, and the console.
+ */
+export function StatusBar({ envName, onEditEnvironments, localMocks, onOpenMocks, last }: Props) {
   const { open, unseenErrors } = useAppConsole();
   const running = useActiveRuns();
+  const consoleKey = consoleShortcutLabel(isMac);
   return (
     <div className="statusbar">
-      <span className="statusbar-summary">{summary}</span>
+      {localMocks > 0 && (
+        <button type="button" className="statusbar-item" onClick={onOpenMocks} title="Open Mocks">
+          <span className="dot live" aria-hidden /> {plural(localMocks, "local mock")}
+        </button>
+      )}
+      <button
+        type="button"
+        className="statusbar-item"
+        onClick={onEditEnvironments}
+        title="Edit environments"
+      >
+        <Layers size={12} aria-hidden /> {envName ?? "No environment"}
+      </button>
+      <span className="spacer" />
       {running.length > 0 && <RunIndicator runs={running} />}
-      {envName != null && <span>env: {envName}</span>}
-      {orgName != null && <span>spec0: {orgName}</span>}
-      <span className="statusbar-transport">
+      <span className="statusbar-transport" title={inTauri ? undefined : "Run the desktop app to send requests without CORS"}>
         {inTauri ? "requests via Rust · no CORS" : "browser preview · CORS applies"}
       </span>
-      {result && (
-        <span>
-          {result.status} · {result.ms}ms
+      {last && (
+        <span className="statusbar-last">
+          Last request <span className={`mono status-ink s${Math.floor(last.status / 100)}`}>{last.status}</span>
+          {" · "}
+          <span className="mono">{last.ms} ms</span>
+          {last.verdict && VERDICT[last.verdict] ? ` · ${VERDICT[last.verdict]}` : ""}
         </span>
       )}
       <button
@@ -41,10 +67,10 @@ export function StatusBar({ summary, envName, orgName, result }: Props) {
         className={`statusbar-console${open ? " on" : ""}`}
         aria-pressed={open}
         aria-label={`Console${unseenErrors ? `, ${unseenErrors} new error${unseenErrors === 1 ? "" : "s"}` : ""}`}
-        title={`Console: requests, runs, local mock, MCP and chat activity (${consoleShortcutLabel(isMac)})`}
+        title={`Console: requests, runs, local mock, MCP and chat activity (${consoleKey})`}
         onClick={toggleConsole}
       >
-        <SquareTerminal size={12} aria-hidden /> Console
+        <SquareTerminal size={12} aria-hidden /> Console <span className="kbd">{consoleKey}</span>
         {unseenErrors > 0 && <span className="statusbar-badge">{unseenErrors > 99 ? "99+" : unseenErrors}</span>}
       </button>
     </div>
