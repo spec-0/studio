@@ -3963,3 +3963,29 @@ textarea.code-editor-input::selection { background: hsl(var(--primary) / 0.35); 
 .disc-chev { transition: transform var(--fast); color: hsl(var(--ink-3)); }
 .disc-chev.open { transform: rotate(90deg); }
 .disc .tbl.disc-body { border: 0; border-top: 1px solid hsl(var(--border)); border-radius: 0; }
+
+/* A filter field with its key. */
+.filter-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px 0 9px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  background: hsl(var(--bg));
+  color: hsl(var(--ink-3));
+}
+:root:not(.dark) .filter-field { background: hsl(var(--panel)); }
+.filter-field:focus-within { border-color: hsl(var(--primary)); }
+.filter-field input { flex: 1; min-width: 0; border: 0; padding: 0; background: none; box-shadow: none; }
+.sidebar .search { padding: 0 10px 8px; border-bottom: 0; }
+
+/* The operation list: groups that collapse, and a method column every path starts after. */
+.sidebar .list { padding: 0 6px 12px; }
+.sidebar .list-group { padding: 10px 6px 4px; border-radius: 6px; }
+.sidebar .list-group:hover { color: hsl(var(--ink)); }
+.group-chev { color: hsl(var(--ink-3)); transition: transform var(--fast); }
+.group-chev.shut { transform: rotate(-90deg); }
+.sidebar .row { padding: 5px 8px; border-radius: 6px; }
+.sidebar .row .method { flex: 0 0 36px; text-align: left; font-size: var(--t-micro); font-weight: 600; }

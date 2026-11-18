@@ -10,7 +10,9 @@ variables, see [Auth, environments and secrets](/auth-environments).
 ## The request editor
 
 Open an API, pick an operation in the **Operations** view, and the editor fills itself in from the
-spec:
+spec. Its sections are tabs: **Body**, **Params**, **Headers**, **Auth** and **Docs**, with a count
+on each (a dot on Body when the spec requires one). An operation opens on the first tab that needs
+input, path parameters first, and remembers the tab you chose for the rest of the session.
 
 - **Parameters** get the right kind of field. A list of allowed values becomes a dropdown, and a
   true/false becomes a toggle. A required parameter starts with the parameter's own example, or
@@ -18,10 +20,15 @@ spec:
 - **Descriptions** are formatted, including the simple HTML some specs use. Links open in your
   browser, and a link to a page relative to the API's own docs shows as text.
 - **Bodies** start filled in with the real field names, and example values that fit each field's
-  type and format. The spec's own examples are used where it has them.
-- **Responses declared** at the bottom lists the status codes the spec describes.
+  type and format. The spec's own examples are used where it has them. The body editor has line
+  numbers and highlighting; **Format** indents the JSON and **Reset to example** puts the spec's
+  example back. The body's schema is a row under the editor that opens to its fields.
+- **Headers** lists the spec's headers, the `Content-Type` the body sets, and any you add. Secrets
+  go in an environment, as `{{name}}`.
+- **Docs** has the operation's description and the responses the spec declares.
 
-Press **Send** or `⌘↵` (`Ctrl+Enter`).
+Press **Send** or `⌘↵` (`Ctrl+Enter`). The arrow next to **Send** has **Copy as cURL** (`⇧⌘C`,
+`Ctrl+Shift+C`), which copies the request exactly as Send would build it, and **Add to collection…**.
 
 ### Bodies and files
 
@@ -46,18 +53,22 @@ If a response says it's binary but is really readable text (servers often send J
 
 ## The address bar
 
-The address bar shows the method, where the request goes, and the operation's path.
+The address bar is one box: the method, where the request goes, and the operation's path.
 
-- **Any base URL.** The spec's `servers` are suggestions. You can type
-  `localhost:8080`, or any host the spec never mentions. A spec with no `servers` works too.
-- **The path isn't editable.** It belongs to the operation.
-- **The target menu** switches between the spec's servers, the environments Spec0 knows the API is
-  deployed to, its [hosted mock](/hosted-mocks), its
-  [local mock](/local-mocks) when one is running, and **Custom…**.
+- **The target** is named once. A server shows its host, an environment its name, and a mock says
+  **Local mock** with its port (`:4011`) or **Hosted mock**. The field then shows only the path; the
+  full address is in the target's tooltip and its menu.
+- **The target menu** lists the spec's servers, the environments Spec0 knows the API is deployed
+  to, its [hosted mock](/hosted-mocks), its [local mock](/local-mocks) when one is running, and
+  **Custom URL…**.
+- **Any base URL.** Choose **Custom URL…** to type one, such as `http://localhost:8080`, or a host
+  the spec never mentions. The path follows what you type. A base URL written as `{{baseUrl}}` is
+  always shown as written. A spec with no `servers` works too.
+- **The path isn't editable.** It belongs to the operation; its `{parameters}` are highlighted.
 
-Nothing is chosen for you: a new API starts on the spec's first server. A request aimed at a mock is
-labelled **MOCK** or **LOCAL MOCK** in the address bar and in History, so you always know whether
-you just called a real server.
+Nothing is chosen for you: a new API starts on the spec's first server. The answer in the response
+pane says where it came from, and History records it, so you always know whether you just called a
+real server.
 
 Some specs give their server as a path, such as `/api/v3`. For a spec added from a URL, Studio
 resolves it against the spec's own address, as OpenAPI describes. A spec from a local file has
@@ -73,7 +84,8 @@ no preflight and no proxy to set up.
 
 ## Request tabs
 
-Every operation you open gets a tab under the API bar. Tabs work across APIs, so you can keep a
+Every operation you open gets a tab above the API bar, like a browser tab; the bar below describes
+the open tab's API. **+** at the end of the strip opens a new request without a spec (Scratch). Tabs work across APIs, so you can keep a
 request from the Orders API next to one from the Payments API and move between them.
 
 <Screenshot
