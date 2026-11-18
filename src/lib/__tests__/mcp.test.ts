@@ -11,6 +11,8 @@ import {
   SPEC_PAGE_CHARS,
   type ToolDeps,
   type ToolResult,
+  toolArea,
+  toolsByArea,
 } from "../mcp";
 import {
   DEFAULT_MCP_PORT,
@@ -518,5 +520,18 @@ describe("server settings", () => {
       headers: { Authorization: "Bearer s0mcp_TOKEN" },
     });
     expect(maskToken(claude, "s0mcp_TOKEN")).not.toContain("s0mcp_TOKEN");
+  });
+});
+
+describe("toolsByArea", () => {
+  it("puts every tool in one area, in the page's order", () => {
+    const groups = toolsByArea(MCP_TOOLS);
+    expect(groups.map((group) => group.area)).toEqual(["Specs", "Requests", "Mocks", "Collections", "Studio"]);
+    expect(groups.reduce((sum, group) => sum + group.tools.length, 0)).toBe(MCP_TOOLS.length);
+    expect(toolArea("create_mock_server")).toBe("Mocks");
+    expect(toolArea("run_collection")).toBe("Collections");
+    expect(toolArea("check_contract")).toBe("Requests");
+    expect(toolArea("reload_spec")).toBe("Specs");
+    expect(toolArea("list_environments")).toBe("Studio");
   });
 });
