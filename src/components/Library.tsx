@@ -4,21 +4,22 @@ import {
   Cloud,
   FileJson,
   Link2,
-  Pencil,
+  MoreHorizontal,
   Plus,
   RefreshCw,
   Search,
   ServerCog,
   SquareDashed,
   Sparkles,
-  Trash2,
   X,
 } from "lucide-react";
 import { mockIsBehind } from "../lib/sync";
 import { relativeTime, sourceLabel, spec0ApiIdOf, type ApiSource, type LibraryEntry } from "../lib/library";
 import { journeyAvailable } from "../lib/mockJourney";
 import { LocalMockControl } from "./LocalMockControl";
-import { LogoMark, Wordmark } from "./Logo";
+import { ContextMenu, type MenuItem } from "./ContextMenu";
+import type { OpenTab } from "../hooks/useDialogs";
+import { LogoMark } from "./Logo";
 import { shortcut } from "../lib/platform";
 import { SWAGGER2_CONVERT_COMMAND } from "../lib/spec";
 
@@ -59,18 +60,8 @@ function openedLabel(entry: LibraryEntry): string {
   return `opened ${relativeTime(entry.openedAt)}${pulled}`;
 }
 
-/**
- * The spec0 mark, large and faint, so the library isn't a bare page when it
- * holds only a few APIs. It's pinned to the pane, not to the scrolling list,
- * and sits under everything, so cards and the drop outline cover it.
- */
-function LibraryMark() {
-  return (
-    <div className="library-mark" aria-hidden>
-      <LogoMark size={30} />
-    </div>
-  );
-}
+/** "opened 2m ago" → "Opened 2m ago". */
+const sentenceCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 interface Props {
   entries: LibraryEntry[];
@@ -78,7 +69,8 @@ interface Props {
   onRemove: (entry: LibraryEntry) => void;
   onRename: (entry: LibraryEntry, title: string) => void;
   onRefresh: (entry: LibraryEntry) => void;
-  onAdd: () => void;
+  /** Add an API, on a given source when the first-run screen chose one. */
+  onAdd: (tab?: OpenTab) => void;
   /** Refreshing a spec0-sourced API needs a connection; the button explains itself when not. */
   connected: boolean;
   onCheckUpdates: () => void;
@@ -139,6 +131,7 @@ export function Library({
   const [filter, setFilter] = useState("");
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
+  const [menu, setMenu] = useState<{ position: { x: number; y: number }; items: MenuItem[] } | null>(null);
 
   const shown = useMemo(() => {
     const needle = filter.trim().toLowerCase();
@@ -150,257 +143,281 @@ export function Library({
 
   if (!entries.length) {
     return (
-      <div className={`empty${dragging ? " dragging" : ""}`}>
-        <LibraryMark />
-        <div className="empty-brand">
-          <Wordmark height={30} />
+      <div className={`page first-run${dragging ? " dragging" : ""}`}>
+        <div className="page-in narrow">
+          <div className="first-run-brand" aria-hidden>
+            <LogoMark size={22} />
+          </div>
+          <h1 className="page-title">Open your first API</h1>
+          <p className="desc">
+            Studio builds requests, checks and mocks from an OpenAPI spec. Everything stays on this computer; no
+            account needed. You can also drop a spec anywhere on this window.
+          </p>
+          <div className="start-grid">
+            <button className="start-card" onClick={() => onAdd("file")}>
+              <span className="start-icon">
+                <FileJson size={16} />
+              </span>
+              <b>Open a file</b>
+              <span className="meta">OpenAPI 3.0 or 3.1, or Swagger 2.0, in YAML or JSON.</span>
+              <span className="kbd">{shortcut("O")}</span>
+            </button>
+            <button className="start-card" onClick={() => onAdd("url")}>
+              <span className="start-icon">
+                <Link2 size={16} />
+              </span>
+              <b>Import from a URL</b>
+              <span className="meta">A spec served over HTTP, re-read when you refresh it.</span>
+            </button>
+            <button className="start-card" onClick={() => onAdd("spec0")}>
+              <span className="start-icon">
+                <Cloud size={16} />
+              </span>
+              <b>From Spec0</b>
+              <span className="meta">Your organisation's APIs, if your team uses Spec0.</span>
+            </button>
+          </div>
+          <div className="start-quiet">
+            <button className="btn ghost" onClick={onTrySample}>
+              <Sparkles size={13} /> Try the sample API
+            </button>
+            <button className="btn ghost" onClick={onOpenScratch}>
+              <SquareDashed size={13} /> Send one request without a spec
+            </button>
+          </div>
+          {busy && <p className="meta" style={{ marginTop: 12 }}>{busy}</p>}
+          {error && <LoadError error={error} />}
         </div>
-        <h1>Your OpenAPI spec, explorable.</h1>
-        <p>
-          Browse operations and schemas as a real structure. Fire requests against your API or a
-          mock. No account, no workspace, just the spec.
-        </p>
-        <div className="drop">Drop an OpenAPI file here, or {shortcut("O")} to add one</div>
-        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          <button className="btn primary" onClick={onAdd}>
-            <Plus size={13} /> Add an API
-          </button>
-          <button className="btn" onClick={onTrySample}>
-            <Sparkles size={13} /> Try a sample API
-          </button>
-        </div>
-        <button className="btn" style={{ marginTop: 14 }} onClick={onOpenScratch}>
-          <SquareDashed size={13} /> Or send one request without a spec
-        </button>
-        {busy && <p className="meta" style={{ marginTop: 12 }}>{busy}</p>}
-        {error && <LoadError error={error} />}
       </div>
     );
   }
 
-  return (
-    <div className={`library${dragging ? " dragging" : ""}`}>
-      <LibraryMark />
-      <div className="library-head">
-        <div>
-          <h1>Your APIs</h1>
-          <p className="meta">
-            {entries.length} in your library · stored on this machine, no account needed
-          </p>
-        </div>
-        <span className="spacer" />
-        <div className="library-search">
-          <Search size={13} />
-          <input
-            className="library-filter"
-            placeholder="Filter…"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-          />
-        </div>
-        {connected && (
-          <button className="btn" onClick={onCheckUpdates} disabled={checking}>
-            <RefreshCw size={13} className={checking ? "spin" : undefined} />
-            {checking ? "Checking…" : "Check for updates"}
-          </button>
-        )}
-        <button className="btn primary" onClick={onAdd}>
-          <Plus size={13} /> Add API <span className="kbd">{shortcut("O")}</span>
-        </button>
-      </div>
+  const cardMenu = (entry: LibraryEntry, position: { x: number; y: number }) =>
+    setMenu({
+      position,
+      items: [
+        { label: "Open", onSelect: () => onOpen(entry) },
+        ...(entry.source.kind !== "sample"
+          ? [
+              {
+                label: "Re-read from source",
+                disabled: entry.source.kind === "spec0" && !connected,
+                onSelect: () => onRefresh(entry),
+              },
+            ]
+          : []),
+        {
+          label: "Rename…",
+          onSelect: () => {
+            setRenaming(entry.id);
+            setDraftName(entry.title);
+          },
+        },
+        ...(entry.mockUrl
+          ? [{ label: "Hosted mock…", onSelect: () => onMock(entry) }]
+          : journeyAvailable({ apiId: spec0ApiIdOf(entry), sourceKind: entry.source.kind })
+            ? [{ label: "Create hosted mock…", onSelect: () => onMock(entry) }]
+            : []),
+        { label: "Remove from library", separator: true, onSelect: () => onRemove(entry) },
+      ],
+    });
 
-      {syncReport && (
-        <div className="sync-report">
-          <div className="sync-report-head">
-            <strong>{syncReport.title} updated</strong>
-            <span className="spacer" />
-            <button className="icon-btn tight" onClick={onDismissReport} aria-label="Dismiss">
-              <X size={13} />
+  return (
+    <div className={`page library${dragging ? " dragging" : ""}`}>
+      <div className="page-in">
+        <div className="page-head">
+          <div className="l">
+            <h1 className="page-title">APIs</h1>
+            <p className="desc">
+              {entries.length} in your library, stored on this computer. No account needed.
+            </p>
+          </div>
+          <div className="btn-row">
+            <label className="filter-field library-filter">
+              <Search size={13} aria-hidden />
+              <input placeholder="Filter APIs" value={filter} onChange={(event) => setFilter(event.target.value)} />
+            </label>
+            {connected && (
+              <button className="btn" onClick={onCheckUpdates} disabled={checking}>
+                <RefreshCw size={13} className={checking ? "spin" : undefined} />
+                {checking ? "Checking…" : "Check for updates"}
+              </button>
+            )}
+            <button className="btn primary" onClick={() => onAdd()}>
+              <Plus size={13} /> Add API <span className="kbd">{shortcut("O")}</span>
             </button>
           </div>
-          {syncReport.lines.length ? (
-            <ul>
-              {syncReport.lines.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="meta">Nothing you had set up was affected.</p>
-          )}
         </div>
-      )}
 
-      {busy && <div className="verdict none">{busy}</div>}
-      {error && <LoadError error={error} style={{ marginTop: 0 }} />}
-
-      <div className="library-grid">
-        {/* Pinned, unnamed, and outside `entries`, so "there is only ever one, and
-            you can't delete it" is structural rather than a rule someone has to
-            remember. */}
-        {!filter.trim() && (
-          <button className="api-card scratch" onClick={onOpenScratch}>
-            <div className="api-card-top">
-              <span className="api-title">
-                <SquareDashed size={13} /> Scratch
-              </span>
+        {syncReport && (
+          <div className="sync-report">
+            <div className="sync-report-head">
+              <strong>{syncReport.title} updated</strong>
+              <span className="spacer" />
+              <button className="icon-btn tight" onClick={onDismissReport} aria-label="Dismiss">
+                <X size={13} />
+              </button>
             </div>
-            <p className="meta">
-              One ad-hoc request: method, URL, headers, body. No spec, so nothing is generated or
-              checked.
-            </p>
-            <div className="api-card-foot">
-              <span className="meta">not saved · holds whatever you last typed</span>
-            </div>
-          </button>
+            {syncReport.lines.length ? (
+              <ul>
+                {syncReport.lines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="meta">Nothing you had set up was affected.</p>
+            )}
+          </div>
         )}
 
-        {shown.map((entry) => (
-          <div key={entry.id} className="api-card" onDoubleClick={() => onOpen(entry)}>
-            <div className="api-card-top">
-              {renaming === entry.id ? (
-                <input
-                  autoFocus
-                  value={draftName}
-                  onChange={(event) => setDraftName(event.target.value)}
-                  onBlur={() => {
-                    if (draftName.trim()) onRename(entry, draftName.trim());
-                    setRenaming(null);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.currentTarget.blur();
-                    if (event.key === "Escape") setRenaming(null);
-                  }}
-                />
-              ) : (
-                <button className="api-title" onClick={() => onOpen(entry)}>
-                  {entry.title}
-                </button>
-              )}
-              {entry.version && <span className="spec-version">{entry.version}</span>}
-              <div className="api-card-actions">
-                {entry.source.kind !== "sample" && (
+        {busy && <div className="verdict none">{busy}</div>}
+        {error && <LoadError error={error} style={{ marginTop: 0 }} />}
+
+        <div className="library-grid">
+          {shown.map((entry) => {
+            const port = localMock?.running[entry.id] ?? null;
+            return (
+              <div
+                key={entry.id}
+                className="api-card"
+                data-source={entry.source.kind}
+                onDoubleClick={() => onOpen(entry)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  cardMenu(entry, { x: event.clientX, y: event.clientY });
+                }}
+              >
+                <div className="api-card-top">
+                  {renaming === entry.id ? (
+                    <input
+                      autoFocus
+                      className="input"
+                      value={draftName}
+                      onChange={(event) => setDraftName(event.target.value)}
+                      onBlur={() => {
+                        if (draftName.trim()) onRename(entry, draftName.trim());
+                        setRenaming(null);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                        if (event.key === "Escape") setRenaming(null);
+                      }}
+                    />
+                  ) : (
+                    <button className="api-title" onClick={() => onOpen(entry)}>
+                      {entry.title}
+                    </button>
+                  )}
+                  {entry.version && <span className="chip">{entry.version}</span>}
+                  {entry.source.kind === "sample" && <span className="chip sans soft">sample</span>}
+                  <span className="spacer" />
                   <button
-                    className="icon-btn tight"
-                    disabled={entry.source.kind === "spec0" && !connected}
-                    onClick={() => onRefresh(entry)}
-                    title={
-                      entry.source.kind === "spec0" && !connected
-                        ? "Connect to spec0 to re-pull this API"
-                        : "Re-read from source"
-                    }
-                    aria-label="Refresh"
+                    className="icon-btn api-card-more"
+                    aria-label={`More for ${entry.title}`}
+                    aria-haspopup="menu"
+                    title="More"
+                    onClick={(event) => {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      cardMenu(entry, { x: rect.left, y: rect.bottom + 4 });
+                    }}
                   >
-                    <RefreshCw size={13} />
+                    <MoreHorizontal size={15} />
                   </button>
-                )}
-                <button
-                  className="icon-btn tight"
-                  title="Rename"
-                  aria-label="Rename"
-                  onClick={() => {
-                    setRenaming(entry.id);
-                    setDraftName(entry.title);
-                  }}
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
-                  className="icon-btn tight danger"
-                  onClick={() => onRemove(entry)}
-                  title="Remove from library"
-                  aria-label="Remove"
-                >
-                  <Trash2 size={13} />
+                </div>
+
+                <div className="api-card-src" title={entry.source.ref}>
+                  <SourceIcon kind={entry.source.kind} />
+                  <span className={entry.source.kind === "sample" ? "" : "mono"}>
+                    {entry.source.kind === "sample" ? "Bundled with Studio" : sourceLabel(entry.source)}
+                  </span>
+                </div>
+
+                <div className="api-card-stats">
+                  <span>
+                    <strong>{entry.operations}</strong> {entry.operations === 1 ? "operation" : "operations"}
+                  </span>
+                  <span>
+                    <strong>{entry.schemas}</strong> {entry.schemas === 1 ? "schema" : "schemas"}
+                  </span>
+                </div>
+
+                <div className="api-card-foot">
+                  {port !== null && localMock ? (
+                    <LocalMockControl
+                      compact
+                      port={port}
+                      busy={localMock.busy === entry.id}
+                      onStart={() => localMock.onStart(entry)}
+                      onStop={() => localMock.onStop(entry.id)}
+                    />
+                  ) : entry.update ? (
+                    <button className="chip sans warn update-chip" onClick={() => onApplyUpdate(entry)}>
+                      <ArrowDownToLine size={11} /> Update available
+                      {entry.update.version ? ` · ${entry.update.version}` : ""}
+                    </button>
+                  ) : onRefreshMock && mockIsBehind(entry) ? (
+                    <button
+                      className="chip sans warn update-chip"
+                      onClick={() => onRefreshMock(entry)}
+                      title="The hosted mock still serves an older version of this spec"
+                    >
+                      <ServerCog size={11} /> Mock is behind
+                      {entry.mockSpecVersion && entry.version ? ` · ${entry.mockSpecVersion} → ${entry.version}` : ""}
+                    </button>
+                  ) : (
+                    <span className="meta" title={openedLabel(entry)}>
+                      {sentenceCase(openedLabel(entry))}
+                    </span>
+                  )}
+                  <span className="spacer" />
+                  {localMock && port === null && (
+                    <LocalMockControl
+                      compact
+                      port={null}
+                      busy={localMock.busy === entry.id}
+                      error={localMock.error?.id === entry.id ? localMock.error.message : null}
+                      onStart={() => localMock.onStart(entry)}
+                      onStop={() => localMock.onStop(entry.id)}
+                    />
+                  )}
+                </div>
+
+                <button className="api-card-open" onClick={() => onOpen(entry)}>
+                  Open
                 </button>
               </div>
-            </div>
+            );
+          })}
 
-            <div className="api-card-meta">
-              <span className={`tag src-${entry.source.kind}`}>
-                <SourceIcon kind={entry.source.kind} />
-                {entry.source.kind}
-              </span>
-              <span className="meta mono" title={entry.source.ref}>
-                {sourceLabel(entry.source)}
-              </span>
-            </div>
-
-            <div className="api-card-stats">
-              <span>
-                <strong>{entry.operations}</strong> operations
-              </span>
-              <span>
-                <strong>{entry.schemas}</strong> schemas
-              </span>
-              <span className="meta api-card-when" title={openedLabel(entry)}>
-                {openedLabel(entry)}
-              </span>
-            </div>
-
-            {entry.update && (
-              <button className="update-pill" onClick={() => onApplyUpdate(entry)}>
-                <ArrowDownToLine size={11} />
-                Update available
-                {entry.update.version && entry.version
-                  ? ` · ${entry.version} → ${entry.update.version}`
-                  : ""}
-              </button>
-            )}
-
-            {onRefreshMock && mockIsBehind(entry) && (
-              <button
-                className="update-pill mock"
-                onClick={() => onRefreshMock(entry)}
-                title="The mock still serves an older version of this spec"
-              >
-                <ServerCog size={11} />
-                Mock is behind
-                {entry.mockSpecVersion && entry.version
-                  ? ` · ${entry.mockSpecVersion} → ${entry.version}`
-                  : ""}
-              </button>
-            )}
-
-            <div className="api-card-foot api-card-buttons">
-              {localMock && (
-                <LocalMockControl
-                  compact
-                  port={localMock.running[entry.id] ?? null}
-                  busy={localMock.busy === entry.id}
-                  error={localMock.error?.id === entry.id ? localMock.error.message : null}
-                  onStart={() => localMock.onStart(entry)}
-                  onStop={() => localMock.onStop(entry.id)}
-                />
-              )}
-              {entry.mockUrl ? (
-                <button
-                  className="btn ghost card-mock"
-                  onClick={() => onMock(entry)}
-                  title="The mock's address and key; rebuild it"
-                >
-                  <ServerCog size={12} /> Mock
-                </button>
-              ) : (
-                journeyAvailable({ apiId: spec0ApiIdOf(entry), sourceKind: entry.source.kind }) && (
-                  <button
-                    className="btn card-mock"
-                    onClick={() => onMock(entry)}
-                    title="Create a hosted mock server for this API"
-                  >
-                    <Plus size={12} /> Create mock
-                  </button>
-                )
-              )}
-            </div>
-
-            <button className="api-card-open" onClick={() => onOpen(entry)}>
-              Open
+          {/* Pinned, unnamed, and outside `entries`, so "there is only ever one, and
+              you can't delete it" is structural rather than a rule someone has to
+              remember. Last, and quiet. */}
+          {!filter.trim() && (
+            <button className="api-card scratch" onClick={onOpenScratch}>
+              <div className="api-card-top">
+                <span className="api-title">
+                  <SquareDashed size={13} /> Scratch request
+                </span>
+              </div>
+              <p className="meta">One request with no spec: method, URL, headers, body. Nothing is generated or checked.</p>
+              <div className="api-card-foot">
+                <span className="meta">Not saved · keeps what you last typed</span>
+              </div>
             </button>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
 
-      {shown.length === 0 && <p className="meta">Nothing matches “{filter}”.</p>}
+        {shown.length === 0 && <p className="meta">Nothing matches “{filter}”.</p>}
+      </div>
+      {menu && (
+        <ContextMenu
+          x={menu.position.x}
+          y={menu.position.y}
+          items={menu.items}
+          label="API"
+          onClose={() => setMenu(null)}
+        />
+      )}
     </div>
   );
 }

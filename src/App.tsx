@@ -145,6 +145,7 @@ export default function App() {
     showOpen,
     setShowOpen,
     openTab,
+    openAddAt,
     openMode,
     setOpenMode,
     showEnvs,
@@ -854,7 +855,7 @@ export default function App() {
               }
               onRename={(entry, title) => void library.renameEntry(entry.id, title).then(setEntries)}
               onRefresh={(entry) => void refreshEntry(entry)}
-              onAdd={() => setShowOpen(true)}
+              onAdd={(tab) => (tab ? openAddAt(tab) : setShowOpen(true))}
               connected={Boolean(session)}
               onCheckUpdates={() => void checkForUpdates()}
               onApplyUpdate={(entry) => void applyUpdate(entry)}

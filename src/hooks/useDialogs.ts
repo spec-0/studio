@@ -30,6 +30,13 @@ export function useDialogs() {
     setShowOpen(true);
   }, []);
 
+  /** Open Add an API on a given source: a file, a URL or Spec0. */
+  const openAddAt = useCallback((tab: OpenTab) => {
+    setOpenMode("add");
+    setOpenTab(tab);
+    setShowOpen(true);
+  }, []);
+
   /** Close the dialog and reset it, so it next opens on the tab that fits. */
   const closeOpen = useCallback(() => {
     setShowOpen(false);
@@ -50,6 +57,7 @@ export function useDialogs() {
     showOpen,
     setShowOpen,
     openTab,
+    openAddAt,
     openMode,
     setOpenMode,
     showEnvs,
