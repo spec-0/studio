@@ -3881,3 +3881,85 @@ input[type="checkbox"] { accent-color: hsl(var(--primary)); }
 }
 button.verdict-schema:hover { color: hsl(var(--ink)); text-decoration-color: currentColor; }
 .findings { margin-bottom: 4px; }
+
+/* The body editor: a transparent text area over its highlighted copy. */
+.code-editor {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  border: 1px solid hsl(var(--code-border));
+  border-radius: var(--radius);
+  background: hsl(var(--code-bg));
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-size: 12px;
+  line-height: 20px;
+}
+.code-editor:focus-within { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18); }
+.code-editor-gutter {
+  overflow: hidden;
+  padding: 8px 12px 8px 0;
+  text-align: right;
+  color: hsl(var(--code-faint));
+  background: hsl(var(--code-gutter));
+  border-right: 1px solid hsl(var(--code-border));
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.code-editor-main { position: relative; min-width: 0; }
+.code-editor-back, .code-editor-input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 8px 12px;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+.code-editor-back { color: hsl(var(--code-ink)); pointer-events: none; scrollbar-width: none; }
+.code-editor-back::-webkit-scrollbar { display: none; }
+.code-editor-back > div { min-height: 20px; }
+textarea.code-editor-input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: hsl(var(--code-ink));
+  resize: none;
+  box-shadow: none;
+  min-height: 0;
+}
+textarea.code-editor-input:focus { border: 0; }
+textarea.code-editor-input::selection { background: hsl(var(--primary) / 0.35); color: transparent; }
+
+/* The request editor: a header, then its sections as tabs. */
+.op-head { border-bottom: 0; padding: 12px 16px 4px; }
+.op-summary-text { font-size: var(--t-title); }
+.op-sub { display: flex; align-items: baseline; gap: 4px; min-width: 0; margin-top: 2px; font-size: var(--t-small); color: hsl(var(--ink-3)); white-space: nowrap; overflow: hidden; }
+.op-sub .mono { font-size: 11px; flex: none; }
+.op-sub-text { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ptabs.request-tabs-list { padding: 0 8px; }
+.ptab .req-dot { width: 5px; height: 5px; border-radius: 50%; background: hsl(var(--primary)); }
+.op-body { padding: 12px 16px 24px; }
+.tab-pane > .field:first-child { padding-top: 0; }
+.pane-toolbar { display: flex; align-items: center; gap: 6px; min-height: 28px; margin-bottom: 8px; font-size: var(--t-small); color: hsl(var(--ink-3)); white-space: nowrap; }
+.pane-toolbar .mono { font-size: 11px; }
+.pane-toolbar .spacer { flex: 1; }
+.required-word { margin-left: 6px; font-family: var(--font-sans); font-size: var(--t-micro); font-weight: 500; color: hsl(var(--warning)); }
+.field.derived input { color: hsl(var(--ink-3)); }
+.type-cell { color: hsl(var(--primary)); white-space: nowrap; }
+.dark .type-cell { color: hsl(var(--syn-key)); }
+
+/* A disclosure row: the body's schema under the editor. */
+.disc { margin-top: 10px; border: 1px solid hsl(var(--border)); border-radius: var(--radius); overflow: hidden; }
+.disc-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 10px; text-align: left; font-weight: 500; color: hsl(var(--ink-2)); }
+.disc-head:hover { background: hsl(var(--surface-hover)); }
+.disc-head .mono { font-size: 12px; color: hsl(var(--ink)); }
+.disc-chev { transition: transform var(--fast); color: hsl(var(--ink-3)); }
+.disc-chev.open { transform: rotate(90deg); }
+.disc .tbl.disc-body { border: 0; border-top: 1px solid hsl(var(--border)); border-radius: 0; }
