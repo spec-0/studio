@@ -539,8 +539,7 @@ pre.code {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--t-small);
   color: hsl(var(--warning));
   padding-left: 2px;
 }
@@ -3989,3 +3988,15 @@ textarea.code-editor-input::selection { background: hsl(var(--primary) / 0.35); 
 .group-chev.shut { transform: rotate(-90deg); }
 .sidebar .row { padding: 5px 8px; border-radius: 6px; }
 .sidebar .row .method { flex: 0 0 36px; text-align: left; font-size: var(--t-micro); font-weight: 600; }
+
+/* Send and its menu: one button in two parts. */
+.send-split { display: inline-flex; flex: none; }
+.send-split .btn.send { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.send-split .btn.send-more {
+  padding: 0 7px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid hsl(0 0% 100% / 0.22);
+}
+.send-split .btn.send:only-child { border-radius: 6px; }
+.send-split .btn { min-height: 32px; }
