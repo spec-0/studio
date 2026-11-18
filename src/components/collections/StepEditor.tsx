@@ -391,8 +391,8 @@ export function StepEditor({
       )}
 
       <TabList<StepTab>
-        className="tabs step-tabs"
-        tabClassName="tab"
+        className="ptabs step-tabs"
+        tabClassName="ptab"
         label="Step"
         tabs={[
           { id: "request", label: "Request" },

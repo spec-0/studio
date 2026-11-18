@@ -2,6 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { answerApproval, pendingApprovals, subscribeApprovals } from "../../lib/agentControl";
 import type { Answer } from "../../lib/agentPolicy";
 import { stopAllAgents } from "../../lib/mcpServer";
+import { Dialog } from "../Dialog";
 
 const LABELS: Record<Answer, string> = {
   deny: "Don't allow",
@@ -37,56 +38,51 @@ export function AgentApprovalDialog() {
   const more = approvals.length - 1;
 
   return (
-    <div className="scrim">
-      <div
-        className="modal agent-approval"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="agent-approval-title"
-        aria-describedby="agent-approval-detail"
-      >
-        <div className="modal-head">
-          <strong id="agent-approval-title">{approval.title}</strong>
-        </div>
-
-        <div className="modal-body" id="agent-approval-detail">
-          {approval.lines.map((line, index) => (
-            <p key={index} className={index === 0 ? "agent-approval-line mono" : "field-meta"}>
-              {line}
-            </p>
-          ))}
-          {approval.kind === "changing" && (
-            <p className="field-meta">
-              DELETE, PUT and PATCH change or remove data, and this host isn&apos;t on this computer, so Studio asks
-              for these separately.
-            </p>
-          )}
-          {approval.answers.includes("session") && approval.sessionNote && (
-            <p className="field-meta">“Allow for this session”: {approval.sessionNote}</p>
-          )}
-          <p className="field-meta">
-            Secret values are filled in by Studio and never shown to the agent. Everything it does is listed in the
-            MCP tab.{more > 0 ? ` ${more} more waiting.` : ""}
+    <Dialog
+      title={approval.title}
+      role="alertdialog"
+      className="agent-approval"
+      labelId="agent-approval-title"
+      describedBy="agent-approval-detail"
+      closable={false}
+      keepFocus
+      onClose={() => answerApproval(approval.id, "deny")}
+      footerContext={
+        <button className="btn ghost" onClick={() => void stopAllAgents()} title="Refuse everything waiting and stop the MCP server">
+          Stop agents
+        </button>
+      }
+      footer={approval.answers.map((answer) => (
+        <button
+          key={answer}
+          ref={answer === "deny" ? denyButton : undefined}
+          className={answer === "session" ? "btn primary" : "btn"}
+          onClick={() => answerApproval(approval.id, answer)}
+        >
+          {LABELS[answer]}
+        </button>
+      ))}
+    >
+      <div id="agent-approval-detail">
+        {approval.lines.map((line, index) => (
+          <p key={index} className={index === 0 ? "agent-approval-line mono" : "field-meta"}>
+            {line}
           </p>
-        </div>
-
-        <div className="modal-foot">
-          <button className="btn ghost" onClick={() => void stopAllAgents()} title="Refuse everything waiting and stop the MCP server">
-            Stop agents
-          </button>
-          <span className="spacer" style={{ flex: 1 }} />
-          {approval.answers.map((answer) => (
-            <button
-              key={answer}
-              ref={answer === "deny" ? denyButton : undefined}
-              className={answer === "deny" ? "btn" : answer === "once" ? "btn" : "btn primary"}
-              onClick={() => answerApproval(approval.id, answer)}
-            >
-              {LABELS[answer]}
-            </button>
-          ))}
-        </div>
+        ))}
+        {approval.kind === "changing" && (
+          <p className="field-meta">
+            DELETE, PUT and PATCH change or remove data, and this host isn&apos;t on this computer, so Studio asks for
+            these separately.
+          </p>
+        )}
+        {approval.answers.includes("session") && approval.sessionNote && (
+          <p className="field-meta">“Allow for this session”: {approval.sessionNote}</p>
+        )}
+        <p className="field-meta">
+          Secret values are filled in by Studio and never shown to the agent. Everything it does is listed in the MCP
+          tab.{more > 0 ? ` ${more} more waiting.` : ""}
+        </p>
       </div>
-    </div>
+    </Dialog>
   );
 }

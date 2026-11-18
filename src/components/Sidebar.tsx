@@ -92,34 +92,36 @@ export function Sidebar({
       {tab === "schemas" ? (
         <div className="history-side-head">
           <h2>Schemas</h2>
-          <span className="meta">{spec.schemas.length}</span>
+          <span className="meta mono">{spec.schemas.length}</span>
         </div>
       ) : (
-        <TabList<SidebarTab>
-          className="tabs"
-          tabClassName="tab"
-          label="Operations or history"
-          tabs={[
-            {
-              id: "operations",
-              label: (
-                <>
-                  Operations <span className="meta">{spec.operations.length}</span>
-                </>
-              ),
-            },
-            {
-              id: "history",
-              label: (
-                <>
-                  History <span className="meta">{history.length}</span>
-                </>
-              ),
-            },
-          ]}
-          selected={tab}
-          onSelect={onTabChange}
-        />
+        <div className="side-top">
+          <TabList<SidebarTab>
+            className="segmented full"
+            tabClassName="segment"
+            label="Operations or history"
+            tabs={[
+              {
+                id: "operations",
+                label: (
+                  <>
+                    Operations <span className="c">{spec.operations.length}</span>
+                  </>
+                ),
+              },
+              {
+                id: "history",
+                label: (
+                  <>
+                    History <span className="c">{history.length}</span>
+                  </>
+                ),
+              },
+            ]}
+            selected={tab}
+            onSelect={onTabChange}
+          />
+        </div>
       )}
 
       <div className="search">

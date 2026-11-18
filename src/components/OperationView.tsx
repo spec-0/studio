@@ -204,7 +204,7 @@ export function OperationView({
             </span>
           )}
         </div>
-        {op.operationId && <div className="meta">{op.operationId}</div>}
+        {op.operationId && <div className="meta mono">{op.operationId}</div>}
       </div>
 
       <div className="op-body">

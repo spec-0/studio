@@ -29,6 +29,8 @@ export function UpdateSettings({ updater }: { updater: Updater }) {
       <label className="check">
         <input
           type="checkbox"
+          className="switch"
+          role="switch"
           checked={updater.prefs.checkOnStart}
           onChange={(event) => updater.setCheckOnStart(event.target.checked)}
         />

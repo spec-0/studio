@@ -1,8 +1,11 @@
+import { Shapes } from "lucide-react";
 import { useMemo, useState } from "react";
 import { deref, typeLabel, type Json, type ParsedSpec } from "../lib/spec";
 import { exampleFor } from "../lib/example";
 import { plural } from "../lib/plural";
 import { Description } from "./Description";
+import { TabList } from "./TabList";
+import { EmptyState } from "./EmptyState";
 
 interface Props {
   spec: ParsedSpec;
@@ -73,7 +76,7 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
     [spec.operations, spec.doc, name],
   );
 
-  if (!schema) return <div className="empty">Schema not found.</div>;
+  if (!schema) return <EmptyState icon={<Shapes size={18} />} title="Schema not found" body="It may have been renamed or removed from the spec." />;
 
   return (
     <>
@@ -90,22 +93,18 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
       </div>
 
       <div className="op-body">
-        <div style={{ display: "flex", gap: 4, marginTop: 12 }}>
-          {(["fields", "example", "raw"] as const).map((tab) => (
-            <button
-              key={tab}
-              className="btn"
-              style={
-                view === tab
-                  ? { borderColor: "hsl(var(--primary))", color: "hsl(var(--primary))" }
-                  : undefined
-              }
-              onClick={() => setView(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        <TabList<"fields" | "example" | "raw">
+          className="ptabs schema-tabs"
+          tabClassName="ptab"
+          label="Schema"
+          tabs={[
+            { id: "fields", label: <>Fields <span className="c">{fields.length}</span></> },
+            { id: "example", label: "Example" },
+            { id: "raw", label: "Raw" },
+          ]}
+          selected={view}
+          onSelect={setView}
+        />
 
         {view === "fields" && (
           <table className="fields" style={{ marginTop: 12 }}>

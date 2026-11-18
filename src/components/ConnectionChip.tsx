@@ -1,40 +1,49 @@
-import { Cloud, CloudOff } from "lucide-react";
 import type { Session } from "../lib/spec0";
 
 interface Props {
   session: Session | null;
   /** Opens Settings at Account & Spec0. */
-  onClick: () => void;
+  onOpenAccount: () => void;
+  /** Opens the sign-in choices. */
+  onSignIn: () => void;
+}
+
+/** Up to two initials from the organisation's name: "Acme" → "A", "Shop Verse" → "SV". */
+export function initials(name: string): string {
+  const words = name.trim().split(/[\s._-]+/).filter(Boolean);
+  return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? "?").slice(0, 1)).toUpperCase();
 }
 
 /**
- * Which of the two modes Studio is in, always visible in the top bar.
+ * Which of Studio's two modes it's in, at the right of the top bar.
  *
- * Studio runs either **local**, where everything works with no account and no
- * network, or **signed in**, which adds the organisation's catalog, remote
- * specs and hosted mocks. Showing it all the time keeps that capability
- * difference visible instead of hidden in a dialog.
- *
- * This is a status indicator, not a prompt. It never changes size, animates,
- * or asks for anything. It states where you are and is a way into Settings if
- * you want one.
+ * Signed in, it's a quiet avatar with the organisation's initials: its tooltip
+ * names the organisation, and it opens Settings at Account & Spec0. Local, it's
+ * a "Sign in" button. Everything works without an account, so it never asks
+ * for anything more than that.
  */
-export function ConnectionChip({ session, onClick }: Props) {
-  const connected = Boolean(session);
-  const label = connected ? `Signed in · ${session!.orgName}` : "Local";
+export function ConnectionChip({ session, onOpenAccount, onSignIn }: Props) {
+  if (!session) {
+    return (
+      <button
+        type="button"
+        className="btn ghost sign-in-btn"
+        onClick={onSignIn}
+        title="Local: everything works without an account. Sign in to Spec0 for your organisation's catalog and hosted mocks."
+      >
+        Sign in
+      </button>
+    );
+  }
   return (
     <button
-      className={`conn-chip${connected ? " on" : ""}`}
-      onClick={onClick}
-      aria-label={`${label}. Account settings`}
-      title={
-        connected
-          ? `Signed in to Spec0 as ${session!.orgName}: org catalog and hosted mocks available`
-          : "Local: everything works without an account. Sign in to Spec0 for your org's catalog and mocks."
-      }
+      type="button"
+      className="avatar"
+      onClick={onOpenAccount}
+      aria-label={`Signed in to Spec0 as ${session.orgName}. Account settings`}
+      title={`Signed in to Spec0 · ${session.orgName}\nOrganisation catalog and hosted mocks available. Account settings`}
     >
-      {connected ? <Cloud size={12} /> : <CloudOff size={12} />}
-      <span>{label}</span>
+      {initials(session.orgName)}
     </button>
   );
 }

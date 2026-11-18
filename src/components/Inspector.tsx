@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Download, History } from "lucide-react";
+import { Copy, Download, History, Send } from "lucide-react";
 import type { ResponseResult } from "../lib/request";
 import type { ValidationResult } from "../lib/validate";
+import { TabList } from "./TabList";
+import { EmptyState } from "./EmptyState";
+import { shortcut } from "../lib/platform";
 
 interface Props {
   result: ResponseResult | null;
@@ -88,13 +91,16 @@ export function Inspector({
         <div className="insp-head">
           <strong style={{ fontSize: 12 }}>Response</strong>
         </div>
-        <div className="insp-body">
-          <div className="meta">
-            {noSchema
-              ? "Send a request to see the response."
-              : "Send a request to see the response and its schema check."}
-          </div>
-        </div>
+        <EmptyState
+          icon={<Send size={18} />}
+          title="No response yet"
+          body={
+            <>
+              {noSchema ? "Send the request to see its response here." : "Send the request to see its response and schema check here."}{" "}
+              <span className="kbd">{shortcut("↵")}</span>
+            </>
+          }
+        />
       </>
     );
   }
@@ -108,7 +114,7 @@ export function Inspector({
       <div className="insp-head">
         <span className={`status-pill s${family}`}>{result.status}</span>
         <span className="meta">{result.statusText}</span>
-        <span className="meta" style={{ marginLeft: "auto" }}>
+        <span className="meta mono" style={{ marginLeft: "auto" }}>
           {result.ms}ms · {formatBytes(result.bytes)}
         </span>
       </div>
@@ -154,30 +160,34 @@ export function Inspector({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 4, margin: "14px 0 8px" }}>
-          {(["body", "headers", "curl"] as const).map((tab) => (
+        <div className="ptabs insp-tabs">
+          <TabList<"body" | "headers" | "curl">
+            className="ptabs-list"
+            tabClassName="ptab"
+            label="Response"
+            tabs={[
+              { id: "body", label: "Body" },
+              {
+                id: "headers",
+                label: (
+                  <>
+                    Headers <span className="c">{Object.keys(result.headers).length}</span>
+                  </>
+                ),
+              },
+              { id: "curl", label: "cURL" },
+            ]}
+            selected={view}
+            onSelect={setView}
+          />
+          <div className="tools">
             <button
-              key={tab}
-              className="btn"
-              style={
-                view === tab
-                  ? { borderColor: "hsl(var(--primary))", color: "hsl(var(--primary))" }
-                  : undefined
-              }
-              onClick={() => setView(tab)}
+              className="btn ghost sm"
+              onClick={() => navigator.clipboard.writeText(view === "curl" ? (curl ?? "") : pretty)}
             >
-              {tab}
+              <Copy size={13} /> Copy
             </button>
-          ))}
-          <button
-            className="btn"
-            style={{ marginLeft: "auto" }}
-            onClick={() =>
-              navigator.clipboard.writeText(view === "curl" ? (curl ?? "") : pretty)
-            }
-          >
-            Copy
-          </button>
+          </div>
         </div>
 
         {view === "body" &&

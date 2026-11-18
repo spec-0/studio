@@ -145,7 +145,7 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
             </p>
             <div className="field">
               <div className="field-label">
-                <div className="field-name">proxy URL</div>
+                <div className="field-label-text">Proxy URL</div>
               </div>
               <input
                 value={draft.proxy.url ?? ""}
@@ -158,7 +158,7 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
             </div>
             <div className="field">
               <div className="field-label">
-                <div className="field-name">bypass</div>
+                <div className="field-label-text">Bypass</div>
               </div>
               <input
                 value={draft.proxy.noProxy ?? ""}
@@ -172,6 +172,8 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
             <label className="check">
               <input
                 type="checkbox"
+                className="switch"
+                role="switch"
                 checked={draft.proxy.disabled ?? false}
                 onChange={(event) =>
                   commit({ ...draft, proxy: { ...draft.proxy, disabled: event.target.checked } })
@@ -185,7 +187,7 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
             <h3>Requests</h3>
             <div className="field">
               <div className="field-label">
-                <div className="field-name">timeout</div>
+                <div className="field-label-text">Timeout</div>
                 <div className="field-meta">seconds</div>
               </div>
               <input
@@ -206,6 +208,8 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
             <label className="check">
               <input
                 type="checkbox"
+                className="switch"
+                role="switch"
                 checked={draft.followRedirects}
                 onChange={(event) => commit({ ...draft, followRedirects: event.target.checked })}
               />

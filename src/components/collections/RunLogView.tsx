@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Copy, Download, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, Download, ListChecks, Trash2 } from "lucide-react";
 import { absoluteTime, relativeTime } from "../../lib/history";
 import {
   describeCause,
@@ -11,6 +11,7 @@ import {
   type RunLog,
   type StepTimeline,
 } from "../../lib/runLog";
+import { EmptyState } from "../EmptyState";
 
 interface Props {
   runs: RunLog[];
@@ -39,13 +40,12 @@ export function RunLogView({ runs, selectedId, onSelect, onClear, onExport }: Pr
 
   if (!runs.length) {
     return (
-      <div className="empty runlog-empty">
-        <p>
-          No runs yet. Press <strong>Run</strong> and each run's log is kept here: every step in order, the values passed
-          between steps, and why a step failed or was skipped.
-        </p>
-        <p className="meta">The last 20 runs are kept on this computer, with secret values replaced by their names.</p>
-      </div>
+      <EmptyState
+        className="runlog-empty"
+        icon={<ListChecks size={18} />}
+        title="No runs yet"
+        body="Press Run, and each run's log is kept here: every step in order, the values passed between steps, and why a step failed or was skipped. The last 20 are kept on this computer."
+      />
     );
   }
 

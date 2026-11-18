@@ -109,8 +109,8 @@ describe("the renderer", () => {
 
 describe("the tabs", () => {
   it("are named to match the dashboard", () => {
-    expect(DOCUMENT).toMatch(/>\s*Raw\s*</);
-    expect(DOCUMENT).toMatch(/>\s*Reference\s*</);
+    expect(DOCUMENT).toMatch(/label: "Raw"/);
+    expect(DOCUMENT).toMatch(/label: "Reference"/);
   });
 });
 

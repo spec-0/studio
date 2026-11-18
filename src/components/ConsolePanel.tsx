@@ -13,6 +13,7 @@ import {
 import { isMac } from "../lib/platform";
 import { consoleShortcutLabel } from "../lib/shortcuts";
 import { useAppConsole } from "../hooks/useAppConsole";
+import { TabList } from "./TabList";
 
 interface Props {
   /** Open a collection run's log. */
@@ -63,21 +64,22 @@ export function ConsolePanel({ onOpenRun }: Props) {
     <section className="console" aria-label="Console">
       <header className="console-head">
         <strong className="console-title">Console</strong>
-        <span className="segmented console-filters" role="tablist" aria-label="Show">
-          {CONSOLE_FILTERS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              role="tab"
-              className="segment"
-              aria-selected={filter === f.id}
-              onClick={() => setFilter(f.id)}
-            >
-              {f.label}
-              {counts[f.id] ? <span className="console-count">{counts[f.id]}</span> : null}
-            </button>
-          ))}
-        </span>
+        <TabList<ConsoleFilter>
+          className="segmented sm console-filters"
+          tabClassName="segment"
+          label="Show"
+          tabs={CONSOLE_FILTERS.map((f) => ({
+            id: f.id,
+            label: (
+              <>
+                {f.label}
+                {counts[f.id] ? <span className={f.id === "errors" ? "console-count" : "c"}>{counts[f.id]}</span> : null}
+              </>
+            ),
+          }))}
+          selected={filter}
+          onSelect={setFilter}
+        />
         <input
           className="console-search"
           type="search"

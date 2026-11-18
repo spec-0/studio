@@ -6,6 +6,7 @@ import { localMockUrl } from "../lib/localMockServer";
 import { KEY_NEEDS_REGENERATING, type MockRow } from "../lib/spec0";
 import { maskKey } from "../lib/mockJourney";
 import type { MockKeyState } from "../hooks/useMocks";
+import { EmptyState } from "./EmptyState";
 
 interface Props {
   signedIn: boolean;
@@ -156,7 +157,7 @@ export function MocksView({
                     {mock.name && <div className="field-meta">{mock.name}</div>}
                   </td>
                   <td className="name mock-url">{mock.url}</td>
-                  <td className="meta">{mock.specVersion ?? "–"}</td>
+                  <td className="meta mono">{mock.specVersion ?? "–"}</td>
                   <td className="mock-key">
                     {mock.mockServerId ? (
                       <KeyCell
@@ -241,7 +242,11 @@ function LocalMocks({
       </div>
 
       {!available ? (
-        <p className="meta">Local mocks need the desktop app.</p>
+        <EmptyState
+          icon={<Server size={18} />}
+          title="Local mocks need the desktop app"
+          body="The browser preview can't listen for requests. Run Studio as an app to start a mock on this computer."
+        />
       ) : (
         <>
           {live.length > 0 && (
@@ -401,7 +406,7 @@ function KeyCell({
   const known = state?.status === "known" ? state.key : null;
   return (
     <div className="mock-key-cell">
-      <code className="meta" title={state?.status === "unavailable" ? state.message : undefined}>
+      <code className="meta mono" title={state?.status === "unavailable" ? state.message : undefined}>
         {state?.status === "loading"
           ? "…"
           : known

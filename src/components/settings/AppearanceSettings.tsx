@@ -36,6 +36,8 @@ export function AppearanceSettings({ dark, onDark, inspectorOpen, onInspectorOpe
         <label className="check">
           <input
             type="checkbox"
+            className="switch"
+            role="switch"
             checked={inspectorOpen}
             onChange={(event) => onInspectorOpen(event.target.checked)}
           />

@@ -6,7 +6,7 @@ import type { EnvironmentFile } from "../lib/env";
 import { TOP_TABS, type TopTab } from "../lib/navigation";
 import { isMac, shortcut } from "../lib/platform";
 import type { Session } from "../lib/spec0";
-import { agentButtonText, toggleAgentChatPanel } from "../lib/agentChatPanel";
+import { agentButtonText, agentChatShortcutLabel, toggleAgentChatPanel } from "../lib/agentChatPanel";
 import { useAgentChatActivity, useAgentChatPanelOpen } from "../hooks/useAgentChatPanelOpen";
 
 interface Props {
@@ -19,8 +19,10 @@ interface Props {
   envFile: EnvironmentFile;
   onSelectEnvironment: (id: string | null) => void;
   onEditEnvironments: () => void;
-  /** The status chip: opens Settings at Account & Spec0. */
+  /** The avatar: opens Settings at Account & Spec0. */
   onOpenAccount: () => void;
+  /** "Sign in", when signed out. */
+  onSignIn: () => void;
   settingsOpen: boolean;
   onOpenSettings: () => void;
   /** How many local mocks are running, for a dot on the Mocks tab. */
@@ -49,6 +51,7 @@ export function TitleBar({
   onSelectEnvironment,
   onEditEnvironments,
   onOpenAccount,
+  onSignIn,
   settingsOpen,
   onOpenSettings,
   localMocks = 0,
@@ -68,7 +71,7 @@ export function TitleBar({
                 label: (
                   <>
                     {tab.label}
-                    <span className="live-dot" aria-hidden />
+                    <span className="dot live" aria-hidden />
                     <span className="sr-only"> ({localMocks} running on this computer)</span>
                   </>
                 ),
@@ -106,9 +109,9 @@ export function TitleBar({
         </button>
       </div>
 
-      <ConnectionChip session={session} onClick={onOpenAccount} />
-
       <AgentButton />
+
+      <ConnectionChip session={session} onOpenAccount={onOpenAccount} onSignIn={onSignIn} />
 
       <button
         className={`icon-btn settings-btn${settingsOpen ? " on" : ""}${insecureHosts ? " warn-dot" : ""}`}
@@ -151,6 +154,7 @@ function AgentButton() {
     >
       <BotMessageSquare size={14} aria-hidden />
       <span>Agent</span>
+      <span className="kbd">{agentChatShortcutLabel(isMac)}</span>
       {activity !== "idle" && <span className={`agent-btn-dot ${activity}`} aria-hidden />}
     </button>
   );

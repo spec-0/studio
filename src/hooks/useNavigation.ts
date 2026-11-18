@@ -5,6 +5,7 @@ import {
   routeForTopTab,
   topTabOf,
   type Route,
+  settingsDestination,
   type SettingsSectionId,
   type TopTab,
 } from "../lib/navigation";
@@ -41,8 +42,10 @@ export function useNavigation({ route, setRoute, hasOpenApi }: Options) {
   );
 
   const openSettings = useCallback(
-    (section?: SettingsSectionId, options?: { host?: string | null }) => {
-      if (section) setSettingsSection(section);
+    (section?: SettingsSectionId | "mcp", options?: { host?: string | null }) => {
+      const destination = settingsDestination(section);
+      if (destination.route === "mcp") return setRoute("mcp");
+      if (destination.section) setSettingsSection(destination.section);
       setSuggestHost(options?.host ?? null);
       setRoute("settings");
     },

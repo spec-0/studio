@@ -320,7 +320,7 @@ export function Library({
                 <SourceIcon kind={entry.source.kind} />
                 {entry.source.kind}
               </span>
-              <span className="meta" title={entry.source.ref}>
+              <span className="meta mono" title={entry.source.ref}>
                 {sourceLabel(entry.source)}
               </span>
             </div>

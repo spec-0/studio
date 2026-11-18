@@ -22,6 +22,7 @@ import { blockScalarMask, detectSyntax, tokenizeLine } from "../lib/highlight";
 import { describeGit, refLabel, type GitInfo } from "../lib/git";
 import type { ApiConsumers } from "../lib/spec0";
 import { CONVERTED_LABEL, describeConversion } from "../lib/swagger2";
+import { TabList } from "./TabList";
 
 const ScalarReference = lazy(() => import("./ScalarReference"));
 
@@ -98,18 +99,17 @@ export function DocumentView({
           )}
         </div>
 
-        <div className="doc-tabs" role="tablist" aria-label="Document">
-          <button role="tab" aria-selected={tab === "raw"} onClick={() => onTabChange("raw")}>
-            Raw
-          </button>
-          <button
-            role="tab"
-            aria-selected={tab === "reference"}
-            onClick={() => onTabChange("reference")}
-          >
-            Reference
-          </button>
-        </div>
+        <TabList<"raw" | "reference">
+          className="segmented doc-tabs"
+          tabClassName="segment"
+          label="Document"
+          tabs={[
+            { id: "raw", label: "Raw" },
+            { id: "reference", label: "Reference" },
+          ]}
+          selected={tab}
+          onSelect={onTabChange}
+        />
       </header>
 
       {converted && (
@@ -146,7 +146,7 @@ function GitChip({ info }: { info: GitInfo }) {
     <span className={`chip git${info.dirty ? " dirty" : ""}`} title={describeGit(info)}>
       <GitBranch size={12} />
       {refLabel(info)}
-      <span className="meta">{info.sha}</span>
+      <span className="meta mono">{info.sha}</span>
       {info.dirty && <span className="meta warn">uncommitted</span>}
     </span>
   );

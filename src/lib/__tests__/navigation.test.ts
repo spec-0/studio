@@ -6,6 +6,7 @@ import {
   nextTab,
   routeForTopTab,
   sectionForKey,
+  settingsDestination,
   topTabOf,
 } from "../navigation";
 
@@ -107,7 +108,15 @@ describe("nextTab", () => {
 });
 
 describe("SETTINGS_SECTIONS", () => {
-  it("has a section for MCP, so it can be filled in later", () => {
-    expect(SETTINGS_SECTIONS.map((section) => section.id)).toContain("mcp");
+  it("has no MCP section: the MCP server's one home is its tab", () => {
+    expect(SETTINGS_SECTIONS.map((section) => section.id)).not.toContain("mcp");
+  });
+});
+
+describe("settingsDestination", () => {
+  it("sends a request for Settings › MCP to the MCP tab", () => {
+    expect(settingsDestination("mcp")).toEqual({ route: "mcp" });
+    expect(settingsDestination("network")).toEqual({ route: "settings", section: "network" });
+    expect(settingsDestination(undefined)).toEqual({ route: "settings" });
   });
 });
