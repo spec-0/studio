@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Cookie, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import { Cookie, Plus, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
 import {
   DEFAULT_TIMEOUT_MS,
   withTrust,
@@ -9,6 +9,7 @@ import {
 } from "../../lib/connection";
 import { clearCookies, listCookies, type StoredCookie } from "../../lib/cookies";
 import { pickCertificate } from "../../lib/store";
+import { plural } from "../../lib/plural";
 
 interface Props {
   settings: ConnectionSettings;
@@ -73,51 +74,72 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
 
   return (
     <>
-          <section className="section">
-            <h3>Certificates</h3>
-            <p className="field-meta">
-              Internal services often sit behind a private CA. Adding its bundle keeps verification
-              on. Skipping verification turns it off for that host only, never globally, and the
-              address bar says so on every request that uses it.
-            </p>
-
-            {draft.trusted.length > 0 && (
-              <div className="trust-list">
-                {draft.trusted.map((entry) => (
-                  <div className="trust-row" key={entry.host}>
-                    {entry.insecure ? (
-                      <ShieldAlert size={13} className="danger-ink" />
-                    ) : (
-                      <ShieldCheck size={13} className="ok-ink" />
-                    )}
-                    <span className="mono">{entry.host}</span>
-                    <span className="meta">
-                      {entry.insecure ? "verification off" : `CA: ${entry.caBundleName ?? "bundle"}`}
-                    </span>
-                    <span className="spacer" />
-                    <button
-                      className="icon-btn tight danger"
-                      aria-label={`Remove ${entry.host}`}
-                      onClick={() => commit(withoutTrust(draft, entry.host))}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="field" style={{ marginTop: 10 }}>
-              <div className="field-label">
+      <div className="section-head">
+        <div className="l">
+          <h2 className="h2">Certificates</h2>
+          <span className="meta">
+            For a host behind a private CA, add its bundle and verification stays on. Skipping verification turns it
+            off for that host only, never globally, and the address bar says so on every request that uses it.
+          </span>
+        </div>
+      </div>
+      <table className="tbl trust-table">
+        <thead>
+          <tr>
+            <th>Host</th>
+            <th>Trust</th>
+            <th aria-label="Actions" />
+          </tr>
+        </thead>
+        <tbody>
+          {draft.trusted.map((entry) => (
+            <tr key={entry.host}>
+              <td className="mono">{entry.host}</td>
+              <td>
+                {entry.insecure ? (
+                  <span className="chip sans warn">
+                    <ShieldAlert size={11} aria-hidden /> Verification skipped
+                  </span>
+                ) : (
+                  <span className="trust-ca">
+                    <ShieldCheck size={13} className="ok-ink" aria-hidden /> Private CA{" "}
+                    <span className="mono">{entry.caBundleName ?? "bundle"}</span>
+                  </span>
+                )}
+              </td>
+              <td className="act">
+                <button
+                  className="icon-btn danger hover-only"
+                  aria-label={`Remove ${entry.host}`}
+                  title="Remove"
+                  onClick={() => commit(withoutTrust(draft, entry.host))}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </td>
+            </tr>
+          ))}
+          {draft.trusted.length === 0 && (
+            <tr>
+              <td colSpan={3} className="meta">
+                Every host is verified against the system&apos;s certificates.
+              </td>
+            </tr>
+          )}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={3}>
+              <div className="trust-add">
                 <input
+                  className="input mono"
                   value={host}
                   placeholder="api.internal.example.com"
+                  aria-label="Host"
                   onChange={(event) => setHost(event.target.value)}
                 />
-              </div>
-              <div style={{ flex: 1, display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <button
-                  className="btn"
+                  className="btn sm"
                   onClick={async () => {
                     const picked = await pickCertificate();
                     if (picked) setPem({ name: picked.name, content: picked.text });
@@ -125,156 +147,172 @@ export function NetworkSettings({ settings, onSave, jar, suggestHost }: Props) {
                 >
                   {pem ? `✓ ${pem.name}` : "Choose CA bundle…"}
                 </button>
-                <button className="btn primary" onClick={() => addTrust(false)}>
-                  Trust with CA
+                <button className="btn sm" onClick={() => addTrust(false)}>
+                  <Plus size={12} /> Trust with CA
                 </button>
-                <button className="btn danger-outline" onClick={() => addTrust(true)}>
+                <button className="btn sm danger-outline" onClick={() => addTrust(true)}>
                   Skip verification
                 </button>
               </div>
-            </div>
-            {error && <div className="error-box">{error}</div>}
-          </section>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+      {error && <div className="error-box">{error}</div>}
 
-          <section className="section">
-            <h3>Proxy</h3>
-            <p className="field-meta">
-              By default Studio honours <span className="mono">HTTPS_PROXY</span>,{" "}
-              <span className="mono">HTTP_PROXY</span> and <span className="mono">NO_PROXY</span> from
-              your environment, the same as every other tool on this machine.
-            </p>
-            <div className="field">
-              <div className="field-label">
-                <div className="field-label-text">Proxy URL</div>
-              </div>
-              <input
-                value={draft.proxy.url ?? ""}
-                placeholder="http://proxy.corp:3128 (blank to use the environment)"
-                disabled={draft.proxy.disabled}
-                onChange={(event) =>
-                  commit({ ...draft, proxy: { ...draft.proxy, url: event.target.value } })
-                }
-              />
-            </div>
-            <div className="field">
-              <div className="field-label">
-                <div className="field-label-text">Bypass</div>
-              </div>
-              <input
-                value={draft.proxy.noProxy ?? ""}
-                placeholder="localhost,127.0.0.1,.internal"
-                disabled={draft.proxy.disabled || !draft.proxy.url}
-                onChange={(event) =>
-                  commit({ ...draft, proxy: { ...draft.proxy, noProxy: event.target.value } })
-                }
-              />
-            </div>
-            <label className="check">
-              <input
-                type="checkbox"
-                className="switch"
-                role="switch"
-                checked={draft.proxy.disabled ?? false}
-                onChange={(event) =>
-                  commit({ ...draft, proxy: { ...draft.proxy, disabled: event.target.checked } })
-                }
-              />
-              Never use a proxy, including the environment's
-            </label>
-          </section>
+      <div className="section-head">
+        <div className="l">
+          <h2 className="h2">Proxy</h2>
+          <span className="meta">
+            By default Studio uses <span className="mono">HTTPS_PROXY</span>, <span className="mono">HTTP_PROXY</span>{" "}
+            and <span className="mono">NO_PROXY</span> from your environment, like every other tool on this computer.
+          </span>
+        </div>
+      </div>
+      <div className="rows">
+        <div className="row-s">
+          <div className="l">
+            <b>Proxy URL</b>
+            <span className="meta">Blank to use the environment&apos;s.</span>
+          </div>
+          <div className="c">
+            <input
+              className="input mono"
+              value={draft.proxy.url ?? ""}
+              placeholder="http://proxy.corp:3128"
+              aria-label="Proxy URL"
+              disabled={draft.proxy.disabled}
+              onChange={(event) => commit({ ...draft, proxy: { ...draft.proxy, url: event.target.value } })}
+            />
+          </div>
+        </div>
+        <div className="row-s">
+          <div className="l">
+            <b>Bypass</b>
+            <span className="meta">Hosts that skip the proxy, separated by commas.</span>
+          </div>
+          <div className="c">
+            <input
+              className="input mono"
+              value={draft.proxy.noProxy ?? ""}
+              placeholder="localhost,127.0.0.1,.internal"
+              aria-label="Hosts that bypass the proxy"
+              disabled={draft.proxy.disabled || !draft.proxy.url}
+              onChange={(event) => commit({ ...draft, proxy: { ...draft.proxy, noProxy: event.target.value } })}
+            />
+          </div>
+        </div>
+        <div className="row-s">
+          <div className="l">
+            <b>Never use a proxy</b>
+            <span className="meta">Including the environment&apos;s.</span>
+          </div>
+          <div className="c">
+            <input
+              type="checkbox"
+              className="switch"
+              role="switch"
+              aria-label="Never use a proxy"
+              checked={draft.proxy.disabled ?? false}
+              onChange={(event) => commit({ ...draft, proxy: { ...draft.proxy, disabled: event.target.checked } })}
+            />
+          </div>
+        </div>
+      </div>
 
-          <section className="section">
-            <h3>Requests</h3>
-            <div className="field">
-              <div className="field-label">
-                <div className="field-label-text">Timeout</div>
-                <div className="field-meta">seconds</div>
-              </div>
-              <input
-                type="number"
-                min={1}
-                max={600}
-                value={Math.round(draft.timeoutMs / 1000)}
-                onChange={(event) => {
-                  const seconds = Number(event.target.value);
-                  commit({
-                    ...draft,
-                    timeoutMs:
-                      Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : DEFAULT_TIMEOUT_MS,
-                  });
+      <div className="section-head">
+        <div className="l">
+          <h2 className="h2">Requests</h2>
+        </div>
+      </div>
+      <div className="rows">
+        <div className="row-s">
+          <div className="l">
+            <b>Timeout</b>
+            <span className="meta">In seconds.</span>
+          </div>
+          <div className="c">
+            <input
+              className="input mono timeout-input"
+              type="number"
+              min={1}
+              max={600}
+              aria-label="Timeout in seconds"
+              value={Math.round(draft.timeoutMs / 1000)}
+              onChange={(event) => {
+                const seconds = Number(event.target.value);
+                commit({
+                  ...draft,
+                  timeoutMs: Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : DEFAULT_TIMEOUT_MS,
+                });
+              }}
+            />
+          </div>
+        </div>
+        <div className="row-s">
+          <div className="l">
+            <b>Follow redirects</b>
+            <span className="meta">Up to 10. The response says which ones were followed.</span>
+          </div>
+          <div className="c">
+            <input
+              type="checkbox"
+              className="switch"
+              role="switch"
+              aria-label="Follow redirects"
+              checked={draft.followRedirects}
+              onChange={(event) => commit({ ...draft, followRedirects: event.target.checked })}
+            />
+          </div>
+        </div>
+        <div className="row-s">
+          <div className="l">
+            <b>
+              <Cookie size={12} style={{ verticalAlign: "-1px", marginRight: 6 }} aria-hidden />
+              Cookies{jar ? ` · ${jar.title}` : ""}
+            </b>
+            <span className="meta">
+              Kept per API, so a session from one never reaches another, and only while Studio is open.
+              {jar ? ` ${plural(cookies.length, "cookie")} held.` : " Open an API to see and clear its cookies."}
+            </span>
+          </div>
+          {jar && cookies.length > 0 && (
+            <div className="c">
+              <button
+                className="btn sm"
+                onClick={async () => {
+                  await clearCookies(jar.id);
+                  setCookies(await listCookies(jar.id));
                 }}
-              />
+              >
+                Clear cookies
+              </button>
             </div>
-            <label className="check">
-              <input
-                type="checkbox"
-                className="switch"
-                role="switch"
-                checked={draft.followRedirects}
-                onChange={(event) => commit({ ...draft, followRedirects: event.target.checked })}
-              />
-              Follow redirects (up to 10)
-            </label>
-          </section>
-
-          {jar && (
-            <section className="section">
-              <h3>
-                <Cookie size={12} style={{ verticalAlign: "-1px", marginRight: 6 }} />
-                Cookies · {jar.title}
-              </h3>
-              <p className="field-meta">
-                Kept per API, so a session from one never reaches another. Not written to disk: they
-                last as long as the app is open.
-              </p>
-              {cookies.length === 0 ? (
-                <div className="field-meta">No cookies held for this API.</div>
-              ) : (
-                <>
-                  <table className="fields" style={{ marginTop: 6 }}>
-                    <tbody>
-                      {cookies.map((cookie) => (
-                        <tr key={`${cookie.domain}${cookie.path}${cookie.name}`}>
-                          <td className="name">{cookie.name}</td>
-                          <td className="type">
-                            {cookie.domain}
-                            {cookie.path}
-                          </td>
-                          <td className="desc">
-                            {cookie.expires ? "expires" : "session"}
-                            {cookie.secure ? " · secure" : ""}
-                            {cookie.httpOnly ? " · httpOnly" : ""}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <button
-                    className="btn"
-                    style={{ marginTop: 8 }}
-                    onClick={async () => {
-                      await clearCookies(jar.id);
-                      setCookies(await listCookies(jar.id));
-                    }}
-                  >
-                    Clear cookies
-                  </button>
-                </>
-              )}
-            </section>
           )}
-          {!jar && (
-            <section className="section">
-              <h3>
-                <Cookie size={12} style={{ verticalAlign: "-1px", marginRight: 6 }} />
-                Cookies
-              </h3>
-              <p className="field-meta">
-                Kept per API, so a session from one never reaches another. Not written to disk: they
-                last as long as the app is open. Open an API to see and clear its cookies.
-              </p>
-            </section>
-          )}
+        </div>
+        {jar && cookies.length > 0 && (
+          <div className="row-s stack">
+            <table className="tbl">
+              <tbody>
+                {cookies.map((cookie) => (
+                  <tr key={`${cookie.domain}${cookie.path}${cookie.name}`}>
+                    <td className="mono">{cookie.name}</td>
+                    <td className="mono">
+                      {cookie.domain}
+                      {cookie.path}
+                    </td>
+                    <td className="meta">
+                      {cookie.expires ? "expires" : "session"}
+                      {cookie.secure ? " · secure" : ""}
+                      {cookie.httpOnly ? " · httpOnly" : ""}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </>
   );
 }

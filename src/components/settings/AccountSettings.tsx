@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, LogOut, Search } from "lucide-react";
-import { ConnectModes } from "../ConnectModes";
+import { initials } from "../ConnectionChip";
 import { getEntitlements, planName, type Session } from "../../lib/spec0";
 
 interface Props {
@@ -45,20 +45,49 @@ function useOrgPlan(session: Session | null): string | null {
   return plan;
 }
 
+const ADDS: ReadonlyArray<[string, string]> = [
+  ["Your organisation's APIs", "Browse the catalog and open any API, private or published."],
+  ["Updates from Spec0", "Re-pull a spec when it changes upstream."],
+  ["Hosted mocks", "Create mock servers with an address your team can share, and send to them from the address bar."],
+];
+
 /** Account & Spec0: whether you're signed in, to which org, and what that adds. */
 export function AccountSettings({ session, onSignIn, onBrowseCatalog, onSignOut, onOpenSpec0 }: Props) {
   const plan = useOrgPlan(session);
   if (!session) {
     return (
       <>
-        <p className="settings-lead">
-          You&apos;re using Studio locally. Everything works without an account. Signing in to
-          Spec0 is optional and adds your organisation&apos;s APIs and hosted mocks.
-        </p>
-        <ConnectModes />
-        <button className="btn primary" onClick={onSignIn}>
-          Sign in to Spec0…
-        </button>
+        <div className="rows">
+          <div className="row-s">
+            <div className="l">
+              <b>Not signed in</b>
+              <span className="meta">
+                Everything in Studio works without an account, with no network call to Spec0. Signing in is optional.
+              </span>
+            </div>
+            <div className="c">
+              <button className="btn" onClick={onSignIn}>
+                Sign in to Spec0…
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="section-head">
+          <div className="l">
+            <h2 className="h2">What signing in adds</h2>
+          </div>
+        </div>
+        <div className="rows">
+          {ADDS.map(([title, detail]) => (
+            <div className="row-s" key={title}>
+              <div className="l">
+                <b>{title}</b>
+                <span className="meta">{detail}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="meta settings-note">Signing out later returns Studio to local use. Nothing you added is lost.</p>
       </>
     );
   }
@@ -66,45 +95,50 @@ export function AccountSettings({ session, onSignIn, onBrowseCatalog, onSignOut,
   const since = new Date(session.connectedAt);
   return (
     <>
-      <div className="settings-card">
-        <div className="settings-card-row">
-          <span className="tag ok">signed in</span>
-          <strong>{session.orgName}</strong>
+      <div className="rows">
+        <div className="row-s">
+          <span className="avatar" aria-hidden>
+            {initials(session.orgName)}
+          </span>
+          <div className="l">
+            <b>{session.orgName}</b>
+            <span className="meta">
+              Signed in with {SOURCE_LABEL[session.source] ?? session.source}
+              {!Number.isNaN(since.getTime()) ? ` on ${since.toLocaleDateString()}` : ""}
+              {plan ? ` · ${plan} plan` : ""}
+            </span>
+          </div>
+          <div className="c">
+            <button className="btn danger-outline" onClick={onSignOut}>
+              <LogOut size={13} /> Sign out
+            </button>
+          </div>
         </div>
-        <dl className="settings-facts">
-          {plan && (
-            <>
-              <dt>Plan</dt>
-              <dd>{plan}</dd>
-            </>
-          )}
-          <dt>Signed in with</dt>
-          <dd>{SOURCE_LABEL[session.source] ?? session.source}</dd>
-          {!Number.isNaN(since.getTime()) && (
-            <>
-              <dt>Since</dt>
-              <dd>{since.toLocaleString()}</dd>
-            </>
-          )}
-          <dt>Server</dt>
-          <dd className="mono">{session.apiUrl}</dd>
-        </dl>
-        <div className="settings-actions">
-          <button className="btn" onClick={onBrowseCatalog}>
-            <Search size={13} /> Browse your organisation&apos;s APIs
-          </button>
-          <button className="btn" onClick={onOpenSpec0}>
-            <ExternalLink size={13} /> Open Spec0
-          </button>
-          <span className="spacer" />
-          <button className="btn danger-outline" onClick={onSignOut}>
-            <LogOut size={13} /> Sign out
-          </button>
+        <div className="row-s">
+          <div className="l">
+            <b>Server</b>
+          </div>
+          <div className="c">
+            <code className="mono">{session.apiUrl}</code>
+          </div>
+        </div>
+        <div className="row-s">
+          <div className="l">
+            <b>Your organisation&apos;s APIs</b>
+            <span className="meta">Open any of them; they come with their hosted mock attached.</span>
+          </div>
+          <div className="c">
+            <button className="btn ghost" onClick={onOpenSpec0}>
+              Open Spec0 <ExternalLink size={12} />
+            </button>
+            <button className="btn" onClick={onBrowseCatalog}>
+              <Search size={13} /> Browse
+            </button>
+          </div>
         </div>
       </div>
-      <p className="field-meta">
-        Signing out returns Studio to local use. APIs you added, environments and history stay
-        where they are.
+      <p className="meta settings-note">
+        Signing out returns Studio to local use. APIs you added, environments and history stay where they are.
       </p>
     </>
   );

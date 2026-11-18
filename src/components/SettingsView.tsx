@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, BotMessageSquare, Database, Globe, Palette, RefreshCw, UserRound, type LucideIcon } from "lucide-react";
 import { TabList } from "./TabList";
 import { SettingsSection } from "./settings/SettingsSection";
 import { SETTINGS_SECTIONS, type SettingsSectionId } from "../lib/navigation";
@@ -22,6 +22,15 @@ const DESCRIPTIONS: Record<SettingsSectionId, string> = {
   data: "What Studio keeps, where it keeps it, and how to clear it.",
 };
 
+const ICONS: Record<SettingsSectionId, LucideIcon> = {
+  account: UserRound,
+  appearance: Palette,
+  network: Globe,
+  agent: BotMessageSquare,
+  data: Database,
+  updates: RefreshCw,
+};
+
 /** The Settings page: a list of sections on the left, the chosen one on the right. */
 export function SettingsView({ section, onSection, content, onOpenMcp }: Props) {
   const current = SETTINGS_SECTIONS.find((entry) => entry.id === section) ?? SETTINGS_SECTIONS[0];
@@ -36,14 +45,24 @@ export function SettingsView({ section, onSection, content, onOpenMcp }: Props) 
           orientation="vertical"
           idPrefix="settings-tab"
           controls={`settings-panel-${current.id}`}
-          tabs={SETTINGS_SECTIONS}
+          tabs={SETTINGS_SECTIONS.map((entry) => {
+            const Icon = ICONS[entry.id];
+            return {
+              id: entry.id,
+              label: (
+                <>
+                  <Icon size={14} aria-hidden /> {entry.label}
+                </>
+              ),
+            };
+          })}
           selected={current.id}
           onSelect={onSection}
         />
         <div className="settings-elsewhere">
           <span className="label">Elsewhere</span>
           <button type="button" className="settings-tab" onClick={onOpenMcp}>
-            MCP server <ArrowUpRight size={12} aria-hidden />
+            <ArrowUpRight size={14} aria-hidden /> MCP server
           </button>
         </div>
       </aside>

@@ -11,42 +11,51 @@ interface Props {
 /** Appearance: the theme and the response pane. */
 export function AppearanceSettings({ dark, onDark, inspectorOpen, onInspectorOpen }: Props) {
   return (
-    <>
-      <section className="section">
-        <h3 id="theme-label">Theme</h3>
-        <div className="choice-row" role="radiogroup" aria-labelledby="theme-label">
-          {([false, true] as const).map((value) => (
-            <label key={String(value)} className={`choice${dark === value ? " on" : ""}`}>
-              <input
-                type="radio"
-                name="theme"
-                checked={dark === value}
-                onChange={() => onDark(value)}
-              />
-              {value ? <Moon size={14} aria-hidden /> : <Sun size={14} aria-hidden />}
-              {value ? "Dark" : "Light"}
-            </label>
-          ))}
+    <div className="rows">
+      <div className="row-s">
+        <div className="l">
+          <b id="theme-label">Theme</b>
+          <span className="meta">
+            <span className="kbd">{shortcut("D")}</span> switches at any time.
+          </span>
         </div>
-        <p className="field-meta">Switch at any time with {shortcut("D")}.</p>
-      </section>
-
-      <section className="section">
-        <h3>Response pane</h3>
-        <label className="check">
+        <div className="c">
+          <span className="segmented sm" role="radiogroup" aria-labelledby="theme-label">
+            {([false, true] as const).map((value) => (
+              <button
+                key={String(value)}
+                type="button"
+                role="radio"
+                className="segment"
+                aria-checked={dark === value}
+                onClick={() => onDark(value)}
+              >
+                {value ? <Moon size={13} aria-hidden /> : <Sun size={13} aria-hidden />}
+                {value ? "Dark" : "Light"}
+              </button>
+            ))}
+          </span>
+        </div>
+      </div>
+      <div className="row-s">
+        <div className="l">
+          <b>Response pane</b>
+          <span className="meta">
+            Show the response next to the request. Also the button at the end of the API bar, or{" "}
+            <span className="kbd">{shortcut("\\")}</span>.
+          </span>
+        </div>
+        <div className="c">
           <input
             type="checkbox"
             className="switch"
             role="switch"
+            aria-label="Show the response pane"
             checked={inspectorOpen}
             onChange={(event) => onInspectorOpen(event.target.checked)}
           />
-          Show the response pane next to the request
-        </label>
-        <p className="field-meta">
-          Also from the button beside Add API, or with {shortcut("\\")}.
-        </p>
-      </section>
-    </>
+        </div>
+      </div>
+    </div>
   );
 }

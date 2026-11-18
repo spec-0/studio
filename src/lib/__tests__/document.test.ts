@@ -102,6 +102,12 @@ describe("the renderer", () => {
     expect(css).toContain("hsl(var(--primary))");
   });
 
+  // Code for other HTTP clients and an SDK generator are another product's
+  // actions; Studio sends requests itself.
+  it("hides the client libraries block", () => {
+    expect(SCALAR).toMatch(/hiddenClients: true/);
+  });
+
   it("is loaded lazily, so a session that never opens it pays nothing", () => {
     expect(DOCUMENT).toMatch(/lazy\(\(\) => import\("\.\/ScalarReference"\)\)/);
   });

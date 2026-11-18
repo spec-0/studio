@@ -42,8 +42,8 @@ Studio keeps a copy of the spec's text, not a link to the file. So an API you've
   tab you were on
 
 Because Studio works from its copy, editing the file doesn't change the API in Studio straight away.
-To pick up your edits, press the **Refresh** button on the API's card in the library ("Re-read from
-source"). It works the same way for a spec from a URL. For an API from Spec0, see
+To pick up your edits, choose **Re-read from source** in the **⋯** menu on the API's card in the
+library (or right-click the card). It works the same way for a spec from a URL. For an API from Spec0, see
 [Keeping specs current](/connect#keeping-specs-current).
 
 References to other files (a `$ref` to `./schemas/order.yaml`, say) aren't followed. A spec split
@@ -59,9 +59,14 @@ across files needs bundling into one file first.
 Requests you've opened stay in the [request tabs](/requests#request-tabs) strip across
 APIs, so you can also move between APIs by tab.
 
-Each API's card in the library has buttons for its mocks, **Refresh**, **Rename** and **Remove from
-library**. Refresh, Rename and Remove sit in the card's top-right corner and appear when you point
-at the card. Removing an API also closes its request tabs and drops its unsent changes.
+Each API's card in the library shows where the spec came from, its counts, and one fact in its
+footer: a running local mock with its port, an update, a hosted mock that's behind, or when you last
+opened it. **Local mock** starts one. The **⋯** menu (or a right-click) has **Re-read from source**,
+**Rename…**, the hosted mock, and **Remove from library**. Removing an API also closes its request
+tabs and drops its unsent changes.
+
+With an empty library, Studio offers three ways in (a file, a URL, or Spec0), the sample API, and a
+request without a spec. You can also drop a spec anywhere on the window.
 
 ## Swagger 2.0 specs
 

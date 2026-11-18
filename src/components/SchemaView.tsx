@@ -6,6 +6,7 @@ import { plural } from "../lib/plural";
 import { Description } from "./Description";
 import { TabList } from "./TabList";
 import { EmptyState } from "./EmptyState";
+import { CodeBlock } from "./CodeBlock";
 
 interface Props {
   spec: ParsedSpec;
@@ -107,7 +108,7 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
         />
 
         {view === "fields" && (
-          <table className="fields" style={{ marginTop: 12 }}>
+          <table className="tbl schema-fields">
             <thead>
               <tr>
                 <th>Field</th>
@@ -126,11 +127,11 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
                       : null;
                 return (
                   <tr key={field}>
-                    <td className="name">
+                    <td className="mono top">
                       {field}
-                      {required.includes(field) && <span className="required">*</span>}
+                      {required.includes(field) && <span className="required-word">required</span>}
                     </td>
-                    <td className="type">
+                    <td className="mono top type-cell">
                       {target ? (
                         <button className="chip link" onClick={() => onSelectSchema(target)}>
                           {typeLabel(spec.doc, propSchema)}
@@ -139,7 +140,15 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
                         typeLabel(spec.doc, propSchema)
                       )}
                     </td>
-                    <td className="desc">{resolved.description ? <Description text={resolved.description} /> : ""}</td>
+                    <td className="top">
+                      {Array.isArray(resolved.enum) && resolved.enum.length > 1 && (
+                        <span className="meta enum-note">
+                          {resolved.enum.length} values: <span className="mono">{resolved.enum.map(String).join(", ")}</span>
+                          {resolved.description ? ". " : ""}
+                        </span>
+                      )}
+                      {resolved.description ? <Description text={resolved.description} /> : resolved.enum ? null : <span className="meta">—</span>}
+                    </td>
                   </tr>
                 );
               })}
@@ -155,14 +164,10 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
         )}
 
         {view === "example" && (
-          <pre className="code" style={{ marginTop: 12 }}>
-            {JSON.stringify(exampleFor(spec.doc, schema, name), null, 2)}
-          </pre>
+          <CodeBlock text={JSON.stringify(exampleFor(spec.doc, schema, name), null, 2)} syntax="json" />
         )}
         {view === "raw" && (
-          <pre className="code" style={{ marginTop: 12 }}>
-            {JSON.stringify(schema, null, 2)}
-          </pre>
+          <CodeBlock text={JSON.stringify(schema, null, 2)} syntax="json" />
         )}
 
         {references.length > 0 && (
@@ -190,11 +195,19 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
         {usedBy.length > 0 && (
           <div className="section">
             <h3>Used in operations</h3>
-            {usedBy.map((op) => (
-              <button className="chip link" key={op.id} onClick={() => onSelectOperation(op.id)}>
-                {op.method} {op.path}
-              </button>
-            ))}
+            <table className="tbl">
+              <tbody>
+                {usedBy.map((op) => (
+                  <tr key={op.id} className="clickable" onClick={() => onSelectOperation(op.id)} title="Open the operation">
+                    <td className="used-method">
+                      <span className={`method ${op.method.toLowerCase()}`}>{op.method}</span>
+                    </td>
+                    <td className="mono">{op.path}</td>
+                    <td className="meta">{op.summary ?? ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

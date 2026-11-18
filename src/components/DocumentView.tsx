@@ -29,8 +29,6 @@ const ScalarReference = lazy(() => import("./ScalarReference"));
 export type DocumentTab = "raw" | "reference";
 
 interface Props {
-  title: string;
-  version: string;
   /** The document as imported, which the Raw tab shows. */
   text: string;
   /**
@@ -59,8 +57,6 @@ const LINE_HEIGHT = 20;
 const OVERSCAN = 20;
 
 export function DocumentView({
-  title,
-  version,
   text,
   converted,
   dark,
@@ -75,11 +71,6 @@ export function DocumentView({
   return (
     <section className="doc">
       <header className="doc-head">
-        <div className="doc-id">
-          <h2>{title}</h2>
-          {version && <span className="chip">{version}</span>}
-        </div>
-
         <div className="doc-facts">
           {git && <GitChip info={git} />}
           {consumers && <ConsumersChip consumers={consumers} onOpen={onOpenConsumers} />}
@@ -89,7 +80,7 @@ export function DocumentView({
           {/* Availability never depends on drift. The git chip supplies
               emphasis, this supplies the action. */}
           {publishBlockedReason === null ? (
-            <button className="btn tight" onClick={onPublish}>
+            <button className="btn" onClick={onPublish}>
               <Upload size={13} /> Publish to spec0
             </button>
           ) : (

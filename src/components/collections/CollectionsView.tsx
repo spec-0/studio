@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
+  Check,
   FileText,
   FolderOpen,
   Import,
+  ListChecks,
   MoreHorizontal,
   Play,
   Plus,
   Save,
   Square,
+  X,
 } from "lucide-react";
 import { fieldsFromOutput, fieldsFromSchema, findRefs, type ResolvedLink, type StepOutput } from "../../lib/chain";
 import {
@@ -51,6 +54,7 @@ import { LinkOperationDialog } from "./LinkOperationDialog";
 import { RunLogView } from "./RunLogView";
 import { StepEditor, type StepChain, type StepTab } from "./StepEditor";
 import { StepList, stepTitle } from "./StepList";
+import { EmptyState } from "../EmptyState";
 
 interface Props {
   api: CollectionsApi;
@@ -145,25 +149,31 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
           <h2>Collections</h2>
           <span className="meta mono">{collections.length}</span>
           <span className="spacer" />
-          <button type="button" className="icon-btn tight" aria-label="New collection" title="New collection" onClick={() => api.requestNew()}>
-            <Plus size={14} />
+          {inTauri && (
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Open file…"
+              title="Open a collection file and keep it linked, e.g. in a git repository"
+              onClick={() => void api.openFromFile(true)}
+            >
+              <FolderOpen size={14} aria-hidden />
+            </button>
+          )}
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Import…"
+            title="Import a Postman collection (v2.1), or a copy of a Studio collection file"
+            onClick={() => (inTauri ? void api.openFromFile(false) : importInput.current?.click())}
+          >
+            <Import size={14} aria-hidden />
+          </button>
+          <button type="button" className="icon-btn" aria-label="New collection" title="New collection" onClick={() => api.requestNew()}>
+            <Plus size={15} />
           </button>
         </div>
         <div className="collections-actions">
-          {inTauri ? (
-            <>
-              <button type="button" className="btn" onClick={() => void api.openFromFile(true)} title="Open a collection file and keep it linked, e.g. in a git repository">
-                <FolderOpen size={13} aria-hidden /> Open file…
-              </button>
-              <button type="button" className="btn" onClick={() => void api.openFromFile(false)} title="Import a Postman collection (v2.1), or a copy of a Studio collection file">
-                <Import size={13} aria-hidden /> Import…
-              </button>
-            </>
-          ) : (
-            <button type="button" className="btn" onClick={() => importInput.current?.click()} title="Import a Postman collection (v2.1), or a Studio collection file">
-              <Import size={13} aria-hidden /> Import…
-            </button>
-          )}
           <input
             ref={importInput}
             type="file"
@@ -217,9 +227,11 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
                       {collection.steps.length} step{collection.steps.length === 1 ? "" : "s"}
                       {collection.draft
                         ? ` · draft by ${collection.draft.by}`
-                        : collection.file
-                          ? ` · ${fileName(collection.file.path)}`
-                          : " · in Studio"}
+                        : Object.keys(collection.apis).length
+                          ? ` · ${Object.values(collection.apis)
+                              .map((a) => a.title)
+                              .join(", ")}`
+                          : ""}
                     </span>
                   </span>
                   {summary && (
@@ -259,26 +271,21 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
             onDelete={() => confirmDelete(selected)}
           />
         ) : (
-          <div className="empty">
-            <h1>Collections</h1>
-            <p>
-              A collection runs steps in order, across your specs: create an order, get it, pay for it. Each step
-              points at an operation, so its response is checked against that spec, and Studio tells you when a step no
-              longer matches it.
-            </p>
-            <p>
-              Right-click an operation and choose <strong>Add to collection</strong>, or add one from History. You can
-              also import a Postman collection: use <strong>Import…</strong> or drop the file here.
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button type="button" className="btn primary" onClick={() => api.requestNew()}>
-                New collection
-              </button>
-              <button type="button" className="btn" onClick={onGoLibrary}>
-                Go to your APIs
-              </button>
-            </div>
-          </div>
+          <EmptyState
+            icon={<ListChecks size={18} />}
+            title={collections.length ? "No collection selected" : "No collections yet"}
+            body="A collection runs steps in order, across your specs: create an order, get it, pay for it. Right-click an operation and choose Add to collection, or import a Postman collection by dropping it here."
+            action={
+              <>
+                <button type="button" className="btn primary" onClick={() => api.requestNew()}>
+                  <Plus size={13} /> New collection
+                </button>
+                <button type="button" className="btn" onClick={onGoLibrary}>
+                  Go to your APIs
+                </button>
+              </>
+            }
+          />
         )}
       </div>
       {api.imported && (
@@ -714,9 +721,9 @@ function CollectionDetail({
               className="btn primary"
               disabled={!collection.steps.length}
               onClick={() => void api.run(collection.id)}
-              title={`Run every step in order`}
+              title={`Run every step in order (${shortcut("↵")})`}
             >
-              <Play size={13} aria-hidden /> Run
+              <Play size={13} aria-hidden /> Run <span className="kbd">{shortcut("↵")}</span>
             </button>
           )}
         </div>
@@ -754,7 +761,9 @@ function CollectionDetail({
           />
           <span className="meta">
             {collection.steps.length} step{collection.steps.length === 1 ? "" : "s"} ·{" "}
-            {Object.keys(collection.apis).length} API{Object.keys(collection.apis).length === 1 ? "" : "s"}
+            {Object.values(collection.apis)
+              .map((a) => a.title)
+              .join(", ") || "no APIs yet"}
           </span>
           {collection.file ? (
             <span className="tag src-file" title={collection.file.path}>
@@ -765,8 +774,9 @@ function CollectionDetail({
             <span className="chip sans">Kept in Studio</span>
           )}
           {summary && (
-            <span className={`meta ${summary.failed ? "warn" : ""}`} role="status">
-              Last run: {describeRun(summary)}
+            <span className={`run-line${summary.failed ? " bad" : " ok"}`} role="status">
+              {summary.failed ? <X size={12} aria-hidden /> : <Check size={12} aria-hidden />} Last run{" "}
+              {describeRun(summary)}
             </span>
           )}
           {running && <span className="meta" role="status">Running step {results.length + 1} of {collection.steps.length}…</span>}

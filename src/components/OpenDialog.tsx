@@ -15,7 +15,7 @@ import {
   type Session,
 } from "../lib/spec0";
 import { ConnectModes } from "./ConnectModes";
-import { Download, Globe, Plus, RefreshCw, Search, TriangleAlert } from "lucide-react";
+import { Cloud, Download, FileJson, Globe, Link2, Plus, RefreshCw, Search, TriangleAlert } from "lucide-react";
 import { inTauri } from "../lib/request";
 import { Dialog } from "./Dialog";
 import { TabList } from "./TabList";
@@ -223,7 +223,17 @@ export function OpenDialog({
             className="ptabs"
             tabClassName="ptab"
             label="Where the API comes from"
-            tabs={SOURCES}
+            tabs={SOURCES.map((tab) => {
+              const Icon = tab.id === "spec0" ? Cloud : tab.id === "url" ? Link2 : FileJson;
+              return {
+                id: tab.id,
+                label: (
+                  <>
+                    <Icon size={13} aria-hidden /> {tab.label}
+                  </>
+                ),
+              };
+            })}
             selected={source}
             onSelect={setSource}
           />

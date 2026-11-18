@@ -773,3 +773,26 @@ export async function runTool(name: string, args: unknown, deps: ToolDeps): Prom
     return fail(error instanceof Error ? error.message : String(error));
   }
 }
+
+/** The areas the MCP page groups the tools into, in the order it shows them. */
+export const TOOL_AREAS = ["Specs", "Requests", "Mocks", "Collections", "Studio"] as const;
+export type ToolArea = (typeof TOOL_AREAS)[number];
+
+/**
+ * Which area a tool belongs to, from its name, so a new tool lands in a group
+ * without the page listing every name.
+ */
+export function toolArea(name: string): ToolArea {
+  if (/mock/.test(name)) return "Mocks";
+  if (/collection|step|link_value|expected_status|run_log/.test(name)) return "Collections";
+  if (/request|contract/.test(name)) return "Requests";
+  if (/api|spec|operation|schema/.test(name)) return "Specs";
+  return "Studio";
+}
+
+/** The tools in their areas, in the page's order, leaving out empty areas. */
+export function toolsByArea<T extends { name: string }>(tools: readonly T[]): Array<{ area: ToolArea; tools: T[] }> {
+  return TOOL_AREAS.map((area) => ({ area, tools: tools.filter((tool) => toolArea(tool.name) === area) })).filter(
+    (group) => group.tools.length > 0,
+  );
+}

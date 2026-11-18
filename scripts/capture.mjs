@@ -102,7 +102,7 @@ await page.screenshot({ path: `${outDir}/01-library-empty.png` });
 console.log("01-library-empty");
 
 // Sample API: the first run should be a demo, not a dead end.
-await clickByText(".btn", "Try a sample API");
+await clickByText(".btn", "Try the sample API");
 await page.waitForSelector(".sidebar", { timeout: 15000 });
 await wait(900);
 await page.screenshot({ path: `${outDir}/02-sample-open.png` });
@@ -212,8 +212,8 @@ await page.waitForSelector(".urlbar", { timeout: 15000 });
 await page.select(".method-select", "POST");
 await page.click(".url-field input");
 await page.type(".url-field input", "https://api.example.com/orders");
-await page.click(".editor");
-await page.type(".editor", '{"sku":"abc","qty":2}');
+await page.click(".code-editor-input");
+await page.type(".code-editor-input", '{"sku":"abc","qty":2}');
 await wait(600);
 await page.screenshot({ path: `${outDir}/09-scratch.png` });
 console.log("09-scratch");
@@ -403,7 +403,7 @@ await page.screenshot({ path: `${outDir}/16-api-record-dark.png` });
 console.log("16-api-record-dark");
 
 // …and "Copy to a new request" opens a normal editor that says it's new.
-await clickByText(".record .btn", "Copy to a new request");
+await clickByText(".record .btn", "Open as new request");
 await page.waitForSelector(".copied-note", { timeout: 15000 });
 await wait(500);
 await page.screenshot({ path: `${outDir}/17-copied-request-dark.png` });
@@ -461,15 +461,25 @@ const openJourneyFromLibrary = async (title) => {
   await wait(400);
   await page.evaluate(() => document.querySelector('[aria-label="Back to all APIs"]')?.click());
   await wait(400);
-  const found = await page.evaluate((needle) => {
+  // The hosted mock is in the card's ⋯ menu.
+  const opened = await page.evaluate((needle) => {
     const card = [...document.querySelectorAll(".api-card")].find((c) =>
       c.querySelector(".api-title")?.textContent?.includes(needle),
     );
-    const button = card?.querySelector(".card-mock");
-    button?.click();
-    return Boolean(button);
+    const more = card?.querySelector(".api-card-more");
+    more?.click();
+    return Boolean(more);
   }, title);
-  if (!found) throw new Error(`No mock button on ${title}`);
+  if (!opened) throw new Error(`No menu on ${title}`);
+  await wait(300);
+  const found = await page.evaluate(() => {
+    const item = [...document.querySelectorAll('.context-menu [role="menuitem"]')].find((el) =>
+      /hosted mock/i.test(el.textContent ?? ""),
+    );
+    item?.click();
+    return Boolean(item);
+  });
+  if (!found) throw new Error(`No hosted mock in the menu on ${title}`);
   await page.waitForSelector(".modal.journey", { timeout: 5000 });
   await wait(400);
 };
@@ -487,7 +497,7 @@ await wait(400);
 const UPLOADED = await page.evaluate(
   () =>
     [...document.querySelectorAll(".api-card")]
-      .find((card) => card.querySelector(".tag.src-file"))
+      .find((card) => card.getAttribute("data-source") === "file")
       ?.querySelector(".api-title")?.textContent ?? "",
 );
 await openJourneyFromLibrary(UPLOADED);
@@ -736,7 +746,7 @@ await wait(300);
 await page.screenshot({ path: `${outDir}/26j-mocks-regenerate-confirm-dark.png` });
 console.log("26j-mocks-regenerate-confirm-dark");
 await clickByText(".mock-key-confirm .btn", "Keep");
-await clickByText(".mocks-section-head .btn", "Create a mock server");
+await clickByText(".section-head .btn", "Create hosted mock");
 await page.waitForSelector(".modal.journey", { timeout: 5000 });
 await wait(300);
 await shootBoth("26k-journey-pick", "dark");
