@@ -19,9 +19,11 @@ export function SettingsSection({ id, title, description, children }: Props) {
       aria-labelledby={`settings-tab-${id}`}
       data-section={id}
     >
-      <header className="settings-head">
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
+      <header className="page-head">
+        <div className="l">
+          <h1 className="page-title">{title}</h1>
+          {description && <p className="desc">{description}</p>}
+        </div>
       </header>
       {children}
     </section>

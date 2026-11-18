@@ -22,70 +22,72 @@ export function DataSettings({ historyCount, onClearHistory }: Props) {
 
   return (
     <>
-      <section className="section">
-        <h3>History</h3>
-        <p className="settings-lead">
-          Every request you send is kept for 30 days, only on this machine, with what came back and
-          the check result. History is never synced anywhere.
-        </p>
-        <div className="settings-actions">
-          <span className="meta">
-            {plural(historyCount, "request")} recorded
-          </span>
-          <span className="spacer" />
-          {confirming ? (
-            <>
-              <span className="field-meta">Delete all history? This can&apos;t be undone.</span>
-              <button className="btn" onClick={() => setConfirming(false)}>
-                Cancel
+      <div className="rows">
+        <div className="row-s">
+          <div className="l">
+            <b>History</b>
+            <span className="meta">
+              {plural(historyCount, "request")}, kept for 30 days on this computer with what came back and the check
+              result. Never synced anywhere.
+            </span>
+          </div>
+          <div className="c">
+            {confirming ? (
+              <>
+                <span className="meta">This can&apos;t be undone.</span>
+                <button className="btn sm" onClick={() => setConfirming(false)}>
+                  Cancel
+                </button>
+                <button
+                  className="btn sm danger-outline"
+                  onClick={() => {
+                    onClearHistory();
+                    setConfirming(false);
+                  }}
+                >
+                  Clear history
+                </button>
+              </>
+            ) : (
+              <button className="btn danger-outline" disabled={historyCount === 0} onClick={() => setConfirming(true)}>
+                Clear history…
               </button>
-              <button
-                className="btn danger-outline"
-                onClick={() => {
-                  onClearHistory();
-                  setConfirming(false);
-                }}
-              >
-                Clear history
-              </button>
-            </>
-          ) : (
-            <button className="btn" disabled={historyCount === 0} onClick={() => setConfirming(true)}>
-              Clear history…
-            </button>
-          )}
+            )}
+          </div>
         </div>
-      </section>
-
-      <section className="section">
-        <h3>Secrets</h3>
-        <p className="settings-lead">{storage.where}</p>
+        <div className="row-s">
+          <div className="l">
+            <b>Secrets</b>
+            <span className="meta">
+              {storage.where} Auth values aren&apos;t stored per API; they go in an environment as secret variables,
+              and the environment file only notes that a secret exists, so it&apos;s safe to commit.
+            </span>
+          </div>
+        </div>
         {storage.notice && (
-          <div className="verdict warn" role="status" style={{ display: "block", lineHeight: 1.6 }}>
-            <TriangleAlert size={13} style={{ verticalAlign: "-2px", marginRight: 6 }} />
-            {storage.notice.text}
-            {storage.notice.fix && <div style={{ marginTop: 4 }}>{storage.notice.fix}</div>}
+          <div className="row-s stack">
+            <div className="verdict warn" role="status" style={{ display: "block", lineHeight: 1.6, margin: 0 }}>
+              <TriangleAlert size={13} style={{ verticalAlign: "-2px", marginRight: 6 }} />
+              {storage.notice.text}
+              {storage.notice.fix && <div style={{ marginTop: 4 }}>{storage.notice.fix}</div>}
+            </div>
           </div>
         )}
-        <p className="field-meta">
-          Auth values aren&apos;t stored per API. They go in an environment as secret variables, and
-          the environment file only notes that a secret exists, so it&apos;s safe to commit.
-        </p>
-      </section>
-
-      <section className="section">
-        <h3>On this machine</h3>
-        <p className="settings-lead">
-          Your library, environments, history and settings are kept in{" "}
-          <span className="mono">{location ?? "…"}</span>. So are your open request tabs and
-          unsent changes, with secret values written as <code>{"{{references}}"}</code>; an auth
-          value typed straight into a request is kept only until Studio quits.
-        </p>
-        <p className="field-meta">
-          No telemetry, analytics or crash reporting. Studio makes no request you didn&apos;t ask
-          for.
-        </p>
-      </section>
+        <div className="row-s">
+          <div className="l">
+            <b>Library and settings</b>
+            <span className="meta">
+              Your library, environments, history and settings, open request tabs and unsent changes are kept in{" "}
+              <span className="mono">{location ?? "…"}</span>, with secret values written as{" "}
+              <span className="mono">{"{{references}}"}</span>. An auth value typed straight into a request is kept
+              only until Studio quits.
+            </span>
+          </div>
+        </div>
+      </div>
+      <p className="meta settings-note">
+        No telemetry, analytics or crash reporting. Studio makes no request you didn&apos;t ask for.
+      </p>
     </>
   );
 }

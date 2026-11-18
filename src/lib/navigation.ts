@@ -43,11 +43,11 @@ export type SettingsSectionId = "account" | "network" | "updates" | "appearance"
 
 export const SETTINGS_SECTIONS: ReadonlyArray<{ id: SettingsSectionId; label: string }> = [
   { id: "account", label: "Account & Spec0" },
-  { id: "network", label: "Network" },
-  { id: "updates", label: "Updates" },
   { id: "appearance", label: "Appearance" },
+  { id: "network", label: "Network" },
   { id: "agent", label: "Agent chat" },
   { id: "data", label: "Data & privacy" },
+  { id: "updates", label: "Updates" },
 ];
 
 /**
