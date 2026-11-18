@@ -3779,3 +3779,63 @@ input[type="checkbox"] { accent-color: hsl(var(--primary)); }
 .settings-elsewhere .label { padding: 0 10px 4px; color: hsl(var(--ink-3)); }
 .settings-elsewhere .settings-tab { display: flex; align-items: center; gap: 6px; }
 .field-label-text { font-size: 12.5px; font-weight: 500; color: hsl(var(--ink)); }
+
+/* The address: one box with the method, the target and the path. A known
+   target shows its name (and a local mock's port); its address is in the
+   tooltip and the menu, so it isn't said three times. */
+.addr {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 7px;
+  background: hsl(var(--panel));
+  overflow: hidden;
+}
+.addr:focus-within { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18); }
+.addr .addr-method {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid hsl(var(--border));
+  border-radius: 0;
+  font-size: 11.5px;
+}
+.addr-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  max-width: 260px;
+  padding: 0 8px 0 10px;
+  border-right: 1px solid hsl(var(--border));
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.addr-target:hover { background: hsl(var(--surface-hover)); }
+.addr-target > svg { color: hsl(var(--ink-3)); flex: none; }
+.addr-target-name { overflow: hidden; text-overflow: ellipsis; }
+.target-port { font-size: 11.5px; color: hsl(var(--ink-3)); font-weight: 400; }
+.addr .url-field { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.addr .url-field:focus-within { box-shadow: none; }
+.addr .url-field.known .url-path { padding-left: 10px; max-width: none; color: hsl(var(--ink)); }
+.addr .url-field .url-path { flex: 1; min-width: 0; }
+.addr .url-field input + datalist + .url-path { flex: 0 1 auto; }
+.path-param { color: hsl(var(--primary)); }
+.dark .path-param { color: hsl(var(--syn-key)); }
+.dot.env { background: hsl(var(--primary)); }
+
+/* The target menu: each target with its address underneath. */
+.target-item { display: flex; align-items: center; gap: 8px; min-width: 260px; }
+.target-item-check { width: 13px; flex: none; color: hsl(var(--primary)); display: inline-grid; }
+.target-item-text { display: grid; gap: 1px; min-width: 0; }
+.target-item-url { font-size: 11px; color: hsl(var(--ink-3)); }
+/* A typed URL: the path follows the text, rather than sitting at the far end. */
+@supports (field-sizing: content) {
+  .addr .url-field input { field-sizing: content; flex: 0 1 auto; min-width: 140px; max-width: 72%; padding-right: 0; }
+  .addr .url-field input + datalist + .url-path { padding-left: 0; }
+}
