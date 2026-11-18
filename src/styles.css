@@ -3834,8 +3834,8 @@ input[type="checkbox"] { accent-color: hsl(var(--primary)); }
 .target-item-check { width: 13px; flex: none; color: hsl(var(--primary)); display: inline-grid; }
 .target-item-text { display: grid; gap: 1px; min-width: 0; }
 .target-item-url { font-size: 11px; color: hsl(var(--ink-3)); }
-/* A typed URL: the path follows the text, rather than sitting at the far end. */
-@supports (field-sizing: content) {
-  .addr .url-field input { field-sizing: content; flex: 0 1 auto; min-width: 140px; max-width: 72%; padding-right: 0; }
-  .addr .url-field input + datalist + .url-path { padding-left: 0; }
-}
+/* A typed URL: the path follows the text (the input is sized in ch, see UrlBar). */
+.addr .url-field input { flex: 0 1 auto; min-width: 60px; max-width: 72%; padding-right: 0; }
+.addr .url-field input + datalist + .url-path { padding-left: 0; }
+.dot.none { visibility: hidden; }
+.addr-target > .dot.none { display: none; }

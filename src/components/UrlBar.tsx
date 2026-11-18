@@ -123,7 +123,10 @@ export function UrlBar({
               {targetLabel(target).name}
               {targetLabel(target).port && <span className="mono target-port">{targetLabel(target).port}</span>}
             </span>
-            <span className="mono target-item-url">{target.url}</span>
+            {/* A server's name is already its address; say the address only when it adds something. */}
+            {target.url.replace(/^https?:\/\//, "").replace(/\/$/, "") !== targetLabel(target).name && (
+              <span className="mono target-item-url">{target.url}</span>
+            )}
           </span>
         </span>
       ),
@@ -137,6 +140,7 @@ export function UrlBar({
           <span className="target-item-check" aria-hidden>
             {!knownTarget ? <Check size={13} /> : null}
           </span>
+          <span className="dot none" aria-hidden />
           <span className="target-item-text">Custom URL…</span>
         </span>
       ),
@@ -179,6 +183,9 @@ export function UrlBar({
                 list="server-suggestions"
                 spellCheck={false}
                 placeholder="https://api.example.com  ·  or {{baseUrl}}"
+                // Mono, so the width in characters is the text's width: the path
+                // then follows what was typed instead of sitting at the far end.
+                style={{ width: `calc(${value ? value.length + 1 : 44}ch + 14px)` }}
                 onChange={(event) => onChange(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") onSend();
@@ -277,7 +284,7 @@ export function targetLabel(target: Target): { name: string; port?: string } {
 function TargetDot({ kind }: { kind: Target["kind"] }) {
   if (kind === "local-mock" || kind === "mock") return <span className="dot live" aria-hidden />;
   if (kind === "env") return <span className="dot env" aria-hidden />;
-  return null;
+  return <span className="dot none" aria-hidden />;
 }
 
 /** The operation's path, with its `{params}` picked out. */
