@@ -3491,3 +3491,7 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
 .collection-draft { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3); border: 1px solid hsl(var(--border)); border-radius: var(--radius); background: hsl(var(--accent-soft)); font-size: 12px; }
 .collection-draft .spacer { flex: 1; }
 .run-started-by { color: hsl(var(--ink-2)); font-size: 12px; }
+
+/* A description from the spec, formatted (see Description.tsx). */
+.op-description { color: hsl(var(--ink-2)); font-size: 12.5px; }
+.field-meta .md, td.desc .md { gap: 4px; }

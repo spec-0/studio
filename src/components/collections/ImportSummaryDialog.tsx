@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import type { EnvironmentDraft, ImportSummary } from "../../lib/postman";
+import { plural } from "../../lib/plural";
 
 interface Props {
   summary: ImportSummary;
@@ -9,7 +10,6 @@ interface Props {
   onDone: (environment: EnvironmentDraft | null) => void;
 }
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * What a Postman import did: how many requests matched a spec and which

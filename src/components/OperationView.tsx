@@ -11,6 +11,9 @@ import { seedEditor, type EditorPrefill, type EditorState } from "../lib/editor"
 import { pickAnyFile } from "../lib/store";
 import type { AuthState, BodyInput, MultipartPart } from "../lib/request";
 import type { LinkTarget } from "../lib/chainLinks";
+import { plural } from "../lib/plural";
+import { Description } from "./Description";
+import { descriptionText } from "../lib/markdown";
 
 interface Props {
   spec: ParsedSpec;
@@ -208,9 +211,7 @@ export function OperationView({
         {op.description && (
           <div className="section">
             <h3>Description</h3>
-            <div style={{ color: "hsl(var(--ink-2))", whiteSpace: "pre-wrap", fontSize: 12.5 }}>
-              {op.description}
-            </div>
+            <Description text={op.description} className="op-description" />
           </div>
         )}
 
@@ -265,13 +266,13 @@ export function OperationView({
                               : "text"
                           }
                           value={bag(where)[p.name] ?? ""}
-                          placeholder={p.description ?? ""}
+                          placeholder={p.description ? descriptionText(p.description) : ""}
                           onChange={(e) =>
                             setter(where)((prev) => ({ ...prev, [p.name]: e.target.value }))
                           }
                         />
                       ))}
-                      {p.description && <div className="field-meta">{p.description}</div>}
+                      {p.description && <Description text={p.description} className="field-meta" />}
                     </div>
                   </div>
                 );
@@ -635,7 +636,7 @@ function BodySchema({ doc, schema }: { doc: Json; schema: Json | undefined }) {
   return (
     <div style={{ marginTop: 10 }}>
       <button className="btn" onClick={() => setOpen((v) => !v)}>
-        {open ? "Hide" : "Show"} schema · {properties.length} fields
+        {open ? "Hide" : "Show"} schema · {plural(properties.length, "field")}
       </button>
       {open && (
         <table className="fields" style={{ marginTop: 8 }}>

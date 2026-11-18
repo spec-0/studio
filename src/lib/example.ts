@@ -1,4 +1,4 @@
-import { deref, type Json } from "./spec";
+import { deref, type Json, type ParamSpec } from "./spec";
 
 /**
  * Build a realistic instance of a schema.
@@ -198,8 +198,10 @@ export function exampleBody(doc: Json, schema: Json | undefined, media?: Json): 
 }
 
 /** Seed a parameter input with something plausible rather than an empty box. */
-export function exampleParam(doc: Json, schema: Json | undefined, name: string): string {
-  const value = exampleFor(doc, schema, name);
+export function exampleParam(doc: Json, param: Pick<ParamSpec, "name" | "schema" | "example" | "examples">): string {
+  // A Parameter Object's own example comes first, then its schema's (OpenAPI 3).
+  const listed = param.example === undefined ? firstExample(doc, param.examples) : { found: true, value: param.example };
+  const value = listed.found ? listed.value : exampleFor(doc, param.schema, param.name);
   if (value === null || value === undefined) return "";
   return typeof value === "object" ? JSON.stringify(value) : String(value);
 }

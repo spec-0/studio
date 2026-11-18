@@ -13,7 +13,10 @@ Open an API, pick an operation in the **Operations** view, and the editor fills 
 spec:
 
 - **Parameters** get the right kind of field. A list of allowed values becomes a dropdown, and a
-  true/false becomes a toggle.
+  true/false becomes a toggle. A required parameter starts with the parameter's own example, or
+  its schema's.
+- **Descriptions** are formatted, including the simple HTML some specs use. Links open in your
+  browser, and a link to a page relative to the API's own docs shows as text.
 - **Bodies** start filled in with the real field names, and example values that fit each field's
   type and format. The spec's own examples are used where it has them.
 - **Responses declared** at the bottom lists the status codes the spec describes.
@@ -144,7 +147,7 @@ History is a read-only log of every request you've sent. It's kept on your compu
 never synced anywhere.
 
 **History** in the top bar lists every API's requests, and scratch requests, in one list. Filter it
-by API, by status (2xx, 3xx, 4xx, 5xx or errors), by mock or real server, or to show only responses
+by API, by status (2xx, 3xx, 4xx, 5xx or errors), by mock (local or hosted) or real server, or to show only responses
 that drifted from the spec, and search it. For one API's requests, open the API and choose
 **History** in the sidebar.
 
@@ -152,7 +155,8 @@ Open an entry to see:
 
 - what was sent: method, full URL, headers and body
 - what came back: status, time, size, headers and body
-- when it ran, which API and environment it used, and whether it went to a mock
+- when it ran, which API and environment it used, and where it went: a server, a local mock (with
+  its address), the hosted mock, or a URL you typed
 - the [schema check](/checking-responses) from when it ran. If the spec has changed
   since, **Re-check against current spec** shows what the check says now.
 

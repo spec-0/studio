@@ -19,6 +19,9 @@ export interface ParamSpec {
   required: boolean;
   schema: Json;
   description?: string;
+  /** The parameter's own `example` and `examples`, which come before its schema's. */
+  example?: unknown;
+  examples?: Json;
 }
 
 export interface ResponseSpec {
@@ -313,6 +316,8 @@ export function parseSpec(text: string, sourceName: string, documentUrl?: string
           required: p.in === "path" ? true : Boolean(p.required),
           schema: p.schema ?? { type: "string" },
           description: p.description,
+          ...(p.example !== undefined ? { example: p.example } : {}),
+          ...(p.examples && typeof p.examples === "object" ? { examples: p.examples } : {}),
         })) as ParamSpec[];
 
       const bodyDef = deref(doc, op.requestBody);

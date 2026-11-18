@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { transportFor, type ConnectionSettings } from "../lib/connection";
+import { interpolate } from "../lib/env";
 import * as history from "../lib/history";
 import type { HistoryEntry } from "../lib/history";
 import { buildPlan, describeBody, send, type AuthState } from "../lib/request";
 import { declaredResponse, storedResponseBody } from "../lib/response";
 import { planRun, type RunOptions, type RunResult } from "../lib/runner";
 import type { OperationSpec, ParsedSpec } from "../lib/spec";
-import { sentToMock } from "../lib/targets";
+import { sentFields, sentTarget, type Target } from "../lib/targets";
 import { validateResponse } from "../lib/validate";
 
 /**
@@ -21,6 +22,7 @@ export function useBulkRun({
   vars,
   mock,
   mockUrl,
+  targets,
   connection,
   currentId,
   environmentName,
@@ -33,6 +35,8 @@ export function useBulkRun({
   vars: Record<string, string>;
   mock: { url: string; key?: string; bearer?: string } | null;
   mockUrl: string | null;
+  /** What the address bar offers, to record which one each request went to. */
+  targets: Target[];
   connection: ConnectionSettings;
   /** The library entry whose cookie jar the run uses, and whose history it joins. */
   currentId: string | undefined;
@@ -113,7 +117,7 @@ export function useBulkRun({
             body: describeBody(plan.body),
             bodyKind: plan.body?.kind,
             ...history.checkFields(verdict, { version: spec.version, fingerprint: specFingerprint }),
-            mock: sentToMock(plan.url, mockUrl),
+            ...sentFields(sentTarget(targets, server, interpolate(server, vars)), plan.url, mockUrl),
             statusText: response.statusText,
             responseHeaders: response.headers,
             responseBody: storedResponseBody(response),
@@ -132,7 +136,7 @@ export function useBulkRun({
       setRunningOp(null);
       setRequests(await history.loadHistory());
     },
-    [spec, server, auth, vars, mock, mockUrl, connection, currentId, environmentName, specFingerprint, setRequests],
+    [spec, server, auth, vars, mock, mockUrl, targets, connection, currentId, environmentName, specFingerprint, setRequests],
   );
 
   /** Stop after the request in flight; results so far are kept. */

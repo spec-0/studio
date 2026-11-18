@@ -1033,6 +1033,8 @@ await page.waitForFunction(() => document.querySelector(".collection-meta")?.tex
   timeout: 15000,
 });
 await wait(600);
+// A run started from the collection's page opens its log; the verdicts are on the step list.
+await collectionView("Steps");
 const verdicts = await page.evaluate(() =>
   [...document.querySelectorAll(".step-row .run-dot")].map((dot) => [...dot.classList].find((c) => c !== "run-dot")),
 );
@@ -1494,10 +1496,11 @@ await page.waitForFunction(() => document.querySelector(".collection-meta")?.tex
   timeout: 15000,
 });
 await wait(600);
+await collectionView("Steps");
 const importedVerdicts = await page.evaluate(() =>
   [...document.querySelectorAll(".step-row .run-dot")].map((dot) => [...dot.classList].find((c) => c !== "run-dot")),
 );
-if (importedVerdicts.some((v) => v !== "pass")) {
+if (!importedVerdicts.length || importedVerdicts.some((v) => v !== "pass")) {
   await page.screenshot({ path: `${outDir}/debug-import-run.png` });
   throw new Error(`Expected every imported step to pass, got ${importedVerdicts.join(",")}`);
 }

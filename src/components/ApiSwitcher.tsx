@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { sourceLabel, type LibraryEntry } from "../lib/library";
+import { plural } from "../lib/plural";
 
 interface Props {
   entries: LibraryEntry[];
@@ -66,7 +67,7 @@ export function ApiSwitcher({ entries, currentId, onPick, onGoLibrary, onClose }
                   {entry.id === currentId && <span className="meta"> · current</span>}
                 </span>
                 <span className="summary">
-                  {entry.operations} operations · {sourceLabel(entry.source)}
+                  {plural(entry.operations, "operation")} · {sourceLabel(entry.source)}
                 </span>
               </span>
               {entry.update && (

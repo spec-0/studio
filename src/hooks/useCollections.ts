@@ -71,7 +71,7 @@ import { declaredResponse, describeSendError, storedResponseBody } from "../lib/
 import { SCRATCH_OPERATION_ID, SCRATCH_TITLE, scratchPath } from "../lib/scratch";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "../lib/spec";
 import { DEFAULT_API_URL, absoluteMockUrl, type Session } from "../lib/spec0";
-import { mockCredentials } from "../lib/targets";
+import { mockCredentials, sentFields, sentTargetOf } from "../lib/targets";
 import { validateResponse, type ValidationResult } from "../lib/validate";
 import type { AgentRunOptions, AgentRunOutcome } from "../lib/agentApp";
 import { useRunLogs } from "./useRunLogs";
@@ -1067,7 +1067,7 @@ export function useCollections({
                 fingerprint: history.fingerprint(linked!.spec.sourceText),
               })
             : { validation: "no_schema" as const }),
-          mock: toMock,
+          ...sentFields(sentTargetOf(linked ? (step.target?.kind ?? "server") : "custom", baseUrl), plan.url, null),
           statusText: response.statusText,
           responseHeaders: response.headers,
           responseBody: storedResponseBody(response),

@@ -1,6 +1,7 @@
 import type { OperationSpec, ParamSpec } from "./spec";
 import type { ValidationResult } from "./validate";
 import { redact } from "./redact";
+import { plural } from "./plural";
 
 /**
  * Run every operation in a tag and report which responses match the spec.
@@ -166,7 +167,7 @@ export function toMarkdown(
     "",
     `**Scope:** ${context.scope} · **Target:** \`${context.target}\``,
     "",
-    `${describeSummary(summary)} · ${summary.total} operations`,
+    `${describeSummary(summary)} · ${plural(summary.total, "operation")}`,
     "",
     "| | Operation | Status | Result |",
     "| --- | --- | --- | --- |",

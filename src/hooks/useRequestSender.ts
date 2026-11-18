@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, type Dispatch, type SetStateAction } from "react";
 import type { RequestValues } from "../components/OperationView";
 import { transportFor, type ConnectionSettings } from "../lib/connection";
+import { interpolate } from "../lib/env";
 import * as history from "../lib/history";
 import type { HistoryEntry } from "../lib/history";
 import {
@@ -29,7 +30,7 @@ import type { Route } from "../lib/navigation";
 import { EMPTY_PANE, paneOwner, paneReducer, visiblePane } from "../lib/responsePane";
 import type { OperationSpec, ParsedSpec } from "../lib/spec";
 import { pickSaveTarget, saveResponseTo } from "../lib/store";
-import { sentToMock } from "../lib/targets";
+import { sentFields, sentTarget, type Target } from "../lib/targets";
 import { validateResponse } from "../lib/validate";
 import type { Settings } from "./useSettings";
 
@@ -43,6 +44,8 @@ interface Options {
   vars: Record<string, string>;
   mock: { url: string; key?: string; bearer?: string } | null;
   mockUrl: string | null;
+  /** What the address bar offers, to record which one a request went to. */
+  targets: Target[];
   connection: ConnectionSettings;
   /** The library entry whose cookie jar a spec request uses, and whose history it joins. */
   currentId: string | undefined;
@@ -84,6 +87,7 @@ export function useRequestSender({
   vars,
   mock,
   mockUrl,
+  targets,
   connection,
   currentId,
   environmentName,
@@ -172,7 +176,7 @@ export function useRequestSender({
           body: describeBody(plan.body),
           bodyKind: plan.body?.kind,
           ...history.checkFields(verdict, { version: spec.version, fingerprint: specFingerprint }),
-          mock: sentToMock(plan.url, mockUrl),
+          ...sentFields(sentTarget(targets, server, interpolate(server, vars)), plan.url, mockUrl),
           statusText: response.statusText,
           responseHeaders: response.headers,
           responseBody: storedResponseBody(response),
@@ -184,7 +188,7 @@ export function useRequestSender({
       dispatch({ type: "done", sendId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, operation, server, auth, vars, mockUrl, mock, connection, currentId, usableToken, environmentName, specFingerprint, snapshot, onSent]);
+  }, [spec, operation, server, auth, vars, mockUrl, targets, mock, connection, currentId, usableToken, environmentName, specFingerprint, snapshot, onSent]);
 
   /**
    * Write the held response body wherever the user asks.

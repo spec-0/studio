@@ -192,3 +192,117 @@ export function parseInline(text: string): Inline[] {
   if (plain) out.push({ type: "text", text: plain });
   return out;
 }
+
+// Descriptions in a spec
+
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+function decodeEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, entity: string) => {
+    if (entity[0] === "#") {
+      const code = entity[1].toLowerCase() === "x" ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1), 10);
+      return code > 0 && code < 0x110000 ? String.fromCodePoint(code) : match;
+    }
+    return ENTITIES[entity.toLowerCase()] ?? match;
+  });
+}
+
+const HAS_TAG = /<\/?[a-z][^>]*>/i;
+const TAG = /<(\/?)([a-z][a-z0-9]*)\b([^>]*)>/iy;
+const HREF = /\bhref\s*=\s*(["'])(.*?)\1/i;
+const BLOCK_TAGS = new Set(["p", "div", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6"]);
+
+/**
+ * A spec description as Markdown.
+ *
+ * OpenAPI descriptions are CommonMark, which allows inline HTML, and some specs
+ * write theirs entirely in it (`<p>With <a href="/connect">Connect</a>…</p>`).
+ * The tags people use for text (p, br, a, code, em, strong, lists) become their
+ * Markdown, and every other tag is dropped, so the result goes through
+ * `parseMarkdown` like anything else and is never HTML. A link that isn't
+ * http(s), such as a path relative to the API's own docs, stays as its text.
+ */
+export function descriptionMarkdown(source: string): string {
+  if (!HAS_TAG.test(source)) return source;
+  // One pass, left to right: text is copied (entities decoded), each tag is
+  // replaced or dropped, and nothing already written is read again.
+  let out = "";
+  let at = 0;
+  let skipping: string | null = null;
+  let link: { href: string; start: number } | null = null;
+  while (at < source.length) {
+    const open = source.indexOf("<", at);
+    const textEnd = open === -1 ? source.length : open;
+    if (!skipping) out += decodeEntities(source.slice(at, textEnd));
+    if (open === -1) break;
+    TAG.lastIndex = open;
+    const tag = TAG.exec(source);
+    if (!tag) {
+      // A "<" that doesn't start a tag is text.
+      if (!skipping) out += "<";
+      at = open + 1;
+      continue;
+    }
+    at = TAG.lastIndex;
+    const closing = tag[1] === "/";
+    const name = tag[2].toLowerCase();
+    if (skipping) {
+      if (closing && name === skipping) skipping = null;
+      continue;
+    }
+    if (name === "script" || name === "style") {
+      if (!closing) skipping = name;
+    } else if (name === "br") {
+      out += "\n";
+    } else if (BLOCK_TAGS.has(name)) {
+      out += "\n\n";
+    } else if (name === "li") {
+      if (!closing) out += "\n- ";
+    } else if (name === "strong" || name === "b") {
+      out += "**";
+    } else if (name === "em" || name === "i") {
+      out += "*";
+    } else if (name === "code") {
+      out += "`";
+    } else if (name === "a") {
+      if (!closing) {
+        const href = HREF.exec(tag[3]);
+        link = href ? { href: decodeEntities(href[2]).replace(/\s/g, "%20"), start: out.length } : null;
+      } else if (link) {
+        out = `${out.slice(0, link.start)}[${out.slice(link.start)}](${link.href})`;
+        link = null;
+      }
+    }
+    // Any other tag is dropped.
+  }
+  return out
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** A spec description as one line of plain text, for a placeholder or a tooltip. */
+export function descriptionText(source: string): string {
+  return parseMarkdown(descriptionMarkdown(source))
+    .map((block) => blockText(block))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function blockText(block: Block): string {
+  switch (block.type) {
+    case "code":
+      return block.text;
+    case "list":
+      return block.items.map(inlineText).join("; ");
+    case "rule":
+      return "";
+    default:
+      return inlineText(block.children);
+  }
+}
+
+function inlineText(nodes: Inline[]): string {
+  return nodes.map((node) => (node.type === "text" || node.type === "code" ? node.text : inlineText(node.children))).join("");
+}
