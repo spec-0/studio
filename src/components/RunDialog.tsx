@@ -71,17 +71,22 @@ export function RunDialog({
   return (
     <Dialog
       title="Run against the spec"
+      subtitle={
+        <>
+          Against <span className="mono">{target || "the current target"}</span>, one request at a time
+        </>
+      }
       wide
       busy={running}
       onClose={onClose}
       footerContext={
-        <>
-          {results.length > 0 && !running && (
-            <button className="btn" onClick={onCopyReport}>
-              <Copy size={13} /> Copy report
-            </button>
-          )}
-        </>
+        results.length > 0 && !running ? (
+          <button className="btn ghost" onClick={onCopyReport}>
+            <Copy size={13} /> Copy report
+          </button>
+        ) : (
+          "Results go to History as one run."
+        )
       }
       footer={
         <>
@@ -108,68 +113,104 @@ export function RunDialog({
         </>
       }
     >
-      <section className="section">
-        <div className="field">
-          <div className="field-label">
-            <div className="field-label-text">Operations</div>
+      <div className="rows">
+        <div className="row-s">
+          <div className="l">
+            <b>Operations</b>
           </div>
-          <select value={scope} onChange={(e) => setScope(e.target.value)} disabled={running}>
-            <option value="__all__">Every operation ({operations.length})</option>
-            {tags.map((tag) => (
-              <option key={tag} value={tag}>
-                {tag} ({operations.filter((op) => op.tag === tag).length})
-              </option>
-            ))}
-          </select>
+          <div className="c">
+            <select className="select" value={scope} onChange={(e) => setScope(e.target.value)} disabled={running}>
+              <option value="__all__">Every operation ({operations.length})</option>
+              {tags.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag} ({operations.filter((op) => op.tag === tag).length})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-
-        <label className="check">
-          <input
-            type="checkbox"
-            className="switch"
-            role="switch"
-            checked={includeMutating}
-            disabled={running || mutatingCount === 0}
-            onChange={(e) => setIncludeMutating(e.target.checked)}
-          />
-          Include methods that change state
-          {mutatingCount > 0 && <span className="meta"> · {mutatingCount} here</span>}
-        </label>
-        {includeMutating && mutatingCount > 0 && (
-          <div className="verdict warn" style={{ marginTop: 8 }}>
-            <span className="glyph">⚠</span>
-            <span>
-              This run will send {mutatingCount} request{mutatingCount === 1 ? "" : "s"} that
-              change state, against <span className="mono">{target || "the current target"}</span>.
+        <div className="row-s">
+          <div className="l">
+            <b>Include methods that change state</b>
+            <span className="meta">
+              {mutatingCount > 0
+                ? `${plural(mutatingCount, "POST, PUT, PATCH or DELETE operation", "POST, PUT, PATCH or DELETE operations")} here.`
+                : "None here; only reads will run."}
             </span>
           </div>
-        )}
-
-        <div className="field-meta" style={{ marginTop: 10 }}>
-          {willRun} of {preview.length} will run. Requests go one at a time: a burst at an
-          internal service is a load test nobody asked for. Responses are checked against the
-          schema the spec declares for the status actually returned.
+          <div className="c">
+            <input
+              type="checkbox"
+              className="switch"
+              role="switch"
+              aria-label="Include methods that change state"
+              checked={includeMutating}
+              disabled={running || mutatingCount === 0}
+              onChange={(e) => setIncludeMutating(e.target.checked)}
+            />
+          </div>
         </div>
-      </section>
+      </div>
+      {includeMutating && mutatingCount > 0 && (
+        <div className="verdict warn" style={{ marginTop: 8 }}>
+          <span className="glyph">⚠</span>
+          <span>
+            This run will send {plural(mutatingCount, "request")} that change state, against{" "}
+            <span className="mono">{target || "the current target"}</span>.
+          </span>
+        </div>
+      )}
 
-      {results.length === 0 && preview.some((p) => p.skip) && (
-        <section className="section">
-          <h3>Won't run</h3>
-          <table className="fields">
+      {results.length === 0 && (
+        <>
+          <div className="label run-plan-label">
+            Will run <span className="mono">{willRun}</span>
+          </div>
+          <table className="tbl run-plan">
             <tbody>
               {preview
-                .filter((p) => p.skip)
+                .filter((p) => !p.skip)
                 .map((p) => (
                   <tr key={p.operation.id}>
-                    <td className="name mono">
-                      {p.operation.method} {p.operation.path}
+                    <td className="used-method">
+                      <span className={`method ${p.operation.method.toLowerCase()}`}>{p.operation.method}</span>
                     </td>
-                    <td className="desc">{describeSkip(p.skip!)}</td>
+                    <td className="mono">{p.operation.path}</td>
+                    <td className="meta">{p.operation.summary ?? ""}</td>
                   </tr>
                 ))}
+              {willRun === 0 && (
+                <tr>
+                  <td colSpan={3} className="meta">
+                    Nothing here can run yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-        </section>
+          {preview.some((p) => p.skip) && (
+            <>
+              <div className="label run-plan-label">
+                Won&apos;t run <span className="mono">{preview.length - willRun}</span>
+              </div>
+              <table className="tbl run-plan">
+                <tbody>
+                  {preview
+                    .filter((p) => p.skip)
+                    .map((p) => (
+                      <tr key={p.operation.id}>
+                        <td className="used-method">
+                          <span className={`method ${p.operation.method.toLowerCase()}`}>{p.operation.method}</span>
+                        </td>
+                        <td className="mono">{p.operation.path}</td>
+                        <td className="meta">{describeSkip(p.skip!)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </>
       )}
 
       {results.length > 0 && (
@@ -178,7 +219,7 @@ export function RunDialog({
             Results
             {summary && <span className="meta"> · {describeSummary(summary)}</span>}
           </h3>
-          <table className="fields run-results">
+          <table className="tbl run-results">
             <tbody>
               {results.map((result, index) => (
                 <tr key={`${result.operation.id}-${index}`}>

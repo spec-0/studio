@@ -158,9 +158,11 @@ are kept in History like any other.
 History is a read-only log of every request you've sent. It's kept on your computer for 30 days and
 never synced anywhere.
 
-**History** in the top bar lists every API's requests, and scratch requests, in one list. Filter it
-by API, by status (2xx, 3xx, 4xx, 5xx or errors), by mock (local or hosted) or real server, or to show only responses
-that drifted from the spec, and search it. For one API's requests, open the API and choose
+**History** in the top bar lists every API's requests, and scratch requests, in one list, by day.
+Each row shows the API, where the request went and any differences from the spec, with the status
+and time on the right. The chips above it filter by API, by status (2xx, 3xx, 4xx, 5xx or errors),
+by mock (local or hosted) or real server, or to responses that drifted from the spec (**Drift
+only**), and the field above them searches. For one API's requests, open the API and choose
 **History** in the sidebar.
 
 Open an entry to see:
@@ -176,5 +178,6 @@ A recording has no Send button, so it always shows what happened. To run it agai
 **Open as new request**, which fills the editor from the recording. **Add to collection** adds it
 as a [collection](/collections) step, with the values it was sent with.
 
-To delete everything, use **Clear history** in **Settings → Data & privacy**. Secret values are
+To delete everything, use **Clear all history…** in the list's **⋯** menu, or **Clear history** in
+**Settings → Data & privacy**. Secret values are
 never written into History.

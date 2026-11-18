@@ -4137,3 +4137,5 @@ select.fchip { padding-right: 24px; background-position: right 7px center; }
   font-weight: 600;
 }
 .addr .scratch-url input { flex: 1; max-width: none; }
+.run-plan-label { margin: 16px 0 6px; }
+.run-plan { max-height: 240px; }
