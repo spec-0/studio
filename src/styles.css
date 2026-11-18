@@ -4083,3 +4083,34 @@ textarea.code-editor-input::selection { background: hsl(var(--primary) / 0.35); 
 .mcp-col-name { width: 34%; }
 .mcp-col-access { width: 190px; }
 .mcp-tool-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* History: filters as chips, rows by day with the status and time on the right. */
+.history-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px 8px; }
+.fchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: auto;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 12px;
+  background-color: hsl(var(--panel));
+  color: hsl(var(--ink-2));
+  font-size: var(--t-small);
+  font-weight: 500;
+}
+.dark .fchip { background-color: hsl(var(--bg)); }
+select.fchip { padding-right: 24px; background-position: right 7px center; }
+.fchip:hover { color: hsl(var(--ink)); }
+.fchip.on { border-color: hsl(var(--primary) / 0.55); background-color: hsl(var(--accent-soft)); color: hsl(var(--ink)); }
+.history-side-head { display: flex; align-items: center; gap: 6px; }
+.history-side-head .spacer { flex: 1; }
+.history-day { padding-left: 8px; }
+.history-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: none; margin-left: 8px; }
+.history-right .mono { font-size: 11px; }
+.history-time { color: hsl(var(--ink-3)); }
+.history-run-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.warn-ink { color: hsl(var(--warning)); }
+.history-row .summary { font-size: var(--t-small); }
+.sidebar .history-row { align-items: center; }

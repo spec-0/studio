@@ -9,7 +9,8 @@ import {
 import type { ParsedSpec } from "../lib/spec";
 import { HistoryDetail } from "./HistoryDetail";
 import { HistoryList } from "./HistoryList";
-import { History as HistoryIcon } from "lucide-react";
+import { History as HistoryIcon, MoreHorizontal, Search } from "lucide-react";
+import { ContextMenu } from "./ContextMenu";
 import { EmptyState } from "./EmptyState";
 
 interface Props {
@@ -22,7 +23,7 @@ interface Props {
   specFor: (entry: HistoryEntry) => Promise<ParsedSpec | null>;
   onCopy: (entry: HistoryEntry, destination: "operation" | "scratch") => void;
   onClear: () => void;
-  /** "Add to a collection" on the open entry, with the spec its API has now. */
+  /** "Add to collection" on the open entry, with the spec its API has now. */
   onAddToCollection?: (entry: HistoryEntry, position: { x: number; y: number }, spec: ParsedSpec | null) => void;
 }
 
@@ -62,6 +63,7 @@ export function HistoryView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const patch = (next: Partial<HistoryFilter>) => setFilter((prev) => ({ ...prev, ...next }));
   const filtered = Boolean(
     filter.api || filter.status || filter.driftOnly || filter.target || filter.query,
@@ -72,20 +74,37 @@ export function HistoryView({
       <aside className="sidebar history-side">
         <div className="history-side-head">
           <h2>History</h2>
-          <span className="meta">
-            {filtered ? `${shown.length} of ${entries.length}` : entries.length}
-          </span>
+          <span className="meta mono">{filtered ? `${shown.length} of ${entries.length}` : entries.length}</span>
+          <span className="spacer" />
+          <button
+            className="icon-btn"
+            aria-label="More"
+            aria-haspopup="menu"
+            title="More"
+            disabled={entries.length === 0}
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              setMenu({ x: rect.left, y: rect.bottom + 4 });
+            }}
+          >
+            <MoreHorizontal size={15} />
+          </button>
         </div>
         <div className="search">
-          <input
-            id="sidebar-search"
-            value={filter.query ?? ""}
-            placeholder="Search history…"
-            onChange={(event) => patch({ query: event.target.value })}
-          />
+          <label className="filter-field">
+            <Search size={13} aria-hidden />
+            <input
+              id="sidebar-search"
+              value={filter.query ?? ""}
+              placeholder="Filter by path, status or API"
+              onChange={(event) => patch({ query: event.target.value })}
+            />
+            <span className="kbd">/</span>
+          </label>
         </div>
         <div className="history-filters">
           <select
+            className="fchip"
             aria-label="API"
             value={filter.api ?? ""}
             onChange={(event) => patch({ api: event.target.value || undefined })}
@@ -98,6 +117,7 @@ export function HistoryView({
             ))}
           </select>
           <select
+            className="fchip"
             aria-label="Status"
             value={filter.status ?? ""}
             onChange={(event) =>
@@ -112,6 +132,7 @@ export function HistoryView({
             <option value="errors">Errors (4xx, 5xx)</option>
           </select>
           <select
+            className="fchip"
             aria-label="Mock or real"
             value={filter.target ?? ""}
             onChange={(event) =>
@@ -122,14 +143,14 @@ export function HistoryView({
             <option value="mock">Mock only</option>
             <option value="real">Real only</option>
           </select>
-          <label className="history-check">
-            <input
-              type="checkbox"
-              checked={Boolean(filter.driftOnly)}
-              onChange={(event) => patch({ driftOnly: event.target.checked || undefined })}
-            />
+          <button
+            type="button"
+            className={`fchip${filter.driftOnly ? " on" : ""}`}
+            aria-pressed={Boolean(filter.driftOnly)}
+            onClick={() => patch({ driftOnly: filter.driftOnly ? undefined : true })}
+          >
             Drift only
-          </label>
+          </button>
         </div>
         <div className="list">
           <HistoryList
@@ -144,13 +165,18 @@ export function HistoryView({
           {entries.length > 0 && shown.length === 0 && (
             <div className="group-label">Nothing matches these filters</div>
           )}
-          {entries.length > 0 && (
-            <button className="btn" style={{ margin: 10 }} onClick={onClear}>
-              Clear all history
-            </button>
-          )}
+
         </div>
         <p className="meta list-foot">Kept 30 days, only on this computer. Never synced.</p>
+        {menu && (
+          <ContextMenu
+            x={menu.x}
+            y={menu.y}
+            label="History"
+            onClose={() => setMenu(null)}
+            items={[{ label: "Clear all history…", onSelect: onClear }]}
+          />
+        )}
       </aside>
 
       <div className="workarea">

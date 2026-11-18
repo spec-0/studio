@@ -15,6 +15,7 @@ import { responseFromHistory } from "../lib/response";
 import type { ParsedSpec } from "../lib/spec";
 import type { Finding, ValidationResult } from "../lib/validate";
 import { TabList } from "./TabList";
+import { CodeBlock } from "./CodeBlock";
 
 interface Props {
   entry: HistoryEntry;
@@ -28,7 +29,7 @@ interface Props {
   specLoading?: boolean;
   onCopy: (entry: HistoryEntry, destination: "operation" | "scratch") => void;
   onClose?: () => void;
-  /** "Add to a collection": opens the menu of collections under the button. */
+  /** "Add to collection": opens the menu of collections under the button. */
   onAddToCollection?: (entry: HistoryEntry, position: { x: number; y: number }) => void;
 }
 
@@ -146,15 +147,15 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
         </dl>
         <div className="record-actions">
           <button
-            className="btn primary"
+            className="btn"
             disabled={specLoading}
             onClick={() => onCopy(entry, destination.kind)}
             title="Opens an editable request with these values. Nothing is sent until you send it."
           >
             <Copy size={13} />
             {destination.kind === "operation" || scratch
-              ? "Copy to a new request"
-              : "Copy to the scratch pad"}
+              ? "Open as new request"
+              : "Open in the scratch pad"}
           </button>
           {onAddToCollection && (
             <button
@@ -168,7 +169,7 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
               title="Add this request as a step, with the values it was sent with"
             >
               <ListPlus size={13} />
-              Add to a collection
+              Add to collection
             </button>
           )}
           {destination.kind === "scratch" && destination.reason && (
@@ -190,7 +191,7 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
           <h4 className="record-sub">Body</h4>
           {entry.body ? (
             <>
-              <pre className="code">{entry.body}</pre>
+              <CodeBlock text={entry.body} syntax={/^\s*[[{]/.test(entry.body) ? "json" : "plain"} />
               {entry.bodyKind && entry.bodyKind !== "text" && (
                 <div className="field-meta" style={{ marginTop: 4 }}>
                   A summary of the {entry.bodyKind === "form" ? "form" : "multipart"} body. File
@@ -206,8 +207,10 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
         <section className="record-col" aria-label="What came back">
           <h3 className="record-h">Received</h3>
           <div className="record-status">
-            <span className={`status-pill s${family}`}>{entry.status}</span>
-            {entry.statusText && <span className="meta">{entry.statusText}</span>}
+            <span className={`status-badge s${family}`}>
+              {entry.status}
+              {entry.statusText ? ` ${entry.statusText}` : ""}
+            </span>
             <span className="meta mono" style={{ marginLeft: "auto" }}>
               {entry.ms}ms · {formatBytes(entry.bytes)}
             </span>
@@ -293,7 +296,11 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
           <HeaderTable title="Response headers" headers={entry.responseHeaders ?? {}} />
           <h4 className="record-sub">Body</h4>
           {response ? (
-            <pre className="code">{pretty || "(empty body)"}</pre>
+            pretty ? (
+              <CodeBlock text={pretty} syntax={response.json !== undefined ? "json" : "plain"} />
+            ) : (
+              <p className="meta">The response had no body.</p>
+            )
           ) : (
             <div className="field-meta">
               This entry was recorded before response bodies were kept.

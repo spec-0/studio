@@ -403,7 +403,7 @@ await page.screenshot({ path: `${outDir}/16-api-record-dark.png` });
 console.log("16-api-record-dark");
 
 // …and "Copy to a new request" opens a normal editor that says it's new.
-await clickByText(".record .btn", "Copy to a new request");
+await clickByText(".record .btn", "Open as new request");
 await page.waitForSelector(".copied-note", { timeout: 15000 });
 await wait(500);
 await page.screenshot({ path: `${outDir}/17-copied-request-dark.png` });
