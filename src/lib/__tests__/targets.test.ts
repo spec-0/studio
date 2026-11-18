@@ -4,7 +4,11 @@ import {
   environmentFor,
   isTargetingMock,
   mockCredentials,
+  sentFields,
+  sentTarget,
+  sentTargetOf,
   sentToMock,
+  withLocalMock,
 } from "../targets";
 
 describe("buildTargets", () => {
@@ -76,6 +80,41 @@ describe("sentToMock", () => {
     expect(sentToMock("https://mock/x/pets/1", "https://mock/x/")).toBe(true);
     expect(sentToMock("https://api/pets/1", "https://mock/x")).toBe(false);
     expect(sentToMock("https://mock/x/pets", null)).toBe(false);
+  });
+});
+
+describe("sentTarget", () => {
+  const targets = withLocalMock(
+    buildTargets(["https://api.example.com/v1"], "https://mock.example.com/m/1", [{ name: "staging", url: "https://staging.example.com" }]),
+    "http://127.0.0.1:4011",
+    "Local mock · 127.0.0.1:4011",
+  );
+
+  it("names a local mock, and marks the request as sent to a mock", () => {
+    // A local mock isn't the hosted mock, so the URL alone never matched it.
+    const sent = sentTarget(targets, "http://127.0.0.1:4011", "http://127.0.0.1:4011");
+    expect(sent).toEqual({ kind: "local-mock", label: "Local mock · 127.0.0.1:4011" });
+    expect(sentFields(sent, "http://127.0.0.1:4011/payments", "https://mock.example.com/m/1").mock).toBe(true);
+  });
+
+  it("names the hosted mock, a server and an environment", () => {
+    expect(sentTarget(targets, "https://mock.example.com/m/1/", "")).toEqual({ kind: "mock", label: "Hosted mock" });
+    expect(sentTarget(targets, "https://api.example.com/v1", "")).toEqual({ kind: "server", label: "api.example.com/v1" });
+    expect(sentTarget(targets, "{{base}}", "https://staging.example.com")).toEqual({ kind: "env", label: "staging" });
+  });
+
+  it("calls anything else a typed URL, and not a mock", () => {
+    const sent = sentTarget(targets, "http://localhost:8080", "http://localhost:8080");
+    expect(sent).toEqual({ kind: "custom", label: "Typed URL" });
+    expect(sentFields(sent, "http://localhost:8080/payments", "https://mock.example.com/m/1").mock).toBe(false);
+  });
+});
+
+describe("sentTargetOf", () => {
+  it("labels a collection step's or an agent's target", () => {
+    expect(sentTargetOf("local-mock", "http://127.0.0.1:4010")).toEqual({ kind: "local-mock", label: "Local mock · 127.0.0.1:4010" });
+    expect(sentTargetOf("server", "https://api.example.com/v1/")).toEqual({ kind: "server", label: "api.example.com/v1" });
+    expect(sentTargetOf("mock", "https://mock.example.com/m/1")).toEqual({ kind: "mock", label: "Hosted mock" });
   });
 });
 

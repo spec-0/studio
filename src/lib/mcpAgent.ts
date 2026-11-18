@@ -31,7 +31,7 @@ import { runLogJson, runLogText } from "./runLog";
 import { buildScratchPlan, SCRATCH_OPERATION_ID, SCRATCH_TITLE, scratchPath } from "./scratch";
 import { parseSpec, type Json, type OperationSpec, type ParsedSpec } from "./spec";
 import { noChanges, specChanges, specProblems } from "./specCheck";
-import { mockCredentials, sentToMock } from "./targets";
+import { mockCredentials, sentFields, sentTargetOf, type SentTarget } from "./targets";
 import { validateResponse, type ValidationResult } from "./validate";
 
 /**
@@ -238,6 +238,8 @@ interface Prepared {
   op: OperationSpec | null;
   toMock: boolean;
   mockUrl: string | null;
+  /** Where it goes, as History records it. */
+  sent: SentTarget;
   /** Header and query names that carry the API's credential. */
   credentialHeaders: string[];
   credentialQuery: string[];
@@ -276,7 +278,7 @@ async function prepareRequest(args: Json, deps: AgentToolDeps, app: AgentApp): P
       { method, url, headers: Object.entries(headers).map(([key, value]) => ({ key, value })), body: body ?? "" },
       vars,
     );
-    return { plan, entry: null, spec: null, op: null, toMock: false, mockUrl: null, credentialHeaders: [], credentialQuery: [] };
+    return { plan, entry: null, spec: null, op: null, toMock: false, mockUrl: null, sent: sentTargetOf("custom", url), credentialHeaders: [], credentialQuery: [] };
   }
 
   const entry = findApi(await deps.loadLibrary(), str(args, "api"));
@@ -290,7 +292,8 @@ async function prepareRequest(args: Json, deps: AgentToolDeps, app: AgentApp): P
   const missing = op.parameters.filter((param) => param.in === "path" && !pathParams[param.name]).map((param) => param.name);
   if (missing.length) throw new Error(`Pass path_params for ${missing.join(", ")}.`);
 
-  const base = baseUrlFor(parseTarget(str(args, "target")), entry, spec, app);
+  const target = parseTarget(str(args, "target"));
+  const base = baseUrlFor(target, entry, spec, app);
   const auth = await authFor(op, spec, entry, typeof args.auth_value === "string" ? args.auth_value : undefined, app);
   const mock = mockCredentials(entry.mockUrl ?? null, entry.mockApiKey, app.session());
   const plan = buildPlan(op, base.url, pathParams, stringMap(args, "query"), headers, auth, body ?? "", vars, mock);
@@ -302,6 +305,7 @@ async function prepareRequest(args: Json, deps: AgentToolDeps, app: AgentApp): P
     op,
     toMock: base.mock,
     mockUrl: entry.mockUrl ?? null,
+    sent: sentTargetOf(target?.kind ?? "server", base.url),
     credentialHeaders: auth?.in === "header" ? paramName : [],
     credentialQuery: auth?.in === "query" ? paramName : [],
   };
@@ -360,7 +364,7 @@ async function sendForAgent(
     ...(validation && spec
       ? checkFields(validation, { version: spec.version, fingerprint: fingerprint(spec.sourceText) })
       : { validation: "no_schema" as const }),
-    mock: prepared.toMock || sentToMock(plan.url, prepared.mockUrl),
+    ...sentFields(prepared.sent, plan.url, prepared.mockUrl),
     statusText: response.statusText,
     responseHeaders: response.headers,
     responseBody: storedResponseBody(response),
@@ -455,7 +459,7 @@ const checkContract: Tool = async (args, deps, context) => {
       results.push({ operation: item.operation, verdict: "error", error: error instanceof Error ? error.message : String(error) });
       continue;
     }
-    const sent = await sendForAgent({ plan, entry, spec, op: item.operation, toMock: base.mock, mockUrl: entry.mockUrl ?? null, credentialHeaders: [], credentialQuery: [] }, deps, app, context, { runId });
+    const sent = await sendForAgent({ plan, entry, spec, op: item.operation, toMock: base.mock, mockUrl: entry.mockUrl ?? null, sent: sentTargetOf(target?.kind ?? "server", base.url), credentialHeaders: [], credentialQuery: [] }, deps, app, context, { runId });
     if ("refused" in sent) {
       // Asking again for every remaining operation would only repeat the question.
       stopped = sent.refused;

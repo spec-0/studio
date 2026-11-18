@@ -52,7 +52,7 @@ export function seedEditor(
     Object.fromEntries(
       op.parameters
         .filter((p) => p.in === where)
-        .map((p) => [p.name, p.required ? exampleParam(spec.doc, p.schema, p.name) : ""]),
+        .map((p) => [p.name, p.required ? exampleParam(spec.doc, p) : ""]),
     );
   let headerParams = prefill?.headers ?? seed("header");
   const custom: Array<{ key: string; value: string }> = [];

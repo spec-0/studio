@@ -3,7 +3,7 @@
  * a message become a link to anything but a web page, or load anything.
  */
 import { describe, expect, it } from "vitest";
-import { parseInline, parseMarkdown, safeHref } from "../markdown";
+import { descriptionMarkdown, descriptionText, parseInline, parseMarkdown, safeHref } from "../markdown";
 
 describe("blocks", () => {
   it("reads headings, paragraphs, lists, quotes, rules and code", () => {
@@ -87,5 +87,44 @@ describe("inline", () => {
     const started = performance.now();
     parseInline(text);
     expect(performance.now() - started).toBeLessThan(1000);
+  });
+});
+
+describe("descriptionMarkdown", () => {
+  it("turns the HTML specs use for text into Markdown, and keeps relative links as text", () => {
+    const html = '<p>With <a href="/connect">Connect</a>, you can <b>create</b> <code>Account</code>s.</p><p>See <a href="https://docs.example.com/x">the guide</a>.</p>';
+    const markdown = descriptionMarkdown(html);
+    expect(markdown).toBe("With [Connect](/connect), you can **create** `Account`s.\n\nSee [the guide](https://docs.example.com/x).");
+    const blocks = parseMarkdown(markdown);
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]).toEqual({
+      type: "paragraph",
+      children: [
+        { type: "text", text: "With Connect, you can " },
+        { type: "strong", children: [{ type: "text", text: "create" }] },
+        { type: "text", text: " " },
+        { type: "code", text: "Account" },
+        { type: "text", text: "s." },
+      ],
+    });
+  });
+
+  it("drops other tags and scripts, and decodes entities as text", () => {
+    expect(descriptionMarkdown('<div onclick="x()">Fee &amp; tax<img src="https://t.example/p.gif"><script>alert(1)</script></div>')).toBe("Fee & tax");
+    expect(descriptionMarkdown("<p>1 &lt; 2 &#8212; ok</p>")).toBe("1 < 2 — ok");
+  });
+
+  it("turns lists into Markdown lists", () => {
+    expect(descriptionMarkdown("<ul><li>one</li><li>two</li></ul>")).toBe("- one\n- two");
+  });
+
+  it("leaves a description without tags alone", () => {
+    expect(descriptionMarkdown("Plain *text* with a < sign")).toBe("Plain *text* with a < sign");
+  });
+});
+
+describe("descriptionText", () => {
+  it("is one line of plain text", () => {
+    expect(descriptionText("<p>The <b>id</b> of the</p><p>order.</p>")).toBe("The id of the order.");
   });
 });

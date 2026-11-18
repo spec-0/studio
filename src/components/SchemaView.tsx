@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { deref, typeLabel, type Json, type ParsedSpec } from "../lib/spec";
 import { exampleFor } from "../lib/example";
+import { plural } from "../lib/plural";
+import { Description } from "./Description";
 
 interface Props {
   spec: ParsedSpec;
@@ -78,11 +80,12 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
       <div className="schema-head">
         <div className="schema-title">{name}</div>
         <div className="meta" style={{ marginTop: 4 }}>
-          {fields.length} fields · referenced by {referencedBy.length} schemas · used in{" "}
-          {usedBy.length} operations
+          {plural(fields.length, "field")} ·{" "}
+          {referencedBy.length ? `referenced by ${plural(referencedBy.length, "schema")}` : "not referenced by other schemas"} ·{" "}
+          {usedBy.length ? `used in ${plural(usedBy.length, "operation")}` : "not used by any operation"}
         </div>
         {deref(spec.doc, schema).description && (
-          <div className="op-summary">{deref(spec.doc, schema).description}</div>
+          <Description text={deref(spec.doc, schema).description} className="op-summary" />
         )}
       </div>
 
@@ -137,7 +140,7 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
                         typeLabel(spec.doc, propSchema)
                       )}
                     </td>
-                    <td className="desc">{resolved.description ?? ""}</td>
+                    <td className="desc">{resolved.description ? <Description text={resolved.description} /> : ""}</td>
                   </tr>
                 );
               })}

@@ -192,3 +192,75 @@ export function parseInline(text: string): Inline[] {
   if (plain) out.push({ type: "text", text: plain });
   return out;
 }
+
+// Descriptions in a spec
+
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+function decodeEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, entity: string) => {
+    if (entity[0] === "#") {
+      const code = entity[1].toLowerCase() === "x" ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1), 10);
+      return code > 0 && code < 0x110000 ? String.fromCodePoint(code) : match;
+    }
+    return ENTITIES[entity.toLowerCase()] ?? match;
+  });
+}
+
+const HAS_TAG = /<\/?[a-z][^>]*>/i;
+
+/**
+ * A spec description as Markdown.
+ *
+ * OpenAPI descriptions are CommonMark, which allows inline HTML, and some specs
+ * write theirs entirely in it (`<p>With <a href="/connect">Connect</a>…</p>`).
+ * The tags people use for text (p, br, a, code, em, strong, lists) become their
+ * Markdown, and every other tag is dropped, so the result goes through
+ * `parseMarkdown` like anything else and is never HTML. A link that isn't
+ * http(s), such as a path relative to the API's own docs, stays as its text.
+ */
+export function descriptionMarkdown(source: string): string {
+  if (!HAS_TAG.test(source)) return source;
+  const text = source
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
+    .replace(/<a\b[^>]*?\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a\s*>/gi, (_, _quote, href: string, label: string) =>
+      `[${label}](${href.replace(/\s/g, "%20")})`,
+    )
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(p|div|ul|ol|h[1-6])\b[^>]*>/gi, "\n\n")
+    .replace(/<li\b[^>]*>/gi, "\n- ")
+    .replace(/<\/?(strong|b)\b[^>]*>/gi, "**")
+    .replace(/<\/?(em|i)\b[^>]*>/gi, "*")
+    .replace(/<\/?code\b[^>]*>/gi, "`")
+    .replace(/<[^>]*>/g, "");
+  return decodeEntities(text)
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** A spec description as one line of plain text, for a placeholder or a tooltip. */
+export function descriptionText(source: string): string {
+  return parseMarkdown(descriptionMarkdown(source))
+    .map((block) => blockText(block))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function blockText(block: Block): string {
+  switch (block.type) {
+    case "code":
+      return block.text;
+    case "list":
+      return block.items.map(inlineText).join("; ");
+    case "rule":
+      return "";
+    default:
+      return inlineText(block.children);
+  }
+}
+
+function inlineText(nodes: Inline[]): string {
+  return nodes.map((node) => (node.type === "text" || node.type === "code" ? node.text : inlineText(node.children))).join("");
+}

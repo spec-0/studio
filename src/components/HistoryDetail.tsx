@@ -121,7 +121,7 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
           </div>
           <div>
             <dt>Sent to</dt>
-            <dd>{scratch ? "Typed URL" : entry.mock ? "Mock server" : "Real server"}</dd>
+            <dd>{sentToLabel(entry, scratch)}</dd>
           </div>
           {entry.environment && (
             <div>
@@ -426,4 +426,11 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+/** Where a request went, in words. Older entries recorded only whether it was a mock. */
+function sentToLabel(entry: HistoryEntry, scratch: boolean): string {
+  if (entry.target) return entry.target.label;
+  if (scratch) return "Typed URL";
+  return entry.mock ? "Mock server" : "Real server";
 }

@@ -89,6 +89,7 @@ import { SAMPLE_NAME, SAMPLE_SPEC } from "./lib/sample";
 import { openapiText, type OperationSpec, type ParsedSpec } from "./lib/spec";
 import { apiIdFromRef, apiUrl, consumersUrl, DEFAULT_API_URL, DEFAULT_APP_URL } from "./lib/spec0";
 import { openInBrowser } from "./lib/store";
+import { plural } from "./lib/plural";
 
 /**
  * The composition root: wires the hooks in `src/hooks` to the components in
@@ -179,6 +180,7 @@ export default function App() {
     vars,
     mock,
     mockUrl,
+    targets,
     connection,
     currentId: current?.id,
     environmentName: activeEnv?.name,
@@ -208,6 +210,7 @@ export default function App() {
     vars,
     mock,
     mockUrl,
+    targets,
     connection,
     currentId: current?.id,
     environmentName: activeEnv?.name,
@@ -1094,7 +1097,7 @@ export default function App() {
               <StatusBar
                 summary={
                   <>
-                    {spec!.operations.length} operations · {spec!.schemas.length} schemas · {spec!.tags.length} tags
+                    {plural(spec!.operations.length, "operation")} · {plural(spec!.schemas.length, "schema")} · {plural(spec!.tags.length, "tag")}
                   </>
                 }
                 envName={activeEnv?.name}

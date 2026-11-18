@@ -97,6 +97,57 @@ export function isTargetingMock(resolved: string, mockUrl: string | null): boole
   return url !== "" && url === trimSlash(mockUrl);
 }
 
+/** Where a sent request went, as History records it. */
+export interface SentTarget {
+  /** `custom` is a URL typed into the address bar. */
+  kind: Target["kind"] | "custom";
+  label: string;
+}
+
+/** True when a request to this kind of target went to a mock, hosted or local. */
+export const isMockKind = (kind: SentTarget["kind"]): boolean => kind === "mock" || kind === "local-mock";
+
+/**
+ * The target a request was sent to, from the address bar it was sent from.
+ *
+ * Matched on the address bar as typed and with its variables filled in, the same
+ * way the address bar recognises a target. Anything else is a typed URL.
+ */
+export function sentTarget(targets: Target[], server: string, resolved: string): SentTarget {
+  const wanted = [trimSlash(server.trim()), trimSlash(resolved.trim())];
+  const target = targets.find((candidate) => wanted.includes(trimSlash(candidate.url)));
+  if (!target) return { kind: "custom", label: "Typed URL" };
+  return { kind: target.kind, label: target.kind === "mock" ? "Hosted mock" : target.label };
+}
+
+/** The same, for a request whose target kind is already known (a collection step, an agent's request). */
+export function sentTargetOf(kind: SentTarget["kind"], url: string): SentTarget {
+  switch (kind) {
+    case "mock":
+      return { kind, label: "Hosted mock" };
+    case "local-mock":
+      return { kind, label: `Local mock · ${hostOf(url)}` };
+    case "custom":
+      return { kind, label: "Typed URL" };
+    default:
+      return { kind, label: hostOf(url) };
+  }
+}
+
+function hostOf(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.host + (parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/$/, ""));
+  } catch {
+    return url;
+  }
+}
+
+/** The fields History records about where a request went. */
+export function sentFields(target: SentTarget, url: string, mockUrl: string | null): { target: SentTarget; mock: boolean } {
+  return { target, mock: isMockKind(target.kind) || sentToMock(url, mockUrl) };
+}
+
 /** True when a sent URL went to the mock. Used to mark history entries. */
 export function sentToMock(url: string, mockUrl: string | null): boolean {
   return Boolean(mockUrl && url.startsWith(trimSlash(mockUrl)));

@@ -394,3 +394,13 @@ describe("recording", () => {
     expect(text).toContain("{{token}}");
   });
 });
+
+describe("where a request went", () => {
+  it("keeps a local-mock request apart from real servers in the target filter", () => {
+    const local = entry({ id: "a", mock: true, target: { kind: "local-mock", label: "Local mock · 127.0.0.1:4011" } });
+    const real = entry({ id: "b", mock: false, target: { kind: "server", label: "api.example.com" } });
+    const old = entry({ id: "c", mock: true });
+    expect(filterHistory([local, real, old], { target: "mock" }).map((e) => e.id)).toEqual(["a", "c"]);
+    expect(filterHistory([local, real, old], { target: "real" }).map((e) => e.id)).toEqual(["b"]);
+  });
+});

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import { describeSecretStorage, secrets } from "../../lib/secrets";
 import { storeLocation } from "../../lib/store";
+import { plural } from "../../lib/plural";
 
 interface Props {
   /** How many requests history holds right now. */
@@ -29,7 +30,7 @@ export function DataSettings({ historyCount, onClearHistory }: Props) {
         </p>
         <div className="settings-actions">
           <span className="meta">
-            {historyCount === 1 ? "1 request recorded" : `${historyCount} requests recorded`}
+            {plural(historyCount, "request")} recorded
           </span>
           <span className="spacer" />
           {confirming ? (

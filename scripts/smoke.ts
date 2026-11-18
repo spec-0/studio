@@ -16,6 +16,7 @@ import { parseSpec } from "../src/lib/spec";
 import { exampleFor } from "../src/lib/example";
 import { validateResponse } from "../src/lib/validate";
 import { answerMockRequest, OPERATION_HEADER } from "../src/lib/localMock";
+import { descriptionText } from "../src/lib/markdown";
 
 function ms(start: number): string {
   return `${Math.round(performance.now() - start)}ms`;
@@ -89,6 +90,14 @@ for (const file of process.argv.slice(2)) {
     }
     console.log(`  mock answers    ${spec.operations.length - misrouted}/${spec.operations.length} routed in ${ms(t4)}`);
     if (misrouted) failures += 1;
+
+    // Descriptions written in HTML must come out as text, with no tag left over.
+    const t5 = performance.now();
+    const descriptions = spec.operations.flatMap((op) => [op.description, ...op.parameters.map((p) => p.description)]).filter(Boolean) as string[];
+    const withHtml = descriptions.filter((text) => /<\/?[a-z][^>]*>/i.test(text));
+    const leftover = withHtml.filter((text) => /<\/?[a-z][^>]*>/i.test(descriptionText(text)));
+    console.log(`  descriptions    ${descriptions.length}, ${withHtml.length} with HTML, ${leftover.length} with a tag left in ${ms(t5)}`);
+    if (leftover.length) failures += 1;
 
     // Drift detection must actually fire on a mutated payload.
     const target = spec.schemas.find((s) => {

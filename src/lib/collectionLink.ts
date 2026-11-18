@@ -293,7 +293,7 @@ export function stepForOperation(
     Object.fromEntries(
       op.parameters
         .filter((p) => p.in === where && p.required)
-        .map((p) => [p.name, exampleParam(spec.doc, p.schema, p.name)]),
+        .map((p) => [p.name, exampleParam(spec.doc, p)]),
     );
   const body: BodyInput | undefined =
     values.body ??

@@ -3,6 +3,7 @@ import { redact, redactHeaders } from "./redact";
 import { declaredResponse } from "./response";
 import { SCRATCH_OPERATION_ID } from "./scratch";
 import type { ParsedSpec } from "./spec";
+import type { SentTarget } from "./targets";
 import { validateResponse, type Finding, type ValidationResult } from "./validate";
 
 /**
@@ -58,8 +59,10 @@ export interface HistoryEntry {
   specVersion?: string;
   /** A hash of the spec text the check ran against, to tell if it has changed. */
   specFingerprint?: string;
-  /** Hit a mock rather than the real server. */
+  /** Hit a mock rather than the real server. Older entries have only this. */
   mock?: boolean;
+  /** Where it was sent, by kind and in words ("Local mock · 127.0.0.1:4010"). */
+  target?: SentTarget;
   /**
    * The conformance run this request belonged to.
    *
