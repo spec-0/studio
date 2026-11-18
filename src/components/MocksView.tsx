@@ -7,6 +7,7 @@ import { KEY_NEEDS_REGENERATING, type MockRow } from "../lib/spec0";
 import { maskKey } from "../lib/mockJourney";
 import type { MockKeyState } from "../hooks/useMocks";
 import { EmptyState } from "./EmptyState";
+import { CodeBlock } from "./CodeBlock";
 
 interface Props {
   signedIn: boolean;
@@ -71,50 +72,45 @@ export function MocksView({
 
   return (
     <div className="page">
-      <div className="page-inner">
-        <div className="library-head">
-          <div>
-            <h1>Mocks</h1>
-            <p className="page-sub">
-              A mock answers with example data from the spec, so you can call an API before it exists.
-            </p>
+      <div className="page-in">
+        <div className="page-head">
+          <div className="l">
+            <h1 className="page-title">Mocks</h1>
+            <p className="desc">A mock answers with example data from the spec, so you can call an API before it exists.</p>
           </div>
         </div>
 
         <LocalMocks {...local} copied={copied} onCopy={copy} />
 
-        <div className="mocks-section-head">
-          <div>
-            <h2>Hosted</h2>
-            <p className="field-meta">Mock servers on Spec0, with an address you can share with your team.</p>
+        <div className="section-head">
+          <div className="l">
+            <h2 className="h2">Hosted on Spec0</h2>
+            <span className="meta">Mock servers with an address you can share with your team.</span>
           </div>
-          <span className="spacer" />
           {signedIn && (
-            <>
-              <button className="btn" onClick={onRefresh} disabled={loading}>
+            <div className="btn-row">
+              <button className="btn ghost" onClick={onRefresh} disabled={loading}>
                 <RefreshCw size={12} className={loading ? "spin" : undefined} /> Refresh
               </button>
-              <button className="btn primary" onClick={onCreate}>
-                <Plus size={13} /> Create a mock server
+              <button className="btn" onClick={onCreate}>
+                <Plus size={13} /> Create hosted mock
               </button>
-            </>
+            </div>
           )}
         </div>
 
         {!signedIn && (
-          <div className="placeholder-card">
-            <Server size={18} aria-hidden />
-            <div>
-              <p>Hosted mocks come with a Spec0 account.</p>
-              <p className="field-meta">
-                Sign in to see your organisation&apos;s mock servers here. An API you open from Spec0
-                comes with its mock attached, and you can pick it as a target in the address bar.
-                Everything else in Studio works without signing in.
-              </p>
-              <button className="btn primary" style={{ marginTop: 10 }} onClick={onSignIn}>
-                Sign in to Spec0…
-              </button>
-            </div>
+          <div className="rows">
+            <EmptyState
+              icon={<Server size={18} />}
+              title="Hosted mocks come with a Spec0 account"
+              body="Sign in to see your organisation's mock servers here. Everything else in Studio works without signing in."
+              action={
+                <button className="btn" onClick={onSignIn}>
+                  Sign in to Spec0…
+                </button>
+              }
+            />
           </div>
         )}
 
@@ -126,25 +122,22 @@ export function MocksView({
         )}
 
         {signedIn && !error && mocks && mocks.length === 0 && (
-          <div className="placeholder-card">
-            <Server size={18} aria-hidden />
-            <div>
-              <p>No hosted mocks in {orgName ?? "your organisation"} yet.</p>
-              <p className="field-meta">
-                Create one from any API in your library. Studio publishes it to your organisation
-                first if it isn&apos;t there yet.
-              </p>
-            </div>
+          <div className="rows">
+            <EmptyState
+              icon={<Server size={18} />}
+              title={`No hosted mocks in ${orgName ?? "your organisation"} yet`}
+              body="Create one from any API in your library. Studio publishes it to your organisation first if it isn't there yet."
+            />
           </div>
         )}
 
         {signedIn && mocks && mocks.length > 0 && (
-          <table className="fields mocks-table">
+          <table className="tbl mocks-table">
             <thead>
               <tr>
                 <th>API</th>
-                <th>URL</th>
-                <th>Spec version</th>
+                <th>Address</th>
+                <th>Spec</th>
                 <th>Key</th>
                 <th aria-label="Actions" />
               </tr>
@@ -156,7 +149,9 @@ export function MocksView({
                     <strong>{mock.apiName}</strong>
                     {mock.name && <div className="field-meta">{mock.name}</div>}
                   </td>
-                  <td className="name mock-url">{mock.url}</td>
+                  <td className="mono mock-url" title={mock.url}>
+                    {middleTruncate(mock.url)}
+                  </td>
                   <td className="meta mono">{mock.specVersion ?? "–"}</td>
                   <td className="mock-key">
                     {mock.mockServerId ? (
@@ -188,7 +183,7 @@ export function MocksView({
                       <span className="meta">–</span>
                     )}
                   </td>
-                  <td className="mock-actions">
+                  <td className="act">
                     <button
                       className="icon-btn"
                       onClick={() => copy(mock.url)}
@@ -231,13 +226,13 @@ function LocalMocks({
 
   return (
     <section className="local-mocks" aria-labelledby="local-mocks-title">
-      <div className="mocks-section-head">
-        <div>
-          <h2 id="local-mocks-title">On this computer</h2>
-          <p className="field-meta">
-            Serves an API from your library on 127.0.0.1, for this computer only. No account needed. It runs until you
-            stop it or quit Studio, and nothing starts by itself.
-          </p>
+      <div className="section-head">
+        <div className="l">
+          <h2 className="h2" id="local-mocks-title">On this computer</h2>
+          <span className="meta">
+            Serves an API from your library on 127.0.0.1, for this computer only. It runs until you stop it or quit
+            Studio, and nothing starts by itself.
+          </span>
         </div>
       </div>
 
@@ -249,8 +244,7 @@ function LocalMocks({
         />
       ) : (
         <>
-          {live.length > 0 && (
-            <table className="fields mocks-table">
+          <table className="tbl mocks-table">
               <thead>
                 <tr>
                   <th>API</th>
@@ -265,12 +259,12 @@ function LocalMocks({
                     <tr key={entry.id}>
                       <td className="mock-api">
                         <span className="local-mock-name">
-                          <span className="live-dot" aria-hidden />
+                          <span className="dot live" aria-hidden />
                           <strong>{entry.title}</strong>
                         </span>
                       </td>
-                      <td className="name mock-url">{url}</td>
-                      <td className="mock-actions local">
+                      <td className="mono">{url}</td>
+                      <td className="act">
                         <div className="local-mock-row-actions">
                           <button
                             className="icon-btn"
@@ -294,61 +288,110 @@ function LocalMocks({
                     </tr>
                   );
                 })}
+                {live.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="meta">
+                      Nothing running.
+                    </td>
+                  </tr>
+                )}
               </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={3}>
+                    {entries.length === 0 ? (
+                      <span className="meta">Add an API to your library to serve a mock of it here.</span>
+                    ) : idle.length > 0 ? (
+                      <div className="local-mock-start">
+                        <label className="meta" htmlFor="local-mock-api">
+                          Start a mock of
+                        </label>
+                        <select
+                          id="local-mock-api"
+                          className="select"
+                          value={choice?.id ?? ""}
+                          onChange={(event) => setPicked(event.target.value)}
+                        >
+                          {idle.map((entry) => (
+                            <option key={entry.id} value={entry.id}>
+                              {entry.title}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          className="btn sm"
+                          disabled={!choice || busy !== null}
+                          onClick={() => choice && onStart(choice)}
+                        >
+                          <Laptop size={13} /> Start
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="meta">Every API in your library has a mock running.</span>
+                    )}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
-          )}
 
-          {entries.length === 0 ? (
-            <p className="meta">Add an API to your library to serve a mock of it here.</p>
-          ) : idle.length > 0 ? (
-            <div className="local-mock-start">
-              <label className="field-meta" htmlFor="local-mock-api">
-                Start a local mock of
-              </label>
-              <select id="local-mock-api" value={choice?.id ?? ""} onChange={(event) => setPicked(event.target.value)}>
-                {idle.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.title}
-                  </option>
-                ))}
-              </select>
-              <button className="btn" disabled={!choice || busy !== null} onClick={() => choice && onStart(choice)}>
-                <Laptop size={13} /> Start
-              </button>
-            </div>
-          ) : null}
           {error && (
             <div className="error-box" role="alert">
               {error.message}
             </div>
           )}
 
-          <fieldset className="local-mock-rules">
-            <legend className="field-meta">When a request doesn&apos;t match the spec</legend>
-            <label className="check">
-              <input type="radio" name="local-mock-invalid" checked={invalid === "warn"} onChange={() => onInvalid("warn")} />
-              <span>
-                Answer anyway, and list the problems in the <code>X-Spec0-Mock-Warnings</code> header
-              </span>
-            </label>
-            <label className="check">
-              <input
-                type="radio"
-                name="local-mock-invalid"
-                checked={invalid === "reject"}
-                onChange={() => onInvalid("reject")}
+          <div className="rows local-mock-rules">
+            <div className="row-s">
+              <div className="l">
+                <b>When a request doesn&apos;t match the spec</b>
+                <span className="meta">
+                  Answer anyway and list the problems in the <span className="mono">X-Spec0-Mock-Warnings</span> header,
+                  or answer <span className="mono">400</span> with them.
+                </span>
+              </div>
+              <div className="c">
+                <span className="segmented sm" role="radiogroup" aria-label="When a request doesn't match the spec">
+                  <button
+                    type="button"
+                    role="radio"
+                    className="segment"
+                    aria-checked={invalid === "warn"}
+                    onClick={() => onInvalid("warn")}
+                  >
+                    Answer and warn
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    className="segment"
+                    aria-checked={invalid === "reject"}
+                    onClick={() => onInvalid("reject")}
+                  >
+                    Answer 400
+                  </button>
+                </span>
+              </div>
+            </div>
+            <details className="row-s stack local-mock-help">
+              <summary>
+                <b>Asking for a specific response</b>
+                <span className="meta">
+                  {" "}
+                  Each operation answers with the lowest 2xx the spec declares. Web pages on localhost can call it;
+                  other websites can&apos;t.
+                </span>
+              </summary>
+              <CodeBlock
+                syntax="plain"
+                text={[
+                  "Prefer: code=404          # another status the spec declares",
+                  "X-Mock-Status: 404        # the same, as a header",
+                  "GET /orders?__status=404  # the same, in the URL",
+                  "Prefer: example=refunded  # a named example",
+                ].join("\n")}
               />
-              <span>
-                Answer <code>400</code> with the problems
-              </span>
-            </label>
-          </fieldset>
-          <p className="field-meta local-mock-help">
-            Each operation answers with the lowest 2xx response the spec declares. Ask for another with{" "}
-            <code>Prefer: code=404</code>, <code>X-Mock-Status: 404</code> or <code>?__status=404</code>, and for a named
-            example with <code>Prefer: example=name</code>. Web pages served from localhost can call a local mock; other
-            websites can&apos;t.
-          </p>
+            </details>
+          </div>
         </>
       )}
     </section>
@@ -443,4 +486,11 @@ function KeyCell({
       </button>
     </div>
   );
+}
+
+/** A long address with its middle elided, so the host and the id's end both show. */
+function middleTruncate(url: string, max = 64): string {
+  if (url.length <= max) return url;
+  const keep = Math.floor((max - 1) / 2);
+  return `${url.slice(0, keep)}…${url.slice(-keep)}`;
 }

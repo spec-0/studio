@@ -2259,19 +2259,16 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .mocks-section-head h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
 .mocks-section-head .spacer { flex: 1; }
 .mocks-section-head > div { min-width: 0; max-width: 640px; }
-.local-mocks { padding-bottom: 8px; border-bottom: 1px solid hsl(var(--border)); }
-.local-mocks .mocks-section-head { margin-top: 4px; }
 .local-mocks .mocks-table { margin-bottom: 12px; }
-.mocks-table td.mock-actions.local { width: 72px; white-space: nowrap; }
-.local-mock-start { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; }
-.local-mock-start select { max-width: 320px; }
-.local-mock-rules { border: 0; padding: 0; margin: 10px 0 8px; display: grid; gap: 4px; }
-.local-mock-rules legend { margin-bottom: 4px; }
-.local-mock-rules label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
-.local-mock-rules input { width: auto; flex: none; margin: 0; padding: 0; }
+.local-mock-start { display: flex; align-items: center; gap: 8px; }
+.local-mock-start .select { width: auto; max-width: 320px; height: 26px; }
+.local-mock-rules { margin-bottom: 8px; }
 .local-mock-row-actions { display: flex; justify-content: flex-end; gap: 4px; }
 .local-mock-name { display: inline-flex; align-items: center; gap: 8px; }
-.local-mock-help { max-width: 640px; margin-bottom: 8px; }
+.local-mock-help summary { cursor: pointer; list-style: none; }
+.local-mock-help summary::-webkit-details-marker { display: none; }
+.local-mock-help summary b { font-weight: 500; }
+.local-mock-help .code-block { margin-top: 4px; }
 .local-mocks code, .local-mock-rules code { font-family: var(--font-mono); font-size: 11.5px; }
 
 .live-dot {
@@ -4068,3 +4065,5 @@ textarea.code-editor-input::selection { background: hsl(var(--primary) / 0.35); 
 .start-quiet { display: flex; gap: 8px; margin-top: 18px; }
 .first-run.dragging .page-in { outline: 2px dashed hsl(var(--primary)); outline-offset: 12px; border-radius: 12px; }
 @media (max-width: 900px) { .start-grid { grid-template-columns: 1fr; } }
+.mocks-table .mock-url { max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mocks-table .act { white-space: nowrap; }
