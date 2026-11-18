@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { Copy, Download, History, Send } from "lucide-react";
+import { Check, Copy, Download, History, Send, Terminal, WrapText, X } from "lucide-react";
 import type { ResponseResult } from "../lib/request";
 import type { ValidationResult } from "../lib/validate";
 import { TabList } from "./TabList";
 import { EmptyState } from "./EmptyState";
 import { shortcut } from "../lib/platform";
+import { plural } from "../lib/plural";
+import { CodeBlock } from "./CodeBlock";
 
 interface Props {
   result: ResponseResult | null;
   validation: ValidationResult | null;
   error: string | null;
-  curl: string | null;
   onDismissHook: () => void;
   showHook: boolean;
   /**
@@ -37,6 +38,14 @@ interface Props {
    * edited since. Said above everything else, so it never reads as new.
    */
   restored?: { sentAt: string; editedSince: boolean } | null;
+  /** Where the request went, in words, so the answer says where it came from. */
+  sentTo?: string | null;
+  /** The schema the response was checked against, e.g. "Order". */
+  schemaName?: string | null;
+  /** Open a schema in the Schemas view. */
+  onShowSchema?: (name: string) => void;
+  /** The sent request as cURL, for a request without a Send menu (Scratch). */
+  curl?: string | null;
 }
 
 const KIND_GLYPH: Record<string, string> = {
@@ -50,7 +59,6 @@ export function Inspector({
   result,
   validation,
   error,
-  curl,
   showHook,
   onDismissHook,
   mockStale = false,
@@ -58,8 +66,13 @@ export function Inspector({
   onSaveBody,
   noSchema = false,
   restored = null,
+  sentTo = null,
+  schemaName = null,
+  onShowSchema,
+  curl = null,
 }: Props) {
-  const [view, setView] = useState<"body" | "headers" | "curl">("body");
+  const [view, setView] = useState<"body" | "headers">("body");
+  const [wrap, setWrap] = useState(false);
 
   const restoredNote = restored && (
     <div className="verdict none restored-note" role="status">
@@ -108,15 +121,30 @@ export function Inspector({
   const family = Math.floor(result.status / 100);
   const pretty = result.json !== undefined ? JSON.stringify(result.json, null, 2) : result.bodyText;
   const binary = result.binary ?? null;
+  const headerCount = Object.keys(result.headers).length;
 
   return (
     <>
-      <div className="insp-head">
-        <span className={`status-pill s${family}`}>{result.status}</span>
-        <span className="meta">{result.statusText}</span>
-        <span className="meta mono" style={{ marginLeft: "auto" }}>
-          {result.ms}ms · {formatBytes(result.bytes)}
+      <div className="insp-head res-head">
+        <span className={`status-badge s${family}`}>
+          {result.status}
+          {result.statusText ? ` ${result.statusText}` : ""}
         </span>
+        <span className="metric mono">{result.ms} ms</span>
+        <span className="metric mono">{formatBytes(result.bytes)}</span>
+        {sentTo && (
+          <span className="chip sans res-target" title={`This answer came from ${sentTo}`}>
+            {/mock/i.test(sentTo) && <span className="dot live" aria-hidden />}
+            {shortTarget(sentTo)}
+          </span>
+        )}
+        <span className="spacer" />
+        <VerdictLine
+          validation={noSchema ? null : validation}
+          noSchema={noSchema}
+          schemaName={schemaName}
+          onShowSchema={onShowSchema}
+        />
       </div>
 
       <div className="insp-body">
@@ -132,36 +160,22 @@ export function Inspector({
             </span>
           </div>
         )}
-        {validation && (
-          <Verdict validation={validation} mockStale={mockStale} onRefreshMock={onRefreshMock} />
-        )}
-
-        {noSchema && (
-          <div className="verdict none">
-            <span className="glyph">–</span>
-            <span>
-              Not checked: no spec describes this response. Import or publish the API and every
-              response gets validated against it.
-            </span>
-          </div>
+        {validation && validation.status !== "ok" && !noSchema && (
+          <Verdict validation={validation} mockStale={mockStale} onRefreshMock={onRefreshMock} schemaName={schemaName} />
         )}
 
         {validation?.status === "mismatch" && showHook && !mockStale && (
           <div className="hook">
             This response doesn&apos;t match your spec. spec0 catches this across your whole org,
             automatically.{" "}
-            <button
-              className="btn"
-              style={{ padding: "1px 7px", marginLeft: 4 }}
-              onClick={onDismissHook}
-            >
+            <button className="btn sm" style={{ marginLeft: 4 }} onClick={onDismissHook}>
               Dismiss
             </button>
           </div>
         )}
 
         <div className="ptabs insp-tabs">
-          <TabList<"body" | "headers" | "curl">
+          <TabList<"body" | "headers">
             className="ptabs-list"
             tabClassName="ptab"
             label="Response"
@@ -171,19 +185,42 @@ export function Inspector({
                 id: "headers",
                 label: (
                   <>
-                    Headers <span className="c">{Object.keys(result.headers).length}</span>
+                    Headers <span className="c">{headerCount}</span>
                   </>
                 ),
               },
-              { id: "curl", label: "cURL" },
             ]}
             selected={view}
             onSelect={setView}
           />
           <div className="tools">
+            {curl && (
+              <button className="btn ghost sm" onClick={() => void navigator.clipboard.writeText(curl)}>
+                <Terminal size={13} /> Copy as cURL
+              </button>
+            )}
+            {view === "body" && !binary && (
+              <button
+                className={`icon-btn${wrap ? " on" : ""}`}
+                aria-pressed={wrap}
+                aria-label="Wrap long lines"
+                title="Wrap long lines"
+                onClick={() => setWrap(!wrap)}
+              >
+                <WrapText size={14} />
+              </button>
+            )}
             <button
               className="btn ghost sm"
-              onClick={() => navigator.clipboard.writeText(view === "curl" ? (curl ?? "") : pretty)}
+              onClick={() =>
+                void navigator.clipboard.writeText(
+                  view === "headers"
+                    ? Object.entries(result.headers)
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join("\n")
+                    : pretty,
+                )
+              }
             >
               <Copy size={13} /> Copy
             </button>
@@ -218,17 +255,18 @@ export function Inspector({
                 </button>
               )}
             </div>
+          ) : pretty ? (
+            <CodeBlock text={pretty} syntax={result.json !== undefined ? "json" : "plain"} wrap={wrap} />
           ) : (
-            <pre className="code">{pretty || "(empty body)"}</pre>
+            <p className="meta">The response has no body.</p>
           ))}
-        {view === "curl" && <pre className="code">{curl ?? ""}</pre>}
         {view === "headers" && (
-          <table className="fields">
+          <table className="tbl">
             <tbody>
               {Object.entries(result.headers).map(([key, value]) => (
                 <tr key={key}>
-                  <td className="name">{key}</td>
-                  <td className="desc" style={{ overflowWrap: "anywhere" }}>
+                  <td className="mono">{key}</td>
+                  <td className="mono" style={{ overflowWrap: "anywhere" }}>
                     {value}
                   </td>
                 </tr>
@@ -241,6 +279,63 @@ export function Inspector({
   );
 }
 
+/** "Local mock · 127.0.0.1:4011" → "local mock"; other targets as they are. */
+function shortTarget(sentTo: string): string {
+  if (sentTo.startsWith("Local mock")) return "local mock";
+  if (sentTo === "Hosted mock") return "hosted mock";
+  return sentTo;
+}
+
+/**
+ * The verdict in one line, at the right of the header: "✓ Matches Order",
+ * "✕ 2 differences from Order", or "Not checked". The schema's name opens it.
+ */
+function VerdictLine({
+  validation,
+  noSchema,
+  schemaName,
+  onShowSchema,
+}: {
+  validation: ValidationResult | null;
+  noSchema: boolean;
+  schemaName: string | null;
+  onShowSchema?: (name: string) => void;
+}) {
+  const name = schemaName ? (
+    onShowSchema && !schemaName.endsWith("[]") ? (
+      <button className="mono verdict-schema" onClick={() => onShowSchema(schemaName)} title={`Open ${schemaName} in Schemas`}>
+        {schemaName}
+      </button>
+    ) : (
+      <span className="mono verdict-schema">{schemaName}</span>
+    )
+  ) : null;
+  if (noSchema || !validation) {
+    return <span className="verdict-line none" title="No spec describes this response">Not checked</span>;
+  }
+  if (validation.status === "ok") {
+    return (
+      <span className="verdict-line ok">
+        <Check size={13} aria-hidden /> {name ? <>Matches {name}</> : "Matches the spec"}
+      </span>
+    );
+  }
+  if (validation.status === "mismatch") {
+    const n = validation.findings.length;
+    return (
+      <span className="verdict-line bad">
+        <X size={13} aria-hidden /> {plural(n, "difference")} {name ? <>from {name}</> : "from the spec"}
+      </span>
+    );
+  }
+  return <span className="verdict-line none" title={validation.note}>Not checked</span>;
+}
+
+/**
+ * What's behind the one-line verdict: why a check couldn't run, or each
+ * difference from the spec. A mock serving an older spec says so first, since
+ * its differences are version skew rather than drift.
+ */
 function Verdict({
   validation,
   mockStale,
@@ -249,30 +344,20 @@ function Verdict({
   validation: ValidationResult;
   mockStale: boolean;
   onRefreshMock?: () => void;
+  schemaName?: string | null;
 }) {
-  if (validation.status === "ok") {
-    return (
-      <div className="verdict ok">
-        <span className="glyph">✓</span>
-        <span>Response matches the declared schema.</span>
-      </div>
-    );
-  }
   if (validation.status === "no_schema" || validation.status === "error") {
-    return (
+    return validation.note ? (
       <div className="verdict none">
         <span className="glyph">?</span>
         <span>{validation.note}</span>
       </div>
-    );
+    ) : null;
   }
-
-  const extra = validation.findings.filter((f) => f.kind === "extra_field").length;
-  const broken = validation.findings.length - extra;
-
-  if (mockStale) {
-    return (
-      <>
+  if (validation.status !== "mismatch") return null;
+  return (
+    <>
+      {mockStale && (
         <div className="verdict warn">
           <span className="glyph">⚠</span>
           <span>
@@ -286,35 +371,8 @@ function Verdict({
             </button>
           )}
         </div>
-        <div>
-          {validation.findings.map((finding, index) => (
-            <div className={`finding ${finding.kind}`} key={`${finding.path}-${index}`}>
-              <span className="glyph">{KIND_GLYPH[finding.kind]}</span>
-              <span className="fpath">{finding.path}</span>
-              <span style={{ flex: 1 }}>{finding.message}</span>
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className="verdict warn">
-        <span className="glyph">⚠</span>
-        <span>
-          Response diverges from the spec:{" "}
-          {[
-            extra ? `${extra} undeclared field${extra > 1 ? "s" : ""}` : null,
-            broken ? `${broken} schema violation${broken > 1 ? "s" : ""}` : null,
-          ]
-            .filter(Boolean)
-            .join(", ")}
-          .
-        </span>
-      </div>
-      <div>
+      )}
+      <div className="findings">
         {validation.findings.map((finding, index) => (
           <div className={`finding ${finding.kind}`} key={`${finding.path}-${index}`}>
             <span className="glyph">{KIND_GLYPH[finding.kind]}</span>

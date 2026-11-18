@@ -104,7 +104,7 @@ export function useRequestSender({
   const owner = paneOwner(route, currentId, operation?.id);
   useEffect(() => dispatch({ type: "show", owner }), [owner]);
   const shown = visiblePane(pane, owner);
-  const { sending, result, validation, error: requestError, curl } = shown;
+  const { sending, result, validation, error: requestError, curl, sentTo } = shown;
 
   const nextSendId = useRef(0);
 
@@ -147,7 +147,8 @@ export function useRequestSender({
         vars,
         mock,
       );
-      dispatch({ type: "curl", sendId, curl: toCurl(plan) });
+      const sent = sentTarget(targets, server, interpolate(server, vars));
+      dispatch({ type: "curl", sendId, curl: toCurl(plan), sentTo: sent.label });
       const response = await send(plan, {
         ...transportFor(connection, plan.url),
         // Cookies are per-API, keyed by the library entry, so a session picked
@@ -176,7 +177,7 @@ export function useRequestSender({
           body: describeBody(plan.body),
           bodyKind: plan.body?.kind,
           ...history.checkFields(verdict, { version: spec.version, fingerprint: specFingerprint }),
-          ...sentFields(sentTarget(targets, server, interpolate(server, vars)), plan.url, mockUrl),
+          ...sentFields(sent, plan.url, mockUrl),
           statusText: response.statusText,
           responseHeaders: response.headers,
           responseBody: storedResponseBody(response),
@@ -189,6 +190,18 @@ export function useRequestSender({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec, operation, server, auth, vars, mockUrl, targets, mock, connection, currentId, usableToken, environmentName, specFingerprint, snapshot, onSent]);
+
+  /**
+   * The request on screen as a cURL command, without sending it: built exactly
+   * as Send builds it, so what's copied is what would go out. An OAuth token is
+   * fetched (or renewed) the same way.
+   */
+  const curlCommand = useCallback(async (): Promise<string | null> => {
+    if (!operation || !server.trim()) return null;
+    const { pathParams, queryParams, headerParams, body } = values.current;
+    const effectiveAuth = auth?.type === "oauth2" ? { ...auth, value: await usableToken() } : auth;
+    return toCurl(buildPlan(operation, server, pathParams, queryParams, headerParams, effectiveAuth, body, vars, mock));
+  }, [operation, server, auth, vars, mock, usableToken]);
 
   /**
    * Write the held response body wherever the user asks.
@@ -268,6 +281,8 @@ export function useRequestSender({
     validation,
     requestError,
     curl,
+    sentTo,
+    curlCommand,
     /** When the answer on screen was brought back from earlier this session: when it was sent, and from what. */
     restored: shown.restored && shown.sentAt ? { sentAt: shown.sentAt, fingerprint: shown.fingerprint } : null,
     onValuesChange,

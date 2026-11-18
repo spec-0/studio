@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { sourceLabel, type LibraryEntry } from "../lib/library";
-import { FileText, Search } from "lucide-react";
+import { FileText, Plus, Search } from "lucide-react";
 import { plural } from "../lib/plural";
 import { shortcut } from "../lib/platform";
 
@@ -9,11 +9,12 @@ interface Props {
   currentId: string | null;
   onPick: (entry: LibraryEntry) => void;
   onGoLibrary: () => void;
+  onAddApi: () => void;
   onClose: () => void;
 }
 
 /** ⌘P / Ctrl+P: jump between the APIs in the library without going home first. */
-export function ApiSwitcher({ entries, currentId, onPick, onGoLibrary, onClose }: Props) {
+export function ApiSwitcher({ entries, currentId, onPick, onGoLibrary, onAddApi, onClose }: Props) {
   const [filter, setFilter] = useState("");
   const [cursor, setCursor] = useState(0);
   const input = useRef<HTMLInputElement>(null);
@@ -92,6 +93,9 @@ export function ApiSwitcher({ entries, currentId, onPick, onGoLibrary, onClose }
             <span className="kbd">↑↓</span> move <span className="kbd">↵</span> open <span className="kbd">esc</span> close
           </span>
           <span className="spacer" />
+          <button className="btn ghost sm" onClick={onAddApi}>
+            <Plus size={12} /> Add API… <span className="kbd">{shortcut("O")}</span>
+          </button>
           <button className="btn ghost sm" onClick={onGoLibrary}>
             All APIs <span className="kbd">{shortcut("L")}</span>
           </button>

@@ -41,10 +41,9 @@ export function LocalMockControl({ port, busy, error, onStart, onStop, compact =
           title={`Local mock running at ${address}, on this computer only. Click to copy the address.`}
           aria-label={`Local mock running at ${address}. Copy the address`}
         >
-          <span className="live-dot" aria-hidden />
-          <Laptop size={compact ? 11 : 12} aria-hidden />
+          <span className="dot live" aria-hidden />
           <span>Local mock</span>
-          <span className="local-mock-state">{copied ? "Copied" : "Running"}</span>
+          <span className="mono local-mock-port">{copied ? "copied" : `:${port}`}</span>
         </button>
         <button
           className="icon-btn tight"
@@ -66,7 +65,8 @@ export function LocalMockControl({ port, busy, error, onStart, onStop, compact =
         disabled={busy}
         title={error ?? "Serve this API on this computer (127.0.0.1) with example responses from the spec"}
       >
-        {busy ? <Loader2 size={compact ? 12 : 13} className="spin" /> : <Laptop size={compact ? 12 : 13} />} Local mock
+        {busy ? <Loader2 size={compact ? 12 : 13} className="spin" /> : <Laptop size={compact ? 12 : 13} />}{" "}
+        <span className="lbl">{compact ? "Local mock" : "Start local mock"}</span>
       </button>
       {error && (
         <span className="local-mock-error" role="alert" title={error}>

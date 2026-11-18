@@ -671,7 +671,7 @@ await shootBoth("26d-journey-done", "dark");
 const expectTestSend = async (what) => {
   const before = mockCalls.length;
   await clickByText(".journey-main .btn", "Send a test request");
-  await page.waitForSelector(".status-pill", { timeout: 10000 }).catch(() => {});
+  await page.waitForSelector(".res-head .status-badge", { timeout: 10000 }).catch(() => {});
   await wait(500);
   const call = mockCalls[before];
   if (!call) throw new Error(`${what}: no request reached the mock`);
@@ -683,13 +683,13 @@ await page.screenshot({ path: `${outDir}/26g-api-targets-mock-dark.png` });
 console.log("26g-api-targets-mock-dark");
 
 // Again from the API bar, where the address and operation already match.
-await clickByText(".apibar .btn", "Mock");
+await clickByText(".apibar .btn", "Hosted mock");
 await page.waitForSelector(".modal.journey", { timeout: 5000 });
 await wait(300);
 await expectTestSend("test request from the API bar");
 
 // Regenerating asks first.
-await clickByText(".apibar .btn", "Mock");
+await clickByText(".apibar .btn", "Hosted mock");
 await page.waitForSelector(".modal.journey", { timeout: 5000 });
 await wait(300);
 await clickByText(".journey-main .btn", "Regenerate key");
@@ -1392,7 +1392,7 @@ console.log("48-collections-list-dark");
   await page.keyboard.down("Control");
   await page.keyboard.press("Enter");
   await page.keyboard.up("Control");
-  await page.waitForFunction(() => document.querySelector(".status-pill"), { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelector(".res-head .status-badge"), { timeout: 10000 });
   await wait(400);
   if (await page.$(".unsent-note")) throw new Error("A sent request still shows unsent changes");
   await pickTab("POST", "/payments");

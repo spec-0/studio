@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BookmarkPlus, Check, ChevronDown, CornerDownLeft, Loader2, Send, ShieldAlert, TriangleAlert } from "lucide-react";
+import { BookmarkPlus, Check, ChevronDown, Loader2, Send, ShieldAlert, TriangleAlert } from "lucide-react";
 import { interpolate, unresolved } from "../lib/env";
 import type { OperationSpec } from "../lib/spec";
 import type { Target } from "../lib/targets";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
+import { isMac, shortcut } from "../lib/platform";
+import { copyCurlShortcutLabel } from "../lib/shortcuts";
 
 export type { Target };
 
@@ -37,6 +39,10 @@ interface Props {
    * host still running 1.4.0 can fail in ways that look like the client's fault.
    */
   envSkew?: { name: string; live: string; held: string } | null;
+  /** Send's menu: the request as a cURL command (⇧⌘C). */
+  onCopyCurl?: () => Promise<boolean>;
+  /** Send's menu: add the request on screen to a collection, from where the menu is. */
+  onAddToCollection?: (position: { x: number; y: number }) => void;
 }
 
 /**
@@ -62,6 +68,8 @@ export function UrlBar({
   unverified = false,
   onOpenConnection,
   envSkew,
+  onCopyCurl,
+  onAddToCollection,
 }: Props) {
   const urlInput = useRef<HTMLInputElement>(null);
   const picker = useRef<HTMLButtonElement>(null);
@@ -69,6 +77,9 @@ export function UrlBar({
   // "Custom URL…" was chosen: the base URL is shown for editing even when it
   // happens to equal one of the targets.
   const [custom, setCustom] = useState(false);
+  const sendMore = useRef<HTMLButtonElement>(null);
+  const [sendMenu, setSendMenu] = useState<{ x: number; y: number } | null>(null);
+  const [copied, setCopied] = useState(false);
   useEffect(() => setCustom(false), [op.id]);
 
   const suggestions = useMemo(() => {
@@ -225,15 +236,73 @@ export function UrlBar({
         </div>
       </div>
 
-      <button className="btn primary send" disabled={blocked} onClick={onSend}>
-        {sending ? <Loader2 size={13} className="spin" /> : <Send size={13} />}
-        {sending ? "Sending" : "Send"}
-        <span className="kbd">
-          <CornerDownLeft size={9} />
-        </span>
-      </button>
+      <span className="send-split">
+        <button className="btn primary send" disabled={blocked} onClick={onSend} title={`Send (${shortcut("↵")})`}>
+          {sending ? <Loader2 size={13} className="spin" /> : <Send size={13} />}
+          {sending ? "Sending…" : "Send"}
+          <span className="kbd">{shortcut("↵")}</span>
+        </button>
+        {(onCopyCurl || onAddToCollection) && (
+          <button
+            ref={sendMore}
+            className="btn primary send-more"
+            aria-label="More ways to send"
+            aria-haspopup="menu"
+            aria-expanded={Boolean(sendMenu)}
+            onClick={() => {
+              const rect = sendMore.current?.getBoundingClientRect();
+              if (rect) setSendMenu({ x: rect.right - 240, y: rect.bottom + 4 });
+            }}
+          >
+            <ChevronDown size={14} />
+          </button>
+        )}
+      </span>
 
       {menu && <ContextMenu x={menu.x} y={menu.y} items={items} label="Target" onClose={() => setMenu(null)} />}
+      {sendMenu && (
+        <ContextMenu
+          x={sendMenu.x}
+          y={sendMenu.y}
+          label="Send"
+          onClose={() => setSendMenu(null)}
+          items={[
+            ...(onCopyCurl
+              ? [
+                  {
+                    label: "Copy as cURL",
+                    hint: copyCurlShortcutLabel(isMac),
+                    onSelect: () => {
+                      setSendMenu(null);
+                      void onCopyCurl().then((ok) => {
+                        if (!ok) return;
+                        setCopied(true);
+                        window.setTimeout(() => setCopied(false), 2000);
+                      });
+                    },
+                  },
+                ]
+              : []),
+            ...(onAddToCollection
+              ? [
+                  {
+                    label: "Add to collection…",
+                    onSelect: () => {
+                      const position = sendMenu;
+                      setSendMenu(null);
+                      onAddToCollection(position);
+                    },
+                  },
+                ]
+              : []),
+          ]}
+        />
+      )}
+      {copied && (
+        <div className="urlbar-note resolved" role="status">
+          Copied the request as a cURL command.
+        </div>
+      )}
 
       {envSkew && missing.length === 0 && !malformed && (
         <div className="urlbar-note">
