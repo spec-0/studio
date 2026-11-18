@@ -123,6 +123,9 @@ export default function ScalarReference({ text, dark }: Props) {
       // points Scalar at them, so the remote faces are both unnecessary and a
       // request to a third party made because someone opened a document.
       withDefaultFonts: false,
+      // The "Client Libraries" block offers code for other HTTP clients and an
+      // SDK generator: another product's actions. Requests go through Studio.
+      hiddenClients: true,
       fetch: refuseNetwork,
       customFetch: refuseNetwork,
       customCss: BRAND_CSS,

@@ -4118,3 +4118,22 @@ select.fchip { padding-right: 24px; background-position: right 7px center; }
 .run-line.ok { color: hsl(var(--success)); }
 .run-line.bad { color: hsl(var(--danger)); }
 .collections-actions { padding: 0; }
+.schema-fields td.mono { white-space: nowrap; }
+.enum-note { display: block; }
+.used-method { width: 64px; }
+.used-method .method { text-align: left; }
+.schema-head + .op-body .code-block { margin-top: 0; }
+.addr select.addr-method-select {
+  width: auto;
+  height: 100%;
+  padding: 0 24px 0 10px;
+  border: 0;
+  border-right: 1px solid hsl(var(--border));
+  border-radius: 0;
+  background-color: transparent;
+  background-position: right 7px center;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.addr .scratch-url input { flex: 1; max-width: none; }

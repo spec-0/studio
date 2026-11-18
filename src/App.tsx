@@ -942,8 +942,6 @@ export default function App() {
                   <>
                   {showDocument && (
                     <DocumentView
-                      title={spec!.title || current?.title || "Document"}
-                      version={spec!.version}
                       text={docText}
                       converted={
                         spec!.converted ? { text: openapiText(spec!), notes: spec!.converted.notes } : null
