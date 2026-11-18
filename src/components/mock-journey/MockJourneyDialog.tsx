@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Check, Copy, ExternalLink, Eye, EyeOff, KeyRound, Plus, RefreshCw, Send, Server, X } from "lucide-react";
+import { Check, Copy, ExternalLink, Eye, EyeOff, KeyRound, Plus, RefreshCw, Send, Server } from "lucide-react";
 import type { LibraryEntry } from "../../lib/library";
 import {
   API_FEATURE,
@@ -23,6 +23,7 @@ import {
 import { deriveApiName, validateApiName, whyNotPublishable } from "../../lib/publish";
 import { inTauri } from "../../lib/request";
 import { targetOf } from "../../hooks/useMockJourney";
+import { Dialog } from "../Dialog";
 
 interface Props {
   mode: "pick" | "journey";
@@ -168,29 +169,19 @@ export function MockJourneyDialog(props: Props) {
   // would land on the backdrop and throw the whole journey away. Close with
   // the × button or Escape.
   return (
-    <div className="scrim journey-scrim">
-      <div
-        ref={ref}
-        className="modal journey"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="journey-title"
-        tabIndex={-1}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="modal-head">
-          <Server size={14} aria-hidden />
-          <strong id="journey-title">{title}</strong>
-          {mode === "journey" && <span className="meta journey-api">{state.target.title}</span>}
-          <span className="spacer" />
-          <button className="icon-btn tight" onClick={onClose} aria-label="Close">
-            <X size={15} />
-          </button>
-        </div>
-
-        {mode === "pick" ? <PickApi {...props} /> : <Journey {...props} />}
-      </div>
-    </div>
+    <Dialog
+      title={title}
+      subtitle={mode === "journey" ? <span className="journey-api">{state.target.title}</span> : undefined}
+      className="journey"
+      labelId="journey-title"
+      frameRef={ref}
+      keepFocus
+      flush
+      closeOnScrim={false}
+      onClose={onClose}
+    >
+      {mode === "pick" ? <PickApi {...props} /> : <Journey {...props} />}
+    </Dialog>
   );
 }
 

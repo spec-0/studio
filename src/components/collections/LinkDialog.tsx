@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Link2, X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { parsePath, type PathSegment, type PickableField } from "../../lib/chain";
 import {
   describeLinkTarget,
@@ -14,6 +14,7 @@ import {
 } from "../../lib/chainLinks";
 import type { Collection } from "../../lib/collection";
 import { redact } from "../../lib/redact";
+import { Dialog } from "../Dialog";
 
 /** What an earlier step offers to link from. */
 export interface StepFields {
@@ -129,209 +130,16 @@ export function LinkDialog({ collection, steps, targetsFor, initial, onSave, onC
   const isEditing = Boolean(initial.editing);
 
   return (
-    <div className="scrim top" onClick={onClose}>
-      <div
-        className="modal link-value-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="link-dialog-title"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.stopPropagation();
-            onClose();
-          }
-        }}
-      >
-        <div className="modal-head">
-          <Link2 size={14} aria-hidden />
-          <strong id="link-dialog-title">{isEditing ? "Change link" : "Pass a value between steps"}</strong>
-          <span className="spacer" />
-          <button type="button" className="icon-btn tight" aria-label="Close" onClick={onClose}>
-            <X size={15} />
-          </button>
-        </div>
-
-        <div className="link-columns">
-          <section className="link-col" aria-labelledby="link-into">
-            <h3 id="link-into">1. Fill this field</h3>
-            <label className="link-select">
-              <span className="field-meta">Step</span>
-              <select ref={first} value={targetIndex} onChange={(event) => changeTargetStep(Number(event.target.value))}>
-                {collection.steps.map((s, i) => (
-                  <option key={s.key} value={i} disabled={i === 0 && initial.targetIndex !== 0}>
-                    {i + 1}. {s.name || s.key}
-                    {i === 0 ? " (runs first)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="link-options" role="radiogroup" aria-label={`Fields of ${targetTitle}`}>
-              {groups.map(([group, fields]) => (
-                <div key={group} className="link-group">
-                  <div className="link-group-label">{group}</div>
-                  {fields.map((field) => {
-                    const selected = Boolean(target && sameTarget(field.target, target));
-                    const linked = field.current && /\{\{\s*steps\./.test(field.current);
-                    return (
-                      <button
-                        key={targetId(field.target)}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        className="link-option"
-                        onClick={() => setTarget(field.target)}
-                      >
-                        <span className="mono link-option-name">
-                          {field.label}
-                          {field.required && <span className="required">*</span>}
-                        </span>
-                        <span className="link-option-meta">
-                          {linked ? "linked now" : field.current ? shorten(redact(field.current), 24) : (field.type ?? "")}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-              {targets.takesBody && targets.bodyProblem && (
-                <p className="field-meta link-note">
-                  {targets.bodyProblem} Body fields can be linked once the body in the step&apos;s Request tab is valid JSON.
-                </p>
-              )}
-              <div className="link-group">
-                <div className="link-group-label">Another field</div>
-                <div className="link-typed">
-                  <input
-                    value={typedHeader}
-                    placeholder="Header name"
-                    aria-label="Another header"
-                    onChange={(event) => setTypedHeader(event.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={!/^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/.test(typedHeader.trim())}
-                    onClick={() => setTarget({ in: "header", name: typedHeader.trim() })}
-                  >
-                    Use header
-                  </button>
-                </div>
-                {targets.takesBody && !targets.bodyProblem && (
-                  <div className="link-typed">
-                    <input
-                      value={typedField}
-                      placeholder="Body field, e.g. items[0].sku"
-                      aria-label="Another body field"
-                      aria-invalid={Boolean(typedField.trim() && !typedPath)}
-                      onChange={(event) => setTypedField(event.target.value)}
-                    />
-                    <button type="button" className="btn" disabled={!typedPath} onClick={() => typedPath && setTarget({ in: "body", path: typedPath })}>
-                      Use field
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="link-col" aria-labelledby="link-from">
-            <h3 id="link-from">2. With this value</h3>
-            {!earlier.length ? (
-              <p className="field-meta link-note">
-                {targetTitle} runs first, so there's no earlier step to take a value from. Choose a later step on the left.
-              </p>
-            ) : (
-              <>
-                <label className="link-select">
-                  <span className="field-meta">From the response of</span>
-                  <select
-                    value={source?.key ?? ""}
-                    onChange={(event) => {
-                      setSourceKey(event.target.value);
-                      setSourcePath(undefined);
-                      setFilter("");
-                    }}
-                  >
-                    {!source && <option value="">Choose a step…</option>}
-                    {earlier.map((s) => (
-                      <option key={s.key} value={s.key}>
-                        {s.index + 1}. {s.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {source && (
-                  <>
-                    <div className="field-meta link-note">
-                      {source.from === "response"
-                        ? "Fields and values from its last run."
-                        : source.from === "schema"
-                          ? "Fields from the response the spec declares. Run the collection to see real values."
-                          : "It hasn't run and its spec declares no response body. Type the field below, or run the collection first."}
-                    </div>
-                    {source.fields.length > 8 && (
-                      <input
-                        className="link-filter"
-                        value={filter}
-                        placeholder="Filter fields…"
-                        aria-label="Filter fields"
-                        onChange={(event) => setFilter(event.target.value)}
-                      />
-                    )}
-                    <div className="link-options" role="radiogroup" aria-label={`Response fields of ${source.title}`}>
-                      {sourcePath && !source.fields.some((f) => describeSourcePath(f.path) === describeSourcePath(sourcePath)) && (
-                        <button type="button" role="radio" aria-checked className="link-option">
-                          <span className="mono link-option-name">{describeSourcePath(sourcePath)}</span>
-                          <span className="link-option-meta danger-ink">not in {source.from === "response" ? "the last response" : "the spec"}</span>
-                        </button>
-                      )}
-                      {shownSources.map((field) => {
-                        const label = describeSourcePath(field.path);
-                        const selected = Boolean(sourcePath && describeSourcePath(sourcePath) === label);
-                        return (
-                          <button
-                            key={field.reference}
-                            type="button"
-                            role="radio"
-                            aria-checked={selected}
-                            className="link-option"
-                            onClick={() => setSourcePath(field.path)}
-                          >
-                            <span className="mono link-option-name">{label}</span>
-                            <span className="link-option-meta" title={redact(field.preview)}>
-                              {shorten(redact(field.preview), 28)}
-                            </span>
-                          </button>
-                        );
-                      })}
-                      {!shownSources.length && source.fields.length > 0 && <p className="field-meta link-note">No field matches.</p>}
-                    </div>
-                    <div className="link-typed">
-                      <input
-                        value={typedSource}
-                        placeholder="Or type one, e.g. body.data[0].id"
-                        aria-label="Response field"
-                        aria-invalid={Boolean(typedSource.trim() && !typedSourcePath)}
-                        onChange={(event) => setTypedSource(event.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={!typedSourcePath}
-                        onClick={() => typedSourcePath && setSourcePath(typedSourcePath)}
-                      >
-                        Use
-                      </button>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </section>
-        </div>
-
-        <div className="modal-foot link-foot">
+    <Dialog
+      title={isEditing ? "Change link" : "Pass a value between steps"}
+      className="link-value-dialog"
+      labelId="link-dialog-title"
+      top
+      flush
+      keepFocus
+      onClose={onClose}
+      footerContext={
+        <>
           <div className="link-summary" aria-live="polite">
             {target ? (
               <span>
@@ -350,15 +158,197 @@ export function LinkDialog({ collection, steps, targetsFor, initial, onSave, onC
             )}
           </div>
           {error && <div className="danger-ink field-meta">{error}</div>}
-          <span className="spacer" style={{ flex: 1 }} />
+        </>
+      }
+      footer={
+        <>
           <button type="button" className="btn" onClick={onClose}>
             Cancel
           </button>
           <button type="button" className="btn primary" disabled={!ready} onClick={save}>
             {isEditing ? "Save link" : "Add link"}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div className="link-columns">
+        <section className="link-col" aria-labelledby="link-into">
+          <h3 id="link-into">1. Fill this field</h3>
+          <label className="link-select">
+            <span className="field-meta">Step</span>
+            <select ref={first} value={targetIndex} onChange={(event) => changeTargetStep(Number(event.target.value))}>
+              {collection.steps.map((s, i) => (
+                <option key={s.key} value={i} disabled={i === 0 && initial.targetIndex !== 0}>
+                  {i + 1}. {s.name || s.key}
+                  {i === 0 ? " (runs first)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="link-options" role="radiogroup" aria-label={`Fields of ${targetTitle}`}>
+            {groups.map(([group, fields]) => (
+              <div key={group} className="link-group">
+                <div className="link-group-label">{group}</div>
+                {fields.map((field) => {
+                  const selected = Boolean(target && sameTarget(field.target, target));
+                  const linked = field.current && /\{\{\s*steps\./.test(field.current);
+                  return (
+                    <button
+                      key={targetId(field.target)}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      className="link-option"
+                      onClick={() => setTarget(field.target)}
+                    >
+                      <span className="mono link-option-name">
+                        {field.label}
+                        {field.required && <span className="required">*</span>}
+                      </span>
+                      <span className="link-option-meta">
+                        {linked ? "linked now" : field.current ? shorten(redact(field.current), 24) : (field.type ?? "")}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+            {targets.takesBody && targets.bodyProblem && (
+              <p className="field-meta link-note">
+                {targets.bodyProblem} Body fields can be linked once the body in the step&apos;s Request tab is valid JSON.
+              </p>
+            )}
+            <div className="link-group">
+              <div className="link-group-label">Another field</div>
+              <div className="link-typed">
+                <input
+                  value={typedHeader}
+                  placeholder="Header name"
+                  aria-label="Another header"
+                  onChange={(event) => setTypedHeader(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!/^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/.test(typedHeader.trim())}
+                  onClick={() => setTarget({ in: "header", name: typedHeader.trim() })}
+                >
+                  Use header
+                </button>
+              </div>
+              {targets.takesBody && !targets.bodyProblem && (
+                <div className="link-typed">
+                  <input
+                    value={typedField}
+                    placeholder="Body field, e.g. items[0].sku"
+                    aria-label="Another body field"
+                    aria-invalid={Boolean(typedField.trim() && !typedPath)}
+                    onChange={(event) => setTypedField(event.target.value)}
+                  />
+                  <button type="button" className="btn" disabled={!typedPath} onClick={() => typedPath && setTarget({ in: "body", path: typedPath })}>
+                    Use field
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="link-col" aria-labelledby="link-from">
+          <h3 id="link-from">2. With this value</h3>
+          {!earlier.length ? (
+            <p className="field-meta link-note">
+              {targetTitle} runs first, so there's no earlier step to take a value from. Choose a later step on the left.
+            </p>
+          ) : (
+            <>
+              <label className="link-select">
+                <span className="field-meta">From the response of</span>
+                <select
+                  value={source?.key ?? ""}
+                  onChange={(event) => {
+                    setSourceKey(event.target.value);
+                    setSourcePath(undefined);
+                    setFilter("");
+                  }}
+                >
+                  {!source && <option value="">Choose a step…</option>}
+                  {earlier.map((s) => (
+                    <option key={s.key} value={s.key}>
+                      {s.index + 1}. {s.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {source && (
+                <>
+                  <div className="field-meta link-note">
+                    {source.from === "response"
+                      ? "Fields and values from its last run."
+                      : source.from === "schema"
+                        ? "Fields from the response the spec declares. Run the collection to see real values."
+                        : "It hasn't run and its spec declares no response body. Type the field below, or run the collection first."}
+                  </div>
+                  {source.fields.length > 8 && (
+                    <input
+                      className="link-filter"
+                      value={filter}
+                      placeholder="Filter fields…"
+                      aria-label="Filter fields"
+                      onChange={(event) => setFilter(event.target.value)}
+                    />
+                  )}
+                  <div className="link-options" role="radiogroup" aria-label={`Response fields of ${source.title}`}>
+                    {sourcePath && !source.fields.some((f) => describeSourcePath(f.path) === describeSourcePath(sourcePath)) && (
+                      <button type="button" role="radio" aria-checked className="link-option">
+                        <span className="mono link-option-name">{describeSourcePath(sourcePath)}</span>
+                        <span className="link-option-meta danger-ink">not in {source.from === "response" ? "the last response" : "the spec"}</span>
+                      </button>
+                    )}
+                    {shownSources.map((field) => {
+                      const label = describeSourcePath(field.path);
+                      const selected = Boolean(sourcePath && describeSourcePath(sourcePath) === label);
+                      return (
+                        <button
+                          key={field.reference}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          className="link-option"
+                          onClick={() => setSourcePath(field.path)}
+                        >
+                          <span className="mono link-option-name">{label}</span>
+                          <span className="link-option-meta" title={redact(field.preview)}>
+                            {shorten(redact(field.preview), 28)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {!shownSources.length && source.fields.length > 0 && <p className="field-meta link-note">No field matches.</p>}
+                  </div>
+                  <div className="link-typed">
+                    <input
+                      value={typedSource}
+                      placeholder="Or type one, e.g. body.data[0].id"
+                      aria-label="Response field"
+                      aria-invalid={Boolean(typedSource.trim() && !typedSourcePath)}
+                      onChange={(event) => setTypedSource(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={!typedSourcePath}
+                      onClick={() => typedSourcePath && setSourcePath(typedSourcePath)}
+                    >
+                      Use
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </section>
       </div>
-    </div>
+    </Dialog>
   );
 }

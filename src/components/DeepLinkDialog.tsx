@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { DeepLinks } from "../hooks/useDeepLinks";
+import { Dialog } from "./Dialog";
 
 /**
  * "Open an API from the web?", shown when a `spec0://open` link arrives.
@@ -30,60 +31,46 @@ export function DeepLinkDialog({ links }: { links: DeepLinks }) {
   return (
     <>
       {request && (
-        <div className="scrim" onClick={cancel}>
-          <div
-            className="modal deep-link"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="deep-link-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="modal-head">
-              <strong id="deep-link-title">Open an API from the web?</strong>
-              <span className="spacer" />
-              <button className="icon-btn tight" onClick={cancel} aria-label="Cancel">
-                <X size={15} />
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <p>
-                A link asked Studio to open{" "}
-                {request.name ? <strong className="deep-link-name">{request.name}</strong> : "an API"}.
-              </p>
-
-              <div className="deep-link-source">
-                <span className="field-meta">{existing ? "Already in your library, from" : "Will be downloaded from"}</span>
-                <span className="deep-link-host">{request.host}</span>
-                <span className="deep-link-url mono" title={request.specUrl}>
-                  {request.specUrl}
-                </span>
-              </div>
-
-              <p className="field-meta">
-                {existing
-                  ? "Open shows the copy you already have. Nothing is downloaded; use Refresh in the library to fetch it again."
-                  : "Nothing has been downloaded yet. Open fetches the spec from this address and adds it to your library, the same as adding it from a URL yourself."}
-              </p>
-
-              {request.ignored.length > 0 && (
-                <p className="field-meta">
-                  Ignored parts of the link Studio doesn't use: {request.ignored.join(", ")}.
-                </p>
-              )}
-            </div>
-
-            <div className="modal-foot">
-              <span className="spacer" style={{ flex: 1 }} />
+        <Dialog
+          title="Open an API from the web?"
+          className="deep-link"
+          labelId="deep-link-title"
+          keepFocus
+          onClose={cancel}
+          footer={
+            <>
               <button className="btn" onClick={cancel} ref={cancelButton}>
                 Cancel
               </button>
               <button className="btn primary" onClick={() => void confirm()}>
                 Open
               </button>
-            </div>
+            </>
+          }
+        >
+          <p>
+            A link asked Studio to open{" "}
+            {request.name ? <strong className="deep-link-name">{request.name}</strong> : "an API"}.
+          </p>
+
+          <div className="deep-link-source">
+            <span className="field-meta">{existing ? "Already in your library, from" : "Will be downloaded from"}</span>
+            <span className="deep-link-host">{request.host}</span>
+            <span className="deep-link-url mono" title={request.specUrl}>
+              {request.specUrl}
+            </span>
           </div>
-        </div>
+
+          <p className="field-meta">
+            {existing
+              ? "Open shows the copy you already have. Nothing is downloaded; use Refresh in the library to fetch it again."
+              : "Nothing has been downloaded yet. Open fetches the spec from this address and adds it to your library, the same as adding it from a URL yourself."}
+          </p>
+
+          {request.ignored.length > 0 && (
+            <p className="field-meta">Ignored parts of the link Studio doesn't use: {request.ignored.join(", ")}.</p>
+          )}
+        </Dialog>
       )}
 
       {notice && (

@@ -518,7 +518,7 @@ const openAddApi = async () => {
   }
   await page.screenshot({ path: `${outDir}/23b-add-api-signed-out-light.png` });
   console.log("23b-add-api-signed-out-light");
-  await must(clickTab('[aria-labelledby="open-dialog-title"] .tab', "Spec0"), "the Spec0 tab");
+  await must(clickTab('[aria-labelledby="open-dialog-title"] .ptab', "Spec0"), "the Spec0 tab");
   await wait(300);
   await page.screenshot({ path: `${outDir}/23c-add-api-spec0-signed-out-light.png` });
   console.log("23c-add-api-spec0-signed-out-light");

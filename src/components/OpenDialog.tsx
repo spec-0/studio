@@ -17,6 +17,8 @@ import {
 import { ConnectModes } from "./ConnectModes";
 import { Download, Globe, Plus, RefreshCw, Search, TriangleAlert } from "lucide-react";
 import { inTauri } from "../lib/request";
+import { Dialog } from "./Dialog";
+import { TabList } from "./TabList";
 
 type Source = "file" | "url" | "spec0";
 
@@ -209,326 +211,310 @@ export function OpenDialog({
   const matches = (text: string) => text.toLowerCase().includes(filter.toLowerCase());
 
   return (
-    <div className="scrim" onClick={onClose}>
-      <div
-        className={`modal ${signingIn ? "sign-in" : "wide"}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="open-dialog-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="modal-head">
-          <strong id="open-dialog-title">{signingIn ? "Sign in to Spec0" : "Add an API"}</strong>
-          <span className="spacer" />
-          <button className="btn" onClick={onClose}>
-            Close
-          </button>
+    <Dialog
+      title={signingIn ? "Sign in to Spec0" : "Add an API"}
+      labelId="open-dialog-title"
+      wide={!signingIn}
+      className={signingIn ? "sign-in" : undefined}
+      onClose={onClose}
+      tabs={
+        !signingIn && (
+          <TabList<Source>
+            className="ptabs"
+            tabClassName="ptab"
+            label="Where the API comes from"
+            tabs={SOURCES}
+            selected={source}
+            onSelect={setSource}
+          />
+        )
+      }
+    >
+      {busy && <div className="verdict none">{busy}</div>}
+      {notice && !busy && (
+        <p className="meta" role="status">
+          {notice}
+        </p>
+      )}
+      {created && !busy && (
+        <div className="verdict ok" role="status">
+          <span className="glyph">✓</span>
+          <span>{created}</span>
         </div>
-
-        {!signingIn && (
-          <div className="tabs" role="tablist" aria-label="Where the API comes from" style={{ padding: "6px 12px 0" }}>
-            {SOURCES.map((tab) => (
-              <button
-                key={tab.id}
-                className="tab"
-                role="tab"
-                aria-selected={source === tab.id}
-                onClick={() => setSource(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
+      )}
+      {error && (
+        <div className="error-box">
+          <div className="error-head">
+            <TriangleAlert size={13} />
+            <span>Couldn&apos;t talk to spec0</span>
+            <span className="spacer" />
+            <button
+              className="btn"
+              style={{ padding: "1px 7px" }}
+              onClick={() => void navigator.clipboard.writeText(error)}
+            >
+              Copy
+            </button>
           </div>
-        )}
+          <pre className="error-detail">{error}</pre>
+        </div>
+      )}
 
-        <div className="modal-body">
-          {busy && <div className="verdict none">{busy}</div>}
-          {notice && !busy && (
-            <p className="meta" role="status">
-              {notice}
+      {source === "file" && (
+        <>
+          <p className="meta">Open an OpenAPI 3.0 or 3.1 document, in YAML or JSON.</p>
+          <button
+            className="btn primary"
+            style={{ marginTop: 10 }}
+            onClick={() => {
+              onOpenFile();
+              onClose();
+            }}
+          >
+            Choose file…
+          </button>
+          <p className="meta" style={{ marginTop: 8 }}>
+            You can also drop a file anywhere on the window. Whatever you open is added to your
+            library, so it&apos;s one click away next time.
+          </p>
+
+          <div className="section">
+            <h3>Nothing to hand?</h3>
+            <button
+              className="btn"
+              onClick={() => {
+                onTrySample();
+                onClose();
+              }}
+            >
+              Add the sample API
+            </button>
+          </div>
+        </>
+      )}
+
+      {source === "url" && (
+        <>
+          <p className="meta">Paste a link to a hosted OpenAPI document.</p>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <input
+              value={url}
+              placeholder="https://example.com/openapi.yaml"
+              onChange={(event) => setUrl(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && url.trim()) {
+                  onOpenUrl(url.trim());
+                  onClose();
+                }
+              }}
+            />
+            <button
+              className="btn primary"
+              disabled={!url.trim()}
+              onClick={() => {
+                onOpenUrl(url.trim());
+                onClose();
+              }}
+            >
+              Open
+            </button>
+          </div>
+          {!inTauri && (
+            <p className="meta warn" style={{ marginTop: 8 }}>
+              In the browser preview this is subject to CORS. The desktop app fetches from Rust
+              and isn&apos;t.
             </p>
           )}
-          {created && !busy && (
-            <div className="verdict ok" role="status">
-              <span className="glyph">✓</span>
-              <span>{created}</span>
-            </div>
-          )}
-          {error && (
-            <div className="error-box">
-              <div className="error-head">
-                <TriangleAlert size={13} />
-                <span>Couldn&apos;t talk to spec0</span>
-                <span className="spacer" />
-                <button
-                  className="btn"
-                  style={{ padding: "1px 7px" }}
-                  onClick={() => void navigator.clipboard.writeText(error)}
-                >
-                  Copy
-                </button>
-              </div>
-              <pre className="error-detail">{error}</pre>
-            </div>
-          )}
+        </>
+      )}
 
-          {source === "file" && (
-            <>
-              <p className="meta">Open an OpenAPI 3.0 or 3.1 document, in YAML or JSON.</p>
+      {source === "spec0" && !session && (
+        <>
+          {/* State the capability split explicitly. Someone on this tab is asking
+              exactly this question, so answering it here isn't a nag, and the
+              status chip must never answer it anywhere else. */}
+          <ConnectModes />
+
+          <div style={{ display: "grid", gap: 8, marginTop: 14, maxWidth: 460 }}>
+            {cliAvailable && (
               <button
                 className="btn primary"
-                style={{ marginTop: 10 }}
-                onClick={() => {
-                  onOpenFile();
-                  onClose();
-                }}
+                onClick={() => void connect(adoptCliSession, "Using your CLI session…")}
               >
-                Choose file…
+                Use my spec0 CLI session
               </button>
-              <p className="meta" style={{ marginTop: 8 }}>
-                You can also drop a file anywhere on the window. Whatever you open is added to your
-                library, so it&apos;s one click away next time.
-              </p>
+            )}
+            <button
+              className="btn"
+              disabled={!inTauri}
+              onClick={() =>
+                void connect(() => signInViaBrowser(DEFAULT_APP_URL, DEFAULT_API_URL), "Waiting for the browser…")
+              }
+            >
+              Sign in with a browser
+            </button>
+            {!inTauri && (
+              <p className="meta">Browser sign-in needs the desktop app (it holds the loopback port).</p>
+            )}
 
-              <div className="section">
-                <h3>Nothing to hand?</h3>
-                <button
-                  className="btn"
-                  onClick={() => {
-                    onTrySample();
-                    onClose();
-                  }}
-                >
-                  Add the sample API
-                </button>
-              </div>
-            </>
-          )}
-
-          {source === "url" && (
-            <>
-              <p className="meta">Paste a link to a hosted OpenAPI document.</p>
-              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <div className="section">
+              <h3>Or paste a token</h3>
+              <div style={{ display: "grid", gap: 6 }}>
                 <input
-                  value={url}
-                  placeholder="https://example.com/openapi.yaml"
-                  onChange={(event) => setUrl(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && url.trim()) {
-                      onOpenUrl(url.trim());
-                      onClose();
-                    }
-                  }}
+                  placeholder="SPEC0_TOKEN"
+                  type="password"
+                  value={manualToken}
+                  onChange={(event) => setManualToken(event.target.value)}
+                />
+                <input
+                  placeholder="SPEC0_ORG_ID"
+                  value={manualOrg}
+                  onChange={(event) => setManualOrg(event.target.value)}
                 />
                 <button
-                  className="btn primary"
-                  disabled={!url.trim()}
-                  onClick={() => {
-                    onOpenUrl(url.trim());
-                    onClose();
-                  }}
-                >
-                  Open
-                </button>
-              </div>
-              {!inTauri && (
-                <p className="meta warn" style={{ marginTop: 8 }}>
-                  In the browser preview this is subject to CORS. The desktop app fetches from Rust
-                  and isn&apos;t.
-                </p>
-              )}
-            </>
-          )}
-
-          {source === "spec0" && !session && (
-            <>
-              {/* State the capability split explicitly. Someone on this tab is asking
-                  exactly this question, so answering it here isn't a nag, and the
-                  status chip must never answer it anywhere else. */}
-              <ConnectModes />
-
-              <div style={{ display: "grid", gap: 8, marginTop: 14, maxWidth: 460 }}>
-                {cliAvailable && (
-                  <button
-                    className="btn primary"
-                    onClick={() => void connect(adoptCliSession, "Using your CLI session…")}
-                  >
-                    Use my spec0 CLI session
-                  </button>
-                )}
-                <button
                   className="btn"
-                  disabled={!inTauri}
+                  disabled={!manualToken.trim() || !manualOrg.trim()}
                   onClick={() =>
-                    void connect(() => signInViaBrowser(DEFAULT_APP_URL, DEFAULT_API_URL), "Waiting for the browser…")
+                    void connect(
+                      async () => ({
+                        apiUrl: DEFAULT_API_URL,
+                        appUrl: DEFAULT_APP_URL,
+                        orgId: manualOrg.trim(),
+                        orgName: "your org",
+                        token: manualToken.trim(),
+                        source: "manual" as const,
+                        connectedAt: new Date().toISOString(),
+                      }),
+                      "Checking token…",
+                    )
                   }
                 >
-                  Sign in with a browser
-                </button>
-                {!inTauri && (
-                  <p className="meta">Browser sign-in needs the desktop app (it holds the loopback port).</p>
-                )}
-
-                <div className="section">
-                  <h3>Or paste a token</h3>
-                  <div style={{ display: "grid", gap: 6 }}>
-                    <input
-                      placeholder="SPEC0_TOKEN"
-                      type="password"
-                      value={manualToken}
-                      onChange={(event) => setManualToken(event.target.value)}
-                    />
-                    <input
-                      placeholder="SPEC0_ORG_ID"
-                      value={manualOrg}
-                      onChange={(event) => setManualOrg(event.target.value)}
-                    />
-                    <button
-                      className="btn"
-                      disabled={!manualToken.trim() || !manualOrg.trim()}
-                      onClick={() =>
-                        void connect(
-                          async () => ({
-                            apiUrl: DEFAULT_API_URL,
-                            appUrl: DEFAULT_APP_URL,
-                            orgId: manualOrg.trim(),
-                            orgName: "your org",
-                            token: manualToken.trim(),
-                            source: "manual" as const,
-                            connectedAt: new Date().toISOString(),
-                          }),
-                          "Checking token…",
-                        )
-                      }
-                    >
-                      Connect
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {signingIn && session && !busy && (
-            <>
-              <div className="verdict ok" role="status">
-                <span className="glyph">✓</span>
-                <span>
-                  Signed in to <strong>{session.orgName}</strong>. Your organisation&apos;s APIs and hosted mocks are
-                  available in Studio now.
-                </span>
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                {onBrowse && (
-                  <button className="btn primary" onClick={onBrowse}>
-                    <Search size={12} /> Browse your organisation&apos;s APIs
-                  </button>
-                )}
-                <button className="btn" onClick={onClose}>
-                  Done
+                  Connect
                 </button>
               </div>
-            </>
-          )}
+            </div>
+          </div>
+        </>
+      )}
 
-          {source === "spec0" && session && !signingIn && (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span className="tag ok">connected</span>
-                <strong>{session.orgName}</strong>
-                <span className="meta">via {session.source}</span>
-                <span className="spacer" />
-                <button className="btn" onClick={() => void loadCatalog(session)}>
-                  <RefreshCw size={12} /> Refresh
-                </button>
+      {signingIn && session && !busy && (
+        <>
+          <div className="verdict ok" role="status">
+            <span className="glyph">✓</span>
+            <span>
+              Signed in to <strong>{session.orgName}</strong>. Your organisation&apos;s APIs and hosted mocks are
+              available in Studio now.
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            {onBrowse && (
+              <button className="btn primary" onClick={onBrowse}>
+                <Search size={12} /> Browse your organisation&apos;s APIs
+              </button>
+            )}
+            <button className="btn" onClick={onClose}>
+              Done
+            </button>
+          </div>
+        </>
+      )}
+
+      {source === "spec0" && session && !signingIn && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span className="tag ok">connected</span>
+            <strong>{session.orgName}</strong>
+            <span className="meta">via {session.source}</span>
+            <span className="spacer" />
+            <button className="btn" onClick={() => void loadCatalog(session)}>
+              <RefreshCw size={12} /> Refresh
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                onSession(null);
+                setCatalog([]);
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+
+          <div className="library-search" style={{ marginTop: 12 }}>
+            <Search size={13} />
+            <input
+              style={{ width: "100%" }}
+              placeholder="Filter your APIs…"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+            />
+          </div>
+
+          <div className="section">
+            <h3>Your APIs · {catalog.length}</h3>
+            {catalog
+              .filter((entry) => matches(`${entry.apiName} ${entry.teamName ?? ""}`))
+              .map((entry) => (
                 <button
-                  className="btn"
-                  onClick={() => {
-                    onSession(null);
-                    setCatalog([]);
-                  }}
+                  key={entry.apiId}
+                  className="row"
+                  onClick={() => void openCatalogEntry(entry)}
                 >
-                  Sign out
-                </button>
-              </div>
-
-              <div className="library-search" style={{ marginTop: 12 }}>
-                <Search size={13} />
-                <input
-                  style={{ width: "100%" }}
-                  placeholder="Filter your APIs…"
-                  value={filter}
-                  onChange={(event) => setFilter(event.target.value)}
-                />
-              </div>
-
-              <div className="section">
-                <h3>Your APIs · {catalog.length}</h3>
-                {catalog
-                  .filter((entry) => matches(`${entry.apiName} ${entry.teamName ?? ""}`))
-                  .map((entry) => (
-                    <button
-                      key={entry.apiId}
-                      className="row"
-                      onClick={() => void openCatalogEntry(entry)}
+                  <Download size={13} className="row-lead" />
+                  <span style={{ minWidth: 0, display: "grid", flex: 1 }}>
+                    <span className="path">{entry.apiName}</span>
+                    <span className="summary">
+                      {entry.teamName ?? "–"}
+                      {entry.description ? ` · ${entry.description}` : ""}
+                    </span>
+                  </span>
+                  {entry.mockUrl && <span className="tag mock">mock</span>}
+                  {entry.isPublic && (
+                    <span className="tag src-spec0" title="Also published to the public registry">
+                      <Globe size={11} />
+                      public
+                    </span>
+                  )}
+                  {entry.version && <span className="count">{entry.version}</span>}
+                  {!entry.mockUrl && (
+                    /* An action, so it looks like one: a real button, at the
+                       end of the row, not a tag where the "mock" tag goes. */
+                    <span
+                      className="btn row-action"
+                      role="button"
+                      tabIndex={0}
+                      title="Create a hosted mock server for this API"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void provisionMock(entry);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void provisionMock(entry);
+                        }
+                      }}
                     >
-                      <Download size={13} className="row-lead" />
-                      <span style={{ minWidth: 0, display: "grid", flex: 1 }}>
-                        <span className="path">{entry.apiName}</span>
-                        <span className="summary">
-                          {entry.teamName ?? "–"}
-                          {entry.description ? ` · ${entry.description}` : ""}
-                        </span>
-                      </span>
-                      {entry.mockUrl && <span className="tag mock">mock</span>}
-                      {entry.isPublic && (
-                        <span className="tag src-spec0" title="Also published to the public registry">
-                          <Globe size={11} />
-                          public
-                        </span>
-                      )}
-                      {entry.version && <span className="count">{entry.version}</span>}
-                      {!entry.mockUrl && (
-                        /* An action, so it looks like one: a real button, at the
-                           end of the row, not a tag where the "mock" tag goes. */
-                        <span
-                          className="btn row-action"
-                          role="button"
-                          tabIndex={0}
-                          title="Create a hosted mock server for this API"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void provisionMock(entry);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              void provisionMock(entry);
-                            }
-                          }}
-                        >
-                          <Plus size={11} /> Create mock
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                {catalog.length === 0 && !busy && (
-                  <p className="meta">
-                    No APIs in this org yet. <code>spec0 push</code> puts one here.
-                  </p>
-                )}
-              </div>
-
-              <p className="meta" style={{ marginTop: 14 }}>
-                Every API opens by its id, so private ones work the same as published ones. An API
-                with a mock imports with it attached: switch between the real servers and the mock
-                from the address bar.
+                      <Plus size={11} /> Create mock
+                    </span>
+                  )}
+                </button>
+              ))}
+            {catalog.length === 0 && !busy && (
+              <p className="meta">
+                No APIs in this org yet. <code>spec0 push</code> puts one here.
               </p>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+            )}
+          </div>
+
+          <p className="meta" style={{ marginTop: 14 }}>
+            Every API opens by its id, so private ones work the same as published ones. An API
+            with a mock imports with it attached: switch between the real servers and the mock
+            from the address bar.
+          </p>
+        </>
+      )}
+    </Dialog>
   );
 }
