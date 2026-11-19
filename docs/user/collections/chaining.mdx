@@ -44,8 +44,8 @@ Check the sentence at the bottom, which says what will happen, and press **Add l
   src="/images/product/studio-link-dialog.webp"
   alt="The 'Pass a value between steps' dialog. On the left, step 2 getOrder with its orderId path parameter selected. On the right, step 1 createOrder with body.id selected from a list of response fields. The footer reads 'getOrder path orderId ← createOrder body.id'."
   caption="Fill getOrder's orderId with the id from createOrder's response."
-  width={1558}
-  height={1280}
+  width={1600}
+  height={1316}
   minWidth={640}
 />
 
@@ -54,10 +54,10 @@ another value, and **×** removes the link.
 
 <Screenshot
   src="/images/product/studio-field-chip.webp"
-  alt="A step's path parameter orderId showing a chip that reads 'from 1 createOrder → body.id', with Change and a remove button."
+  alt="A step's Params tab: the path parameter orderId shows a chip that reads 'from 1 createOrder → body.id', with Change and a remove button."
   caption="A linked field reads 'from 1 createOrder → body.id' rather than showing a value."
   width={1600}
-  height={614}
+  height={407}
   minWidth={640}
 />
 
@@ -87,9 +87,9 @@ A line runs from each value to the field it fills.
 <Screenshot
   src="/images/product/studio-chain-view.webp"
   alt="The Chain view of a three-step Checkout collection. createOrder gives body.id and body.total; getOrder takes its orderId path parameter from body.id; createPayment takes body.orderId and body.amount. Lines connect each value to the field it fills, and an All links table lists the three links."
-  caption="Each line runs from a value in one step's response to the field it fills in a later step. All links lists them again as a table."
+  caption="Each line runs from a value in one step's response to the field it fills in a later step."
   width={1600}
-  height={1128}
+  height={880}
   minWidth={640}
 />
 
@@ -115,7 +115,7 @@ declare, or a response header, is marked as not checked yet rather than as broke
   alt="The Chain view with a warning: '1 link can't work as the collection is now.' getOrder now runs before createOrder, so its orderId link is shown in red with a dashed line running upward and a button 'Move createOrder before getOrder'."
   caption="getOrder was moved above createOrder, so its link runs upward. The fix moves createOrder back."
   width={1600}
-  height={898}
+  height={1009}
   minWidth={640}
 />
 

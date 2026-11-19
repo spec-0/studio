@@ -47,10 +47,10 @@ has run.
 
 <Screenshot
   src="/images/product/studio-expected-404.webp"
-  alt="A step expecting 404: the response is 404 from GET /orders/00000000-…, and a green bar reads 'Passed · the response matches the spec.'"
+  alt="A step expecting 404, on its Last response tab: 404 from GET /v1/orders/00000000-…, a green bar reading 'Passed · the response matches the spec.', and the response body."
   caption="A step that expects 404 passes when the 404 comes back and matches the spec's error schema."
   width={1600}
-  height={326}
+  height={531}
   minWidth={640}
 />
 
@@ -66,10 +66,10 @@ run. It lists the collection's last 20 runs, each named for what happened ("Pass
 
 <Screenshot
   src="/images/product/studio-run-log.webp"
-  alt="The Runs view of a Checkout collection. The run log lists three steps with their method, URL, status and time. getOrder is expanded to show its target, the value used from createOrder, the request, the response, 'Expected status 2xx · matched' and 'Schema matches the spec'. createPayment is marked FAILED with 'Schema difference: The response doesn't match the spec: 1 difference.'"
+  alt="The Runs view of a Checkout collection. The run is named 'Failed at step 3'. The log lists three steps with their method, URL, status and time; getOrder is expanded to show its target, the value it used from createOrder, the request and the response; createPayment failed with 'Schema difference: The response doesn't match the spec: 1 difference.'"
   caption="A run log. The failed step says why it failed; an opened step shows the values it took from earlier steps."
   width={1600}
-  height={1026}
+  height={647}
   minWidth={640}
 />
 
