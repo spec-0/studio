@@ -25,7 +25,9 @@ input, path parameters first, and remembers the tab you chose for the rest of th
   example back. The body's schema is a row under the editor that opens to its fields.
 - **Headers** lists the spec's headers, the `Content-Type` the body sets, and any you add. Secrets
   go in an environment, as `{{name}}`.
-- **Docs** has the operation's description and the responses the spec declares.
+- **Docs** has everything the spec says about the operation: its description (or its summary when
+  there is none), each parameter, the request body and its fields, and each response with its
+  description and schema.
 
 Press **Send** or `⌘↵` (`Ctrl+Enter`). The arrow next to **Send** has **Copy as cURL** (`⇧⌘C`,
 `Ctrl+Shift+C`), which copies the request exactly as Send would build it, and **Add to collection…**.
