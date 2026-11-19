@@ -4224,3 +4224,32 @@ select.fchip { padding-right: 24px; background-position: right 7px center; }
 .step-markers { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; }
 .step-markers .step-marker { margin-top: 0; font-family: var(--font-sans); font-size: 11px; }
 .collection-body { margin-top: 0; border-top: 0; }
+
+/* Environments: the list, then the selected one's name and variables */
+.env-list { display: flex; flex-direction: column; padding: 8px; background: hsl(var(--surface)); }
+.env-list-items { display: grid; gap: 2px; flex: 1; align-content: start; }
+.env-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; font-size: var(--t-body); }
+.env-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.env-row .chip { font-size: 10.5px; }
+.env-new { justify-content: flex-start; margin-top: 8px; }
+.env-detail { padding: 18px 20px; display: grid; gap: 14px; align-content: start; }
+.env-name { display: grid; gap: 6px; max-width: 280px; }
+.env-vars td { padding-top: 4px; padding-bottom: 4px; vertical-align: middle; }
+.env-vars input.switch { vertical-align: middle; }
+.cell-input {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 12px;
+}
+.cell-input:hover { border-color: hsl(var(--border)); }
+.cell-input:focus { border-color: hsl(var(--primary)); background: hsl(var(--bg)); outline: none; }
+.env-vars tfoot td { border-top: 1px solid hsl(var(--border)); }
+.env-vars tfoot .cell-input::placeholder { color: hsl(var(--ink-3)); }
+.row-actions { white-space: nowrap; text-align: right; }
+.row-actions .icon-btn { opacity: 0; }
+tr:hover .row-actions .icon-btn, .row-actions .icon-btn:focus-visible { opacity: 1; }
+.env-note { margin: 0; line-height: 1.6; }
+.env-note svg { vertical-align: -1px; margin-right: 4px; }

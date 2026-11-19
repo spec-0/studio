@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Eye, EyeOff, Lock, Plus, X } from "lucide-react";
 import {
   newEnvironment,
   type Environment,
@@ -21,6 +22,10 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
     file.activeId ?? file.environments[0]?.id ?? null,
   );
   const [location, setLocation] = useState("");
+  /** Secret values shown in the clear, by row, while the dialog is open. */
+  const [revealed, setRevealed] = useState<Set<number>>(new Set());
+  const [newName, setNewName] = useState("");
+  const [newValue, setNewValue] = useState("");
   // Read once on open: environments have loaded by the time this can be shown.
   const [storage] = useState(() => describeSecretStorage(secrets.status()));
 
@@ -55,9 +60,29 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
     });
   };
 
+  /** The add row becomes a variable once it has a name. */
+  const commitNew = () => {
+    if (!selected || !newName.trim()) return;
+    update({ ...selected, variables: [...selected.variables, { name: newName.trim(), value: newValue, secret: false }] });
+    setNewName("");
+    setNewValue("");
+  };
+  const onNewKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter" || !newName.trim()) return;
+    event.preventDefault();
+    commitNew();
+    requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="New variable name"]')?.focus());
+  };
+
   return (
     <Dialog
       title="Environments"
+      subtitle={
+        <>
+          Values you use as <span className="mono">{"{{name}}"}</span> in URLs, parameters, headers, auth and bodies.
+          Where a request goes is chosen in the address bar.
+        </>
+      }
       wide
       flush
       className="env-dialog"
@@ -81,21 +106,28 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
     >
       <div className="env-split">
         <div className="env-list">
-          {draft.environments.map((env) => (
-            <button
-              key={env.id}
-              className="row"
-              aria-selected={env.id === selectedId}
-              onClick={() => setSelectedId(env.id)}
-            >
-              <span className="path" style={{ flex: 1 }}>
-                {env.name}
-              </span>
-              <span className="count">{env.variables.length}</span>
-            </button>
-          ))}
-          <button className="btn" style={{ margin: 8 }} onClick={addEnvironment}>
-            + New environment
+          <div className="env-list-items">
+            {draft.environments.map((env) => (
+              <button
+                key={env.id}
+                className="row env-row"
+                aria-selected={env.id === selectedId}
+                onClick={() => {
+                  setSelectedId(env.id);
+                  setRevealed(new Set());
+                }}
+              >
+                <span className="env-row-name">{env.name || "Untitled"}</span>
+                {env.id === draft.activeId ? (
+                  <span className="chip sans ok">active</span>
+                ) : (
+                  <span className="count">{env.variables.length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <button className="btn ghost env-new" onClick={addEnvironment}>
+            <Plus size={13} aria-hidden /> New environment
           </button>
         </div>
 
@@ -118,104 +150,134 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
           )}
           {!selected ? (
             <p className="meta">
-              No environments yet. Create one to hold `{"{{baseUrl}}"}`, tokens, and per-stage
-              values.
+              No environments yet. Create one to hold <span className="mono">{"{{baseUrl}}"}</span>, tokens and values
+              for each stage.
             </p>
           ) : (
             <>
-              <div className="field">
-                <div className="field-label">
-                  <div className="field-label-text">Name</div>
-                </div>
-                <input
-                  value={selected.name}
-                  onChange={(event) => update({ ...selected, name: event.target.value })}
-                />
-              </div>
-              <h3 style={{ marginTop: 18 }}>Variables</h3>
-              <table className="fields">
+              <label className="field env-name">
+                <span className="field-label-text">Name</span>
+                <input className="input" value={selected.name} onChange={(event) => update({ ...selected, name: event.target.value })} />
+              </label>
+              <table className="tbl env-vars">
+                <colgroup>
+                  <col style={{ width: "34%" }} />
+                  <col />
+                  <col style={{ width: 64 }} />
+                  <col style={{ width: 64 }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ width: "34%" }}>Name</th>
+                    <th>Variable</th>
                     <th>Value</th>
-                    <th style={{ width: 72 }}>Secret</th>
-                    <th style={{ width: 34 }} />
+                    <th>Secret</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {selected.variables.map((variable, index) => (
-                    <tr key={index}>
-                      <td>
-                        <input
-                          value={variable.name}
-                          placeholder="baseUrl"
-                          onChange={(event) => setVariable(index, { name: event.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type={variable.secret ? "password" : "text"}
-                          value={variable.value}
-                          onChange={(event) => setVariable(index, { value: event.target.value })}
-                        />
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <input
-                          type="checkbox"
-                          className="switch"
-                          role="switch"
-                          checked={variable.secret}
-                          onChange={(event) =>
-                            setVariable(index, { secret: event.target.checked })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <button
-                          className="btn"
-                          style={{ padding: "2px 7px" }}
-                          onClick={() =>
-                            update({
-                              ...selected,
-                              variables: selected.variables.filter((_, i) => i !== index),
-                            })
-                          }
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {selected.variables.map((variable, index) => {
+                    const hidden = variable.secret && !revealed.has(index);
+                    return (
+                      <tr key={index}>
+                        <td>
+                          <input
+                            className="cell-input mono"
+                            value={variable.name}
+                            placeholder="baseUrl"
+                            aria-label="Variable name"
+                            onChange={(event) => setVariable(index, { name: event.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="cell-input mono"
+                            type={hidden ? "password" : "text"}
+                            value={variable.value}
+                            aria-label={`Value of ${variable.name || "this variable"}`}
+                            onChange={(event) => setVariable(index, { value: event.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            className="switch"
+                            role="switch"
+                            aria-label={`${variable.name || "This variable"} is secret`}
+                            checked={variable.secret}
+                            onChange={(event) => setVariable(index, { secret: event.target.checked })}
+                          />
+                        </td>
+                        <td className="row-actions">
+                          {variable.secret && (
+                            <button
+                              type="button"
+                              className="icon-btn tight"
+                              aria-label={hidden ? "Show value" : "Hide value"}
+                              title={hidden ? "Show value" : "Hide value"}
+                              onClick={() =>
+                                setRevealed((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(index)) next.delete(index);
+                                  else next.add(index);
+                                  return next;
+                                })
+                              }
+                            >
+                              {hidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="icon-btn tight"
+                            aria-label={`Remove ${variable.name || "this variable"}`}
+                            title="Remove"
+                            onClick={() => {
+                              setRevealed(new Set());
+                              update({ ...selected, variables: selected.variables.filter((_, i) => i !== index) });
+                            }}
+                          >
+                            <X size={13} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
+                <tfoot>
+                  <tr
+                    onBlur={(event) => {
+                      // Leaving the add row with a name in it adds the variable.
+                      if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+                      commitNew();
+                    }}
+                  >
+                    <td>
+                      <input
+                        className="cell-input mono"
+                        value={newName}
+                        placeholder="Add variable"
+                        aria-label="New variable name"
+                        onChange={(event) => setNewName(event.target.value)}
+                        onKeyDown={onNewKey}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="cell-input mono"
+                        placeholder="Value"
+                        aria-label="New variable value"
+                        value={newValue}
+                        onChange={(event) => setNewValue(event.target.value)}
+                        onKeyDown={onNewKey}
+                      />
+                    </td>
+                    <td colSpan={2} />
+                  </tr>
+                </tfoot>
               </table>
-
-              <button
-                className="btn"
-                style={{ marginTop: 10 }}
-                onClick={() =>
-                  update({
-                    ...selected,
-                    variables: [...selected.variables, { name: "", value: "", secret: false }],
-                  })
-                }
-              >
-                + Add variable
-              </button>
-
-              <p className="meta" style={{ marginTop: 18, lineHeight: 1.6 }}>
-                Use them anywhere as <code>{"{{name}}"}</code>: base URL, parameters, headers,
-                auth, body. An environment supplies <strong>values</strong>, not destinations:
-                where a request goes is chosen in the address bar. A <code>baseUrl</code> variable
-                is a good habit, and it&apos;s an ordinary variable like any other.
-                <br />
-                {storage.where} <code>environments.json</code> records only that a variable is
-                secret, never its value, so it stays safe to commit.
-                {location && (
-                  <>
-                    <br />
-                    Stored in <code>{location}</code>
-                  </>
-                )}
+              <p className="env-note meta" title={location ? `Stored in ${location}` : undefined}>
+                <Lock size={12} aria-hidden /> {storage.where} <span className="mono">environments.json</span> only records
+                that a secret exists.
               </p>
             </>
           )}
