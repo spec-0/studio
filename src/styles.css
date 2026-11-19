@@ -3537,6 +3537,17 @@ button.runlog-line:hover { background: hsl(var(--surface-hover)); }
 .op-description { color: hsl(var(--ink-2)); font-size: 12.5px; }
 .field-meta .md, td.desc .md { gap: 4px; }
 
+/* The Docs tab: everything the spec says about one operation (OperationDocs.tsx). */
+.op-docs { display: flex; flex-direction: column; gap: var(--s2); }
+.op-docs-note { margin: 0; }
+.op-docs-section { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s3); }
+.op-docs-section > .label { margin: 0; }
+.op-docs-line { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 12.5px; }
+.op-docs-body, .op-docs-response { display: flex; flex-direction: column; gap: 6px; }
+.op-docs-response + .op-docs-response { padding-top: var(--s2); border-top: 1px solid hsl(var(--border)); }
+.op-docs .disc { margin-top: 0; }
+.op-docs .tbl.op-docs-params td.top .md { gap: 4px; }
+
 /*
  * System components. Every screen is built from these; a screen that needs
  * something new adds it here first.

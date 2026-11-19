@@ -42,9 +42,18 @@ export interface OperationSpec {
   deprecated: boolean;
   parameters: ParamSpec[];
   /** `media` is the chosen media type object as written, for its `example`/`examples`. */
-  requestBody?: { required: boolean; contentType: string; schema?: Json; media?: Json };
+  requestBody?: {
+    required: boolean;
+    contentType: string;
+    schema?: Json;
+    media?: Json;
+    /** The request body's own description, as written. */
+    description?: string;
+  };
   responses: ResponseSpec[];
   security?: string[];
+  /** A link to more documentation, from the operation's `externalDocs`. */
+  externalDocs?: { url: string; description?: string };
 }
 
 export interface SchemaEntry {
@@ -352,10 +361,23 @@ export function parseSpec(text: string, sourceName: string, documentUrl?: string
               contentType: bodyContent.contentType,
               schema: bodyContent.schema,
               media: bodyContent.media,
+              ...(typeof bodyDef?.description === "string" && bodyDef.description
+                ? { description: bodyDef.description }
+                : {}),
             }
           : undefined,
         responses,
         security: (op.security ?? doc.security)?.flatMap((s: Json) => Object.keys(s)),
+        ...(typeof op.externalDocs?.url === "string" && op.externalDocs.url
+          ? {
+              externalDocs: {
+                url: op.externalDocs.url,
+                ...(typeof op.externalDocs.description === "string"
+                  ? { description: op.externalDocs.description }
+                  : {}),
+              },
+            }
+          : {}),
       });
     }
   }

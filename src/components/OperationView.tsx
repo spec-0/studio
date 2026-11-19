@@ -3,7 +3,6 @@ import {
   bodyModeFor,
   deref,
   typeLabel,
-  type Json,
   type OperationSpec,
   type ParsedSpec,
 } from "../lib/spec";
@@ -11,11 +10,12 @@ import { seedEditor, type EditorPrefill, type EditorState } from "../lib/editor"
 import { pickAnyFile } from "../lib/store";
 import type { AuthState, BodyInput, MultipartPart } from "../lib/request";
 import type { LinkTarget } from "../lib/chainLinks";
-import { plural } from "../lib/plural";
 import { Description } from "./Description";
 import { descriptionText } from "../lib/markdown";
-import { AlignLeft, ChevronRight, Plus, RotateCcw, X } from "lucide-react";
+import { AlignLeft, Plus, RotateCcw, X } from "lucide-react";
 import { CodeEditor } from "./CodeEditor";
+import { SchemaFields } from "./SchemaFields";
+import { OperationDocs } from "./OperationDocs";
 import { TabList } from "./TabList";
 
 interface Props {
@@ -503,7 +503,7 @@ export function OperationView({
               </>
             )}
             {bodyExtra}
-            <BodySchema doc={spec.doc} schema={op.requestBody.schema} />
+            <SchemaFields doc={spec.doc} schema={op.requestBody.schema} />
           </div>
         )}
 
@@ -696,26 +696,7 @@ export function OperationView({
 
         {shown === "extra" && extraTab?.content}
 
-        {shown === "docs" && (
-          <div className="tab-pane">
-            {op.description ? (
-              <Description text={op.description} className="op-description" />
-            ) : (
-              <p className="meta">The spec has no description for this operation.</p>
-            )}
-            <div className="label" style={{ marginTop: 16, marginBottom: 6 }}>
-              Responses declared
-            </div>
-            <div>
-              {op.responses.map((r) => (
-                <span className="chip" key={r.status}>
-                  {r.status}
-                  {r.schema ? ` ${typeLabel(spec.doc, r.schema)}` : " no schema"}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        {shown === "docs" && <OperationDocs spec={spec} op={op} />}
 
         {missingRequired.length > 0 && (
           <div className="verdict warn" style={{ marginTop: 16 }}>
@@ -733,48 +714,3 @@ type RequestTab = "body" | "params" | "headers" | "auth" | "docs" | "extra";
 /** The section chosen for each operation, for the session. */
 const chosenTabs = new Map<string, RequestTab>();
 
-/** The schema under the editor, so you never leave the request to learn the shape. */
-function BodySchema({ doc, schema }: { doc: Json; schema: Json | undefined }) {
-  const [open, setOpen] = useState(false);
-  const resolved = deref(doc, schema);
-  const properties = Object.entries<Json>(resolved.properties ?? {});
-  if (!properties.length) return null;
-  const required: string[] = resolved.required ?? [];
-  const name = typeLabel(doc, schema);
-
-  return (
-    <div className="disc">
-      <button type="button" className="disc-head" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <ChevronRight size={13} className={`disc-chev${open ? " open" : ""}`} aria-hidden />
-        <span className="mono">{name}</span>
-        <span className="meta">
-          · {plural(properties.length, "field")}
-          {required.length ? `, ${required.length} required` : ""}
-        </span>
-      </button>
-      {open && (
-        <table className="tbl disc-body">
-          <thead>
-            <tr>
-              <th>Field</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {properties.map(([field, prop]) => (
-              <tr key={field}>
-                <td className="mono top">
-                  {field}
-                  {required.includes(field) && <span className="required-word">required</span>}
-                </td>
-                <td className="mono top type-cell">{typeLabel(doc, prop)}</td>
-                <td className="top">{deref(doc, prop).description ? <Description text={deref(doc, prop).description} /> : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
