@@ -14,17 +14,18 @@ function quoteArg(arg: string): string {
   return /[\s"']/.test(arg) || arg === "" ? `"${arg.replace(/(["\\])/g, "\\$1")}"` : arg;
 }
 
+/** Whether the agent can start: a short word for the card's chip. */
+function stateWord(agent: AgentInfo): { text: string; tone: "ok" | "warn" | "" } {
+  if (agent.how === "missing") return { text: agent.id === "custom" ? "Not set up" : "Not found", tone: "" };
+  if (agent.how === "npx") return { text: "Via npx", tone: "warn" };
+  return { text: agent.how === "chosen" ? "Your program" : "Installed", tone: "ok" };
+}
+
+/** How a found agent is started, when it isn't simply installed. */
 function howText(agent: AgentInfo): string {
-  switch (agent.how) {
-    case "installed":
-      return "Installed";
-    case "npx":
-      return "Runs its adapter with npx. The first start downloads it, which needs Node.js and a moment.";
-    case "chosen":
-      return "Uses the program you chose";
-    default:
-      return agent.id === "custom" ? "Not set up" : "Not found on this computer";
-  }
+  return agent.how === "npx"
+    ? "Runs its adapter with npx. The first start downloads it, which needs Node.js and a moment."
+    : "Uses the program you chose";
 }
 
 const INSTALL: Record<Exclude<AgentId, "custom">, string> = {
@@ -37,8 +38,10 @@ const INSTALL: Record<Exclude<AgentId, "custom">, string> = {
 /** The Anthropic API key Claude Agent uses. */
 function AnthropicKey() {
   return (
-    <section className="section">
-      <h3>Anthropic API key</h3>
+    <section>
+      <div className="section-head">
+        <h2 className="h2">Anthropic API key</h2>
+      </div>
       <p className="field-meta">
         Claude Agent signs in with an Anthropic API key. Studio keeps it in your system&apos;s credential store and gives
         it only to the Claude agent when a chat starts. Without one, Studio uses an{" "}
@@ -100,10 +103,12 @@ export function AgentChatSettings() {
         anything is sent. Past chats are kept on this computer only.
       </p>
 
-      <section className="section">
-        <h3>Agent</h3>
+      <section className="agent-section">
+        <div className="section-head">
+          <h2 className="h2">Agent</h2>
+        </div>
         <div className="agent-choices" role="radiogroup" aria-label="Agent">
-          <label className="agent-choice">
+          <label className={`agent-choice agent-choice-none${prefs.agent === null ? " on" : ""}`}>
             <input
               type="radio"
               name="agent"
@@ -116,7 +121,7 @@ export function AgentChatSettings() {
             </span>
           </label>
           {(agents ?? []).map((agent) => (
-            <div key={agent.id} className="agent-choice-wrap">
+            <div key={agent.id} className={`agent-choice-wrap${prefs.agent === agent.id ? " on" : ""}`}>
               <label className={`agent-choice${agent.how === "missing" ? " missing" : ""}`}>
                 <input
                   type="radio"
@@ -126,8 +131,11 @@ export function AgentChatSettings() {
                   onChange={() => void settings.setPrefs({ agent: agent.id })}
                 />
                 <span>
-                  <strong>{agent.name}</strong>
-                  <span className="field-meta">{howText(agent)}</span>
+                  <span className="agent-choice-title">
+                    <strong>{agent.name}</strong>
+                    <span className={`chip sans ${stateWord(agent).tone}`}>{stateWord(agent).text}</span>
+                  </span>
+                  {(agent.how === "npx" || agent.how === "chosen") && <span className="field-meta">{howText(agent)}</span>}
                   {agent.command && <code className="agent-command mono">{agent.command}</code>}
                   {agent.id !== "custom" && agent.how === "missing" && (
                     <span className="field-meta">{INSTALL[agent.id]}</span>
@@ -144,6 +152,11 @@ export function AgentChatSettings() {
                 </span>
               </label>
               <div className="agent-choice-actions">
+                {prefs.agent === agent.id && (
+                  <button className="btn" onClick={() => void runTest()} disabled={test?.running}>
+                    Test connection
+                  </button>
+                )}
                 {editing !== agent.id && (
                   <button className="btn ghost" onClick={() => startEditing(agent)}>
                     {agent.id === "custom" ? "Set the command…" : "Choose the program…"}
@@ -209,9 +222,6 @@ export function AgentChatSettings() {
           <button className="btn" onClick={() => void findAgents()} disabled={settings.searching}>
             <RefreshCw size={13} className={settings.searching ? "spin" : undefined} /> Look again
           </button>
-          <button className="btn" onClick={() => void runTest()} disabled={!prefs.agent || test?.running}>
-            Test the connection
-          </button>
           <button
             className="btn primary"
             disabled={!prefs.agent}
@@ -228,71 +238,77 @@ export function AgentChatSettings() {
         )}
       </section>
 
-      <section className="section">
-        <h3>Studio&apos;s tools</h3>
-        <label className="check">
-          <input
-            type="checkbox"
-            className="switch"
-            role="switch"
-            checked={prefs.studioTools}
-            onChange={(event) => void settings.setPrefs({ studioTools: event.target.checked })}
-          />
-          Give the agent Studio&apos;s tools
-        </label>
-        <p className="field-meta">
-          When a chat starts, Studio starts its local MCP server if it isn&apos;t running and connects the agent to
-          it, so the agent can look up your APIs, send requests, start local mocks and run collections. Requests and
-          other actions still ask you first, as they do for any agent. The first message of each chat also tells the
-          agent it&apos;s in Studio and what you have open.
-        </p>
-      </section>
-
-      <section className="section">
-        <h3>Studio&apos;s instructions</h3>
-        <label className="check">
-          <input
-            type="checkbox"
-            className="switch"
-            role="switch"
-            checked={prefs.instructions}
-            onChange={(event) => void settings.setPrefs({ instructions: event.target.checked })}
-          />
-          Use Spec0 instructions
-        </label>
-        <p className="field-meta">
-          Tells the agent how to work in Studio: start from the spec, try changes against a local mock, build tests as
-          collections, and never ask for secret values. A few step-by-step guides come with it. In Studio&apos;s own
-          folder they go in the file the agent reads ({prefs.agent ? INSTRUCTIONS_FILE[prefs.agent] : "AGENTS.md"});
-          in a folder you chose, Studio writes nothing and sends them with the first message instead. The text is in
-          Studio&apos;s repository, under <span className="mono">src/agent-profile</span>.
-        </p>
-        {prefs.agent && prefs.instructions && !prefs.workspace && <InstructionsStatus agent={prefs.agent} />}
-      </section>
-
       {prefs.agent === "claude" && <AnthropicKey />}
-
-      <section className="section">
-        <h3>Folder</h3>
-        <p className="field-meta">
-          The agent works in this folder and can ask to read or change files in it. By default it&apos;s an empty
-          folder of Studio&apos;s own. Choose a project folder if you want the agent to work on your specs.
-        </p>
-        <dl className="settings-facts">
-          <dt>Folder</dt>
-          <dd className="mono">{prefs.workspace ?? `${settings.defaultWorkspace || "Studio's own folder"} (default)`}</dd>
-        </dl>
-        <div className="settings-actions">
-          <button className="btn" onClick={() => void chooseFolder()}>
-            <FolderOpen size={13} /> Choose a folder…
-          </button>
-          {prefs.workspace && (
-            <button className="btn ghost" onClick={() => void settings.setPrefs({ workspace: null })}>
-              Use Studio&apos;s empty folder
-            </button>
-          )}
+      <div className="section-head">
+        <h2 className="h2">What the agent gets</h2>
+      </div>
+      <div className="rows">
+        <div className="row-s">
+          <div className="l">
+            <b>Studio&apos;s tools</b>
+            <span className="meta">
+              When a chat starts, Studio starts its local MCP server if it isn&apos;t running and connects the agent to
+              it, so the agent can look up your APIs, send requests, start local mocks and run collections. Requests
+              and other actions still ask you first. The first message also tells the agent what you have open.
+            </span>
+          </div>
+          <div className="c">
+            <input
+              type="checkbox"
+              className="switch"
+              role="switch"
+              aria-label="Give the agent Studio's tools"
+              checked={prefs.studioTools}
+              onChange={(event) => void settings.setPrefs({ studioTools: event.target.checked })}
+            />
+          </div>
         </div>
-      </section>
+        <div className="row-s">
+          <div className="l">
+            <b>Studio&apos;s instructions</b>
+            <span className="meta">
+              How to work in Studio: start from the spec, try changes against a local mock, build tests as collections,
+              never ask for secret values. In Studio&apos;s own folder they go in{" "}
+              <span className="mono">{prefs.agent ? INSTRUCTIONS_FILE[prefs.agent] : "AGENTS.md"}</span>; in a folder
+              you chose, Studio writes nothing and sends them with the first message. The text is in Studio&apos;s
+              repository, under <span className="mono">src/agent-profile</span>.
+            </span>
+            {prefs.agent && prefs.instructions && !prefs.workspace && <InstructionsStatus agent={prefs.agent} />}
+          </div>
+          <div className="c">
+            <input
+              type="checkbox"
+              className="switch"
+              role="switch"
+              aria-label="Use Spec0 instructions"
+              checked={prefs.instructions}
+              onChange={(event) => void settings.setPrefs({ instructions: event.target.checked })}
+            />
+          </div>
+        </div>
+        <div className="row-s">
+          <div className="l">
+            <b>Folder</b>
+            <span className="meta mono agent-folder" title={prefs.workspace ?? settings.defaultWorkspace}>
+              {prefs.workspace ?? `${settings.defaultWorkspace || "Studio's own folder"} (default)`}
+            </span>
+            <span className="meta">
+              The agent works here and can ask to read or change files in it. Studio&apos;s own folder is empty; choose a
+              project folder to have it work on your specs.
+            </span>
+          </div>
+          <div className="c">
+            {prefs.workspace && (
+              <button className="btn ghost" onClick={() => void settings.setPrefs({ workspace: null })}>
+                Use Studio&apos;s folder
+              </button>
+            )}
+            <button className="btn" onClick={() => void chooseFolder()}>
+              <FolderOpen size={13} /> Choose…
+            </button>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

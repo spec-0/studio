@@ -10,6 +10,7 @@ import type { ResponseResult } from "./request";
 import { runLogText, type RunLog } from "./runLog";
 import type { OperationSpec } from "./spec";
 import { readStore, writeStore } from "./store";
+import studioTools from "./mcp-tools.json";
 
 /**
  * The chat panel's settings, what can be attached to a message, and the
@@ -375,6 +376,31 @@ export function studioLinkFor(item: Extract<ChatItem, { kind: "tool" }>): Studio
   }
   const run = objects.find((object) => typeof object.runId === "string" && typeof object.collection === "string");
   return run ? { tool, collection: run.collection as string, runId: run.runId as string } : null;
+}
+
+const STUDIO_TOOL_NAMES = new Set((studioTools as Array<{ name: string }>).map((tool) => tool.name));
+
+/**
+ * Which of Studio's own tools a tool call used, read from its title or input
+ * (agents name them differently: `mcp__spec0-studio__run_collection`,
+ * `spec0-studio/run_collection`, or only in the input). Null for any other tool.
+ */
+export function studioToolName(item: Extract<ChatItem, { kind: "tool" }>): string | null {
+  for (const text of [item.title, item.input ?? ""]) {
+    for (const word of text.match(/[a-z][a-z0-9]*(?:_[a-z0-9]+)+/g) ?? []) {
+      if (STUDIO_TOOL_NAMES.has(word)) return word;
+    }
+  }
+  return null;
+}
+
+/** A tool call's title in words: a bare tool id reads as "Run collection". */
+export function toolCallTitle(item: Extract<ChatItem, { kind: "tool" }>): string {
+  const name = studioToolName(item);
+  const bare = /^(?:tool:\s*)?[\w.-]*?(?:__|\/)?[a-z0-9_]+$/i.test(item.title.trim());
+  if (!name || !bare || !item.title.includes(name)) return item.title;
+  const words = name.replace(/_/g, " ");
+  return words[0].toUpperCase() + words.slice(1);
 }
 
 /**

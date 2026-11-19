@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, AtSign, History, MessageSquarePlus, RefreshCw, Settings, Square, Trash2, X } from "lucide-react";
+import { ArrowUp, AtSign, Bot, History, MessageSquarePlus, RefreshCw, Settings, Square, Trash2, X } from "lucide-react";
 import { AGENT_NAMES, useAgentChat } from "../../hooks/useAgentChat";
 import { useAgentChatSettings } from "../../hooks/useAgentChatSettings";
 import { useAgentChatPanelOpen } from "../../hooks/useAgentChatPanelOpen";
@@ -222,9 +222,14 @@ export function AgentChatPanel({ mentionChoices, studioContext, onOpenInStudio, 
         }}
       />
       <header className="agent-chat-head">
-        <strong>Agent chat</strong>
-        {agentLabel && <span className="agent-chat-agent">{agentLabel}</span>}
-        {chat.running && <span className="mcp-dot on" title="The agent is running" aria-label="Running" />}
+        <Bot size={15} aria-hidden className="agent-chat-icon" />
+        <strong className="agent-chat-name">{agentLabel ?? "Agent chat"}</strong>
+        {chat.running && <span className="dot live" title="The agent is running" aria-label="Running" />}
+        {prefs.workspace && (
+          <span className="agent-chat-folder" title={prefs.workspace}>
+            in <span className="mono">{shortFolder(prefs.workspace)}</span>
+          </span>
+        )}
         <span className="spacer" />
         <button
           className={`icon-btn${showHistory ? " on" : ""}`}
@@ -380,6 +385,7 @@ export function AgentChatPanel({ mentionChoices, studioContext, onOpenInStudio, 
               )}
             </div>
           )}
+          <div className="composer-box">
           {mentions.length > 0 && (
             <div className="chat-chips">
               {mentions.map((mention) => (
@@ -399,8 +405,8 @@ export function AgentChatPanel({ mentionChoices, studioContext, onOpenInStudio, 
           <textarea
             ref={input}
             value={draft}
-            rows={3}
-            placeholder={`Message ${agentLabel ?? "the agent"}. @ to attach. Enter to send.`}
+            rows={2}
+            placeholder={`Message ${agentLabel ?? "the agent"}. @ to attach an operation, response, step or run.`}
             aria-label="Message"
             onChange={(event) => onDraftChange(event.target.value, event.target.selectionStart)}
             onKeyDown={(event) => {
@@ -456,9 +462,10 @@ export function AgentChatPanel({ mentionChoices, studioContext, onOpenInStudio, 
               </button>
             ) : (
               <button className="btn primary" onClick={() => void submit()} disabled={!draft.trim() || busy}>
-                <ArrowUp size={13} /> Send
+                <ArrowUp size={13} /> Send <span className="kbd">↵</span>
               </button>
             )}
+          </div>
           </div>
         </footer>
       )}
@@ -517,4 +524,11 @@ function ToolsLine({ chat }: { chat: ReturnType<typeof useAgentChat> }) {
     default:
       return null;
   }
+}
+
+/** A folder by its last two parts, `…/work/payments`; short paths as they are. */
+function shortFolder(path: string): string {
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  if (parts.length <= 2) return path;
+  return `…/${parts.slice(-2).join("/")}`;
 }

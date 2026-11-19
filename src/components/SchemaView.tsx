@@ -136,6 +136,10 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
                         <button className="chip link" onClick={() => onSelectSchema(target)}>
                           {typeLabel(spec.doc, propSchema)}
                         </button>
+                      ) : Array.isArray(resolved.enum) ? (
+                        // The values are listed in the description column; a type cell that
+                        // spelled them out would push the table off a narrow panel.
+                        `enum · ${plural(resolved.enum.length, "value")}`
                       ) : (
                         typeLabel(spec.doc, propSchema)
                       )}

@@ -213,62 +213,32 @@ export function StepEditor({
   );
 
   const method = (step.operation?.method ?? step.request?.method ?? "GET").toUpperCase();
+  const lastResponseLabel = (
+    <>
+      Last response
+      {result?.status ? (
+        <span className={`status-badge s${String(result.status)[0]} step-tab-status`}>{result.status}</span>
+      ) : result ? (
+        <span className={`run-dot ${result.verdict}`} aria-label={result.verdict === "pass" ? "passed" : result.verdict === "fail" ? "failed" : "not run"} />
+      ) : null}
+    </>
+  );
+  const responsePane = (
+    <div className="tab-pane step-response-pane">
+      <StepResponse stepKey={step.key} result={result} running={running} onPick={onPickFromResponse} />
+    </div>
+  );
 
   return (
     <section className="step-editor" aria-label={`Step ${index + 1} of ${total}`}>
       <header className="step-head">
         <div className="step-head-row">
-          <span className={`method-chip ${method.toLowerCase()}`}>{method}</span>
-          <span className="step-head-path mono">{step.operation?.path ?? step.request?.url}</span>
-          <span className="spacer" />
-          <button
-            type="button"
-            className="btn step-menu-btn"
-            aria-haspopup="menu"
-            aria-label={`Actions for step ${index + 1}`}
-            onClick={(event) => onMenu(event.currentTarget.getBoundingClientRect())}
-          >
-            <MoreHorizontal size={14} aria-hidden /> Step
-          </button>
-        </div>
-        <div className="step-head-fields">
-          <label className="step-field">
-            <span className="field-meta" title="How the collection file, and links from later steps, refer to this step">Key</span>
-            <input
-              className="mono"
-              value={keyDraft}
-              aria-invalid={Boolean(keyError)}
-              data-no-insert
-              onChange={(event) => setKeyDraft(event.target.value)}
-              onBlur={(event) => {
-                const next = event.currentTarget.value.trim();
-                if (next === step.key) return;
-                const problem = onRenameKey(next);
-                setKeyError(problem);
-                if (problem) setKeyDraft(step.key);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") (event.target as HTMLInputElement).blur();
-              }}
-            />
-          </label>
-          <label className="step-field">
-            <span className="field-meta">Name</span>
-            <input
-              value={step.name ?? ""}
-              placeholder={linked?.op.summary ?? "Optional"}
-              data-no-insert
-              onChange={(event) => {
-                const name = event.target.value;
-                onChange(({ name: _old, ...rest }) => (name ? { ...rest, name } : rest));
-              }}
-            />
-          </label>
-          <ExpectedStatusField step={step} declared={linked?.op.responses.map((r) => r.status) ?? []} onChange={onChange} />
-          {step.api && (
-            <label className="step-field grow">
-              <span className="field-meta">Send to</span>
+          <div className="addr step-addr">
+            <span className={`addr-method method-chip ${method.toLowerCase()}`}>{method}</span>
+            {step.api && (
               <select
+                className="addr-target-select"
+                aria-label="Send to"
                 value={targetValue(step.target)}
                 data-no-insert
                 onChange={(event) => {
@@ -306,11 +276,25 @@ export function StepEditor({
                 )}
                 <option value="custom">Custom URL…</option>
               </select>
-            </label>
-          )}
+            )}
+            <span className="step-addr-path mono" title={step.operation?.path ?? step.request?.url}>
+              {step.operation?.path ?? step.request?.url}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="icon-btn step-menu-btn"
+            aria-haspopup="menu"
+            aria-label={`Actions for step ${index + 1}`}
+            title="Change operation, duplicate, move, remove"
+            onClick={(event) => onMenu(event.currentTarget.getBoundingClientRect())}
+          >
+            <MoreHorizontal size={15} aria-hidden />
+          </button>
+        </div>
           {step.target?.kind === "custom" && (
-            <label className="step-field grow">
-              <span className="field-meta">URL</span>
+            <label className="step-field">
+              <span className="field-meta">Custom URL</span>
               <input
                 className="mono"
                 value={step.target.url}
@@ -323,6 +307,40 @@ export function StepEditor({
               />
             </label>
           )}
+        <div className="step-head-fields">
+          <label className="step-field grow">
+            <span className="field-meta">Name</span>
+            <input
+              value={step.name ?? ""}
+              placeholder={linked?.op.summary ?? "Optional"}
+              data-no-insert
+              onChange={(event) => {
+                const name = event.target.value;
+                onChange(({ name: _old, ...rest }) => (name ? { ...rest, name } : rest));
+              }}
+            />
+          </label>
+          <label className="step-field">
+            <span className="field-meta" title="How the collection file, and links from later steps, refer to this step">Key, for later steps</span>
+            <input
+              className="mono"
+              value={keyDraft}
+              aria-invalid={Boolean(keyError)}
+              data-no-insert
+              onChange={(event) => setKeyDraft(event.target.value)}
+              onBlur={(event) => {
+                const next = event.currentTarget.value.trim();
+                if (next === step.key) return;
+                const problem = onRenameKey(next);
+                setKeyError(problem);
+                if (problem) setKeyDraft(step.key);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") (event.target as HTMLInputElement).blur();
+              }}
+            />
+          </label>
+          <ExpectedStatusField step={step} declared={linked?.op.responses.map((r) => r.status) ?? []} onChange={onChange} />
         </div>
         {keyError && <div className="field-meta danger-ink">{keyError}</div>}
       </header>
@@ -390,53 +408,48 @@ export function StepEditor({
         </div>
       )}
 
-      <TabList<StepTab>
-        className="ptabs step-tabs"
-        tabClassName="ptab"
-        label="Step"
-        tabs={[
-          { id: "request", label: "Request" },
-          {
-            id: "response",
-            label: (
-              <>
-                Response
-                {result && (
-                  <span className={`run-dot ${result.verdict}`} aria-label={result.verdict === "pass" ? "passed" : result.verdict === "fail" ? "failed" : "not run"} />
-                )}
-              </>
-            ),
-          },
-        ]}
-        selected={tab}
-        onSelect={onTab}
-      />
-
       <div className="step-body">
-        {tab === "response" ? (
-          <StepResponse stepKey={step.key} result={result} running={running} onPick={onPickFromResponse} />
+        {linked ? (
+          <div className="step-operation">
+            <OperationView
+              key={editorKey}
+              spec={linked.spec}
+              op={linked.op}
+              auth={authOf(step)}
+              onAuthChange={(auth) =>
+                onChange(({ auth: _old, ...rest }) => {
+                  const next = stepAuthOf(auth);
+                  return next ? { ...rest, auth: next } : rest;
+                })
+              }
+              onValuesChange={onValuesChange}
+              prefill={prefill}
+              mode="step"
+              linkSlot={linkSlot}
+              bodyExtra={bodyExtra}
+              extraTab={{
+                label: lastResponseLabel,
+                content: responsePane,
+                active: tab === "response",
+                onActive: (active) => onTab(active ? "response" : "request"),
+              }}
+            />
+          </div>
         ) : (
           <>
-            {linked ? (
-              <div className="step-operation">
-                <OperationView
-                  key={editorKey}
-                  spec={linked.spec}
-                  op={linked.op}
-                  auth={authOf(step)}
-                  onAuthChange={(auth) =>
-                    onChange(({ auth: _old, ...rest }) => {
-                      const next = stepAuthOf(auth);
-                      return next ? { ...rest, auth: next } : rest;
-                    })
-                  }
-                  onValuesChange={onValuesChange}
-                  prefill={prefill}
-                  mode="step"
-                  linkSlot={linkSlot}
-                  bodyExtra={bodyExtra}
-                />
-              </div>
+            <TabList<StepTab>
+              className="ptabs step-tabs"
+              tabClassName="ptab"
+              label="Step"
+              tabs={[
+                { id: "request", label: "Request" },
+                { id: "response", label: lastResponseLabel },
+              ]}
+              selected={tab}
+              onSelect={onTab}
+            />
+            {tab === "response" ? (
+              responsePane
             ) : (
               <PlainStepEditor key={`${step.key}:${revision}`} step={step} onChange={onChange} unlinked={link.kind === "unlinked"} />
             )}

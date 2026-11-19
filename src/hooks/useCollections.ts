@@ -853,6 +853,26 @@ export function useCollections({
     [entries, addOperation, create, freshName, update],
   );
 
+  /** Add an empty request step at the end, to fill in by hand, and select it. */
+  const addBlankStep = useCallback(
+    (collectionId: string) => {
+      let at = 0;
+      update(collectionId, (c) => {
+        at = c.steps.length;
+        const step: CollectionStep = {
+          key: uniqueStepKey("request", c.steps.map((s) => s.key)),
+          request: { method: "GET", url: "" },
+          pathParams: {},
+          queryParams: {},
+          headers: {},
+        };
+        return { ...c, steps: [...c.steps, step] };
+      });
+      setSelectedStep(at);
+    },
+    [update],
+  );
+
   // Running
 
   const tokenFor = useCallback(
@@ -1292,6 +1312,7 @@ export function useCollections({
     relinkStep,
     addOperation,
     addRecorded,
+    addBlankStep,
     run,
     stop,
     save,

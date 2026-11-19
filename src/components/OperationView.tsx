@@ -63,6 +63,12 @@ interface Props {
   linkSlot?: (target: LinkTarget, value: string, control: ReactNode) => ReactNode;
   /** In a collection step: shown under the body editor, e.g. the body fields that are linked. */
   bodyExtra?: ReactNode;
+  /**
+   * In a collection step: one more tab after Docs (the last response), whose
+   * selection the step keeps. The step's own header names it, so the
+   * operation's title isn't repeated.
+   */
+  extraTab?: { label: ReactNode; content: ReactNode; active: boolean; onActive: (active: boolean) => void };
 }
 
 export interface RequestValues {
@@ -93,6 +99,7 @@ export function OperationView({
   unsent,
   linkSlot,
   bodyExtra,
+  extraTab,
 }: Props) {
   const slot = (target: LinkTarget, value: string, control: ReactNode) =>
     linkSlot ? linkSlot(target, value, control) : control;
@@ -227,8 +234,14 @@ export function OperationView({
     { id: "headers", label: <>Headers <span className="c">{headerCount}</span></> },
     { id: "auth", label: <>Auth <span className="c">{authLabel}</span></> },
     { id: "docs", label: "Docs" },
+    ...(extraTab ? [{ id: "extra" as const, label: extraTab.label }] : []),
   ];
-  const shown = tab === "body" && !op.requestBody ? "params" : tab;
+  const shown: RequestTab = extraTab?.active ? "extra" : tab === "body" && !op.requestBody ? "params" : tab;
+  const selectTab = (next: RequestTab) => {
+    if (next === "extra") return extraTab?.onActive(true);
+    extraTab?.onActive(false);
+    setTab(next);
+  };
 
   const paramRows = (where: "path" | "query" | "header") =>
     grouped[where].map((p) => {
@@ -285,6 +298,7 @@ export function OperationView({
     <>
       {/* Method and path live in the address bar above. This header carries the
           human layer: what the operation is for, and whether it's on its way out. */}
+      {mode !== "step" && (
       <div className="op-head">
         <div className="op-title">
           <span className="op-summary-text">{op.summary ?? op.operationId ?? "Operation"}</span>
@@ -312,6 +326,7 @@ export function OperationView({
           </div>
         )}
       </div>
+      )}
 
       <TabList<RequestTab>
         className="ptabs request-tabs-list"
@@ -319,7 +334,7 @@ export function OperationView({
         label="Request"
         tabs={tabs}
         selected={shown}
-        onSelect={setTab}
+        onSelect={selectTab}
       />
 
       <div className="op-body">
@@ -679,6 +694,8 @@ export function OperationView({
           </div>
         )}
 
+        {shown === "extra" && extraTab?.content}
+
         {shown === "docs" && (
           <div className="tab-pane">
             {op.description ? (
@@ -711,7 +728,7 @@ export function OperationView({
   );
 }
 
-type RequestTab = "body" | "params" | "headers" | "auth" | "docs";
+type RequestTab = "body" | "params" | "headers" | "auth" | "docs" | "extra";
 
 /** The section chosen for each operation, for the session. */
 const chosenTabs = new Map<string, RequestTab>();

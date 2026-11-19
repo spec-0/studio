@@ -141,18 +141,19 @@ usual install folders: Homebrew, `~/.local/bin`, npm's global folder, nvm, Volta
 `%APPDATA%\npm` on Windows. If your agent is somewhere else, choose its full path in
 **Settings → Agent chat**. As with another agent, Studio asks you to confirm the command first.
 
-Next to each agent, Settings says how Studio will run it: **Installed**, runs its adapter with
-`npx`, uses the program you chose, or **Not found on this computer**.
+Each agent's card in Settings says how Studio will run it: **Installed**, **Via npx** (it runs the
+agent's adapter with `npx`), **Your program**, or **Not found**. The chosen agent's card has **Test
+connection**.
 
 ## The folder the agent works in
 
 By default the agent works in an empty folder of Studio's own, away from Studio's settings. Studio
 keeps its [instructions](/agent-chat/instructions) for the agent there.
 
-To let the agent work on your specs or code, choose a project folder under **Folder the agent works
-in** in **Settings → Agent chat**. The agent can then read or change files in that folder with its
+To let the agent work on your specs or code, press **Choose…** next to **Folder** in **Settings →
+Agent chat**. The agent can then read or change files in that folder with its
 own tools. When it asks permission for one of them, the question shows up in the panel.
-**Use Studio's empty folder** goes back to the default.
+**Use Studio's folder** goes back to the default.
 
 ## Turning off Studio's tools
 

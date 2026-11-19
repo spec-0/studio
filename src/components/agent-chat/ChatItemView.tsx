@@ -7,11 +7,10 @@ import {
   Info,
   Loader2,
   ShieldQuestion,
-  Wrench,
   X,
 } from "lucide-react";
 import type { ChatItem } from "../../lib/acpClient";
-import { studioLinkFor, type StudioLink } from "../../lib/agentChat";
+import { studioLinkFor, studioToolName, toolCallTitle, type StudioLink } from "../../lib/agentChat";
 import { Markdown } from "./Markdown";
 
 interface Props {
@@ -79,16 +78,20 @@ export function ChatItemView({ item, onAnswer, onOpenInStudio }: Props) {
       );
     case "tool": {
       const link = onOpenInStudio ? studioLinkFor(item) : null;
+      const tool = studioToolName(item);
       return (
         <details className={`chat-tool ${item.status}`}>
           <summary>
-            <Wrench size={12} aria-hidden />
-            <span className="chat-tool-title">{item.title}</span>
+            <span className={`chat-tool-icon ${item.status}`} title={STATUS_LABEL[item.status] ?? item.status}>
+              <StatusIcon status={item.status} />
+              <span className="sr-only">{STATUS_LABEL[item.status] ?? item.status}</span>
+            </span>
+            <span className="chat-tool-title">{toolCallTitle(item)}</span>
             {link && (
               <button
                 className="btn ghost chat-tool-open"
                 onClick={(event) => {
-                  // A button inside <summary> would also open and close the card.
+                  // A button inside <summary> would also open and close the row.
                   event.preventDefault();
                   onOpenInStudio?.(link);
                 }}
@@ -97,24 +100,25 @@ export function ChatItemView({ item, onAnswer, onOpenInStudio }: Props) {
                 Open in Studio <ArrowUpRight size={11} aria-hidden />
               </button>
             )}
-            <span className={`chat-tool-status ${item.status}`}>
-              <StatusIcon status={item.status} /> {STATUS_LABEL[item.status] ?? item.status}
-            </span>
+            {tool && <span className="chat-tool-name mono">{tool}</span>}
+            <ChevronRight size={13} className="chat-caret" aria-hidden />
           </summary>
-          {item.locations?.length ? <div className="chat-tool-where mono">{item.locations.join(", ")}</div> : null}
-          {item.input && (
-            <>
-              <div className="chat-tool-label">Input</div>
-              <pre className="chat-pre">{item.input}</pre>
-            </>
-          )}
-          {item.output && (
-            <>
-              <div className="chat-tool-label">Output</div>
-              <pre className="chat-pre">{item.output}</pre>
-            </>
-          )}
-          {!item.input && !item.output && <div className="chat-tool-label">No details.</div>}
+          <div className="chat-tool-body">
+            {item.locations?.length ? <div className="chat-tool-where mono">{item.locations.join(", ")}</div> : null}
+            {item.input && (
+              <>
+                <div className="chat-tool-label">Input</div>
+                <pre className="chat-pre">{item.input}</pre>
+              </>
+            )}
+            {item.output && (
+              <>
+                <div className="chat-tool-label">Output</div>
+                <pre className="chat-pre">{item.output}</pre>
+              </>
+            )}
+            {!item.input && !item.output && <div className="chat-tool-label">No details.</div>}
+          </div>
         </details>
       );
     }
@@ -131,37 +135,46 @@ export function ChatItemView({ item, onAnswer, onOpenInStudio }: Props) {
           </ol>
         </div>
       );
-    case "permission":
+    case "permission": {
+      // The agent names its options; they're shown as it words them. The first
+      // way to allow is the primary, other allows are outline, rejects sit apart.
+      const allows = item.options.filter((option) => option.kind.startsWith("allow"));
+      const rejects = item.options.filter((option) => !option.kind.startsWith("allow"));
       return (
         <div className={`chat-permission ${item.state}`} role={item.state === "pending" ? "alertdialog" : undefined}>
           <div className="chat-permission-head">
             <ShieldQuestion size={14} aria-hidden />
-            <span>
-              {item.state === "pending" ? "The agent asks to: " : "The agent asked to: "}
-              <strong>{item.title}</strong>
-            </span>
+            <strong>{item.title}</strong>
           </div>
-          {item.state === "pending" && onAnswer ? (
+          <div className="chat-permission-meta">
+            {item.state === "pending"
+              ? "The agent is waiting for your answer."
+              : item.state === "answered"
+                ? `You chose: ${item.options.find((option) => option.optionId === item.chosen)?.name ?? item.chosen}`
+                : "Not answered."}
+          </div>
+          {item.state === "pending" && onAnswer && (
             <div className="chat-permission-actions">
-              {item.options.map((option) => (
+              {allows.map((option, index) => (
                 <button
                   key={option.optionId}
-                  className={`btn${option.kind.startsWith("allow") ? " primary" : ""}`}
+                  className={`btn${index === 0 ? " primary" : ""}`}
                   onClick={() => onAnswer(item.id, option.optionId)}
                 >
                   {option.name}
                 </button>
               ))}
-            </div>
-          ) : (
-            <div className="chat-permission-answer">
-              {item.state === "answered"
-                ? `You chose: ${item.options.find((option) => option.optionId === item.chosen)?.name ?? item.chosen}`
-                : "Not answered."}
+              <span className="spacer" />
+              {rejects.map((option) => (
+                <button key={option.optionId} className="btn ghost" onClick={() => onAnswer(item.id, option.optionId)}>
+                  {option.name}
+                </button>
+              ))}
             </div>
           )}
         </div>
       );
+    }
     case "notice":
       return (
         <div className={`chat-notice ${item.level}`} role={item.level === "error" ? "alert" : "status"}>

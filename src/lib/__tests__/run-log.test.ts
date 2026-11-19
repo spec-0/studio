@@ -19,6 +19,7 @@ import {
   MAX_RUNS_PER_COLLECTION,
   MAX_STORE_CHARS,
   RUN_LOG_STORE,
+  runHeadline,
   runLogFileName,
   runLogJson,
   runLogText,
@@ -291,6 +292,12 @@ describe("a run's log", () => {
     });
     expect(third).toMatchObject({ verdict: "skipped", cause: "earlier_failure" });
     expect(third.t).toBeGreaterThan(second.t!);
+  });
+
+  it("sums a run up in a few words", async () => {
+    expect(runHeadline(await logOf({ create: created, get: { status: 404, json: {} }, pay: created }))).toBe("Failed at step 2");
+    expect(runHeadline(await logOf({ create: created, get: created, pay: created }))).toBe("Passed · 3 of 3");
+    expect(runHeadline(startLog("r", { id: "c1", name: "Checkout" }, null, "2026-11-19T10:00:00Z"))).toBe("Didn't finish");
   });
 
   it("keeps at most so many events, and says so", () => {

@@ -311,6 +311,15 @@ export function describeSchema(schema: SchemaResult | undefined): string {
 }
 
 /** The run's one-line result. */
+/** A run in a word or three: "Passed · 4 of 4", "Failed at step 3", "Didn't finish". */
+export function runHeadline(log: RunLog): string {
+  if (!log.counts) return "Didn't finish";
+  const { total, passed, failed } = log.counts;
+  if (!failed) return `Passed · ${passed} of ${total}`;
+  const first = timeline(log).find((step) => step.verdict === "fail");
+  return first ? `Failed at step ${first.index + 1}` : `Failed · ${passed} of ${total}`;
+}
+
 export function describeCounts(log: RunLog): string {
   if (!log.counts) return "Didn't finish";
   const { passed, failed, skipped } = log.counts;

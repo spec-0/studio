@@ -229,7 +229,8 @@ export function OpenDialog({
                 id: tab.id,
                 label: (
                   <>
-                    <Icon size={13} aria-hidden /> {tab.label}
+                    <Icon size={13} aria-hidden />
+                    {tab.label}
                   </>
                 ),
               };

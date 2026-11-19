@@ -69,17 +69,21 @@ values it was sent with.
 
 ## Edit a step
 
-Select a step to edit it. Its header has:
+Select a step to edit it. At the top is the same address box as a request: the method, where the
+step goes (one of the API's servers, its hosted mock, its local mock, or a URL you type), and the
+path. Below it:
 
 | Field | What it's for |
 |---|---|
-| **Key** | The step's name in references, such as `createOrder` in `{{steps.createOrder.body.id}}`. |
-| **Name** | A readable name, shown in the list and in run logs. |
+| **Name** | A readable name, shown in the list and in run logs. Empty shows the operation's summary. |
+| **Key, for later steps** | The step's name in references, such as `createOrder` in `{{steps.createOrder.body.id}}`. |
 | **Expects** | The status that counts as a pass. Empty means any 2xx. See [Expected status](/collections/running#expected-status). |
-| **Send to** | Where this step goes: one of the API's servers, its hosted mock, its local mock, or a URL you type. |
 
-Below that, **Request** holds the step's inputs, in the same editor as any other request, and
-**Response** shows its last response.
+Then the step's inputs, in the same tabs as any other request (Body, Params, Headers, Auth, Docs),
+and **Last response**, with its status.
+
+In the list, each step shows its name, method and path, the values it takes from earlier steps
+(`orderId ← step 1 body.id`), and its last result. **Add step** adds an empty request at the end.
 
 Each step has its own target. So one step can call a real staging server while the next calls a
 [local mock](/local-mocks) of an API that doesn't exist yet. A step aimed at a local
