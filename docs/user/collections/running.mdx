@@ -42,7 +42,8 @@ order or paying twice, set the step's **Expects** field:
 
 The step also checks the response against what the spec declares for that status, such as an error
 schema for `404`. If the spec declares nothing for it, the step passes on the status alone and says
-the body wasn't checked. A step with a non-default expectation shows it in the list ("expects 404").
+the body wasn't checked. A step with a non-default expectation shows it in the list, where the last status goes before it
+has run.
 
 <Screenshot
   src="/images/product/studio-expected-404.webp"
@@ -59,8 +60,9 @@ With nothing set, a `3xx` fails. Studio follows redirects, so a 3xx rarely reach
 
 ## The run log
 
-Choose **Runs** in the collection header. It lists the collection's last 20 runs; select one to see
-its log.
+Choose **Runs** in the collection header, or **Open run log** in the line above the steps after a
+run. It lists the collection's last 20 runs, each named for what happened ("Passed · 3 of 3",
+"Failed at step 3"); select one to see its log.
 
 <Screenshot
   src="/images/product/studio-run-log.webp"
@@ -82,7 +84,7 @@ For each step, the log shows:
 A failed step says why: a network error, an unexpected status, a schema difference, or a value
 that couldn't be found. A step that didn't run says why it was skipped.
 
-**Copy as text** copies the log. **Export JSON…** and **Export text…** save it to a file.
+**Copy log** copies the log as text. **Export JSON…** and **Export text…** save it to a file.
 **Clear** removes the collection's runs.
 
 <Callout title="Good to know">

@@ -4253,3 +4253,49 @@ select.fchip { padding-right: 24px; background-position: right 7px center; }
 tr:hover .row-actions .icon-btn, .row-actions .icon-btn:focus-visible { opacity: 1; }
 .env-note { margin: 0; line-height: 1.6; }
 .env-note svg { vertical-align: -1px; margin-right: 4px; }
+
+/* Agent chat: who's running where, plain messages, one-line tool rows */
+.agent-chat-head { height: 48px; padding: 0 8px 0 14px; gap: 7px; background: hsl(var(--bg)); }
+.agent-chat-icon { color: hsl(var(--ink-2)); flex: none; }
+.agent-chat-name { font-size: var(--t-body); font-weight: 600; white-space: nowrap; }
+.agent-chat-folder { font-size: var(--t-small); color: hsl(var(--ink-3)); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-user { background: hsl(var(--surface-hover)); border-radius: 10px; padding: 8px 11px; font-size: var(--t-body); }
+.chat-agent { font-size: var(--t-body); }
+.chat-tool { background: hsl(var(--bg)); }
+.chat-tool summary { gap: 8px; padding: 7px 10px; }
+.chat-tool summary:hover { background: hsl(var(--surface-hover)); }
+.chat-tool-icon { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 999px; flex: none; color: hsl(var(--ink-3)); }
+.chat-tool-icon.completed { color: hsl(var(--success)); }
+.chat-tool-icon.failed { color: hsl(var(--danger)); background: hsl(var(--danger) / 0.12); }
+.chat-tool-name { font-size: 11px; color: hsl(var(--ink-3)); white-space: nowrap; flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+.chat-tool .chat-caret { color: hsl(var(--ink-3)); flex: none; transition: transform var(--fast); }
+.chat-tool[open] .chat-caret { transform: rotate(90deg); }
+.chat-tool-body { border-top: 1px solid hsl(var(--border)); padding-top: 6px; padding-bottom: 6px; }
+.chat-permission { padding: 12px 14px; gap: 6px; background: hsl(var(--warning) / 0.08); }
+.chat-permission-head { align-items: center; }
+.chat-permission-head svg { color: hsl(var(--warning)); flex: none; }
+.chat-permission-meta { font-size: var(--t-small); color: hsl(var(--ink-2)); }
+.chat-permission-actions { align-items: center; margin-top: 4px; }
+.chat-permission-actions .spacer { flex: 1; }
+.agent-chat-compose { background: hsl(var(--bg)); padding: 10px 12px 12px; }
+.composer-box {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 10px;
+  background: hsl(var(--panel));
+}
+.composer-box:focus-within { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18); }
+.composer-box textarea { border: 0; background: transparent; padding: 2px 0; box-shadow: none; outline: none; }
+.composer-box textarea:focus { box-shadow: none; }
+.composer-box .chat-chips { margin-top: 0; }
+.composer-box .btn.primary .kbd { margin-left: 2px; }
+/* Agent chat settings: one card per agent, the chosen one marked */
+.agent-choice-wrap { background: hsl(var(--bg)); padding: 10px 12px; }
+.agent-choice-wrap.on, .agent-choice-none.on { border-color: hsl(var(--primary)); box-shadow: 0 0 0 1px hsl(var(--primary)); }
+.agent-choices > .agent-choice { border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+.agent-choice-title { display: flex; align-items: center; gap: 8px; }
+.agent-choice-title .chip { font-size: 10.5px; }
+.agent-folder { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 420px; }
+.agent-section { margin-top: 20px; }

@@ -28,6 +28,8 @@ import {
   stepMention,
   studioContextNote,
   studioLinkFor,
+  studioToolName,
+  toolCallTitle,
   type SavedChat,
 } from "../agentChat";
 import { isAgentChatShortcut } from "../agentChatPanel";
@@ -394,6 +396,16 @@ describe("tool cards for Studio's tools", () => {
     >;
   const created = JSON.stringify({ id: "col_abc123", name: "Checkout", draft: true, steps: [] });
   const ran = JSON.stringify({ collection: "Checkout", runId: "run_9", summary: "3 passed", passed: true });
+
+  it("name Studio's tool and say a bare tool id in words", () => {
+    expect(studioToolName(card("mcp__spec0-studio__get_run_log", ""))).toBe("get_run_log");
+    expect(toolCallTitle(card("mcp__spec0-studio__get_run_log", ""))).toBe("Get run log");
+    expect(toolCallTitle(card("Tool: spec0-studio/run_collection", ""))).toBe("Run collection");
+    const described = card("Calling a tool", "", { input: JSON.stringify({ tool: "run_collection" }) });
+    expect(studioToolName(described)).toBe("run_collection");
+    expect(toolCallTitle(described)).toBe("Calling a tool");
+    expect(studioToolName(card("Read file src/main.rs", ""))).toBeNull();
+  });
 
   it("link to the collection an agent created", () => {
     expect(studioLinkFor(card("mcp__spec0-studio__create_collection", created))).toEqual({
