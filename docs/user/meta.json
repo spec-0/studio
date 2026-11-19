@@ -2,6 +2,7 @@
   "title": "Studio",
   "pages": [
     "---Get started---",
+    "quick-start",
     "install",
     "first-request",
     "---Work with APIs---",
