@@ -1,0 +1,125 @@
+---
+title: Quick start
+description: What Studio is, how to install it, and the five things to try first. About ten minutes, no account.
+docType: how-to
+---
+
+**Spec0 Studio** is a free, open source desktop app for calling and testing APIs, built around
+your OpenAPI spec. You open a spec, Studio builds the requests from it, and every response is
+checked against the spec as it arrives. It runs on macOS, Windows and Linux, it needs no account,
+and it sends no telemetry.
+
+This page gets you from download to a checked request, a mock, a small test flow and a coding
+agent that can use your APIs. Each step links to the full page if you want more.
+
+<Screenshot
+  src="/images/product/studio-request-check.webp"
+  alt="Studio with a POST /orders request from the Orders API: the request editor on the left, and a 201 Created response on the right with 'Matches Order' at the top."
+  caption="A request built from the spec and sent. 'Matches Order' at the top of the response is the schema check."
+  width={1600}
+  height={847}
+  priority
+  minWidth={640}
+/>
+
+## 1. Download
+
+<Tabs items={['macOS', 'Windows', 'Linux']}>
+  <Tab value="macOS">
+
+[spec0-studio-macos-universal.dmg](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-macos-universal.dmg).
+Open it and drag Studio to Applications. macOS 11 or later, Apple silicon and Intel. The app is
+signed and notarized, so it opens without a warning.
+
+  </Tab>
+  <Tab value="Windows">
+
+[spec0-studio-windows-x64-setup.exe](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-windows-x64-setup.exe).
+Windows 10 and 11 (x64), no admin rights needed. The installer isn't code-signed yet, so
+SmartScreen will likely warn you: click **More info**, then **Run anyway**.
+
+  </Tab>
+  <Tab value="Linux">
+
+[AppImage](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-x86_64.AppImage)
+for most distributions, or
+[.deb](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-amd64.deb) for
+Debian and Ubuntu. Needs WebKitGTK 4.1 (Ubuntu 22.04, Debian 12 or newer), x86_64 only.
+
+  </Tab>
+</Tabs>
+
+[Install and update](/install) has checksums, the update setting, and building from source.
+
+## 2. Add an API
+
+Press `⌘O` (`Ctrl+O` on Windows and Linux). Choose **Local file** for a spec on your computer
+(or drop it on the window), or **URL** and paste an address. To try it with a public spec:
+
+```text
+https://petstore3.swagger.io/api/v3/openapi.json
+```
+
+No spec at hand? On an empty library, **Try the sample API** opens a small Orders API that comes
+with Studio. Studio reads OpenAPI 3.0 and 3.1 and Swagger 2.0, in YAML or JSON.
+More in [Your API library](/library).
+
+## 3. Send a request and read the check
+
+Pick an operation in the list on the left. The form is built from the spec: path and query
+parameters, headers, auth, and a body filled in from the spec's examples. Press `⌘↵`
+(`Ctrl+Enter`) to send.
+
+The response appears on the right. Above it, Studio says whether it **matches** the schema the
+spec declares for that status, and if not, which fields are wrong, missing or not in the spec at
+all. **Docs** next to the request tabs shows everything the spec says about the operation.
+More in [Sending requests](/requests) and [Checking responses](/checking-responses).
+
+## 4. Start a mock
+
+No server yet, or don't want to call the real one? Press **Local mock** in the API's bar. Studio
+starts a mock of that spec on `127.0.0.1`, answering from the spec's examples, and the address bar
+can send to it straight away. Nothing leaves your computer.
+
+<Screenshot
+  src="/images/product/studio-local-mock.webp"
+  alt="The Orders sample API sending GET /orders/{orderId} to a local mock. The target menu reads 'Local mock :4011', the response is 200 OK with a 'local mock' tag, and the schema check says it matches Order."
+  caption="The same request, sent to a local mock. The response is still checked against the spec."
+  width={1600}
+  height={648}
+  minWidth={640}
+/>
+
+Your app, curl or a test suite can call the mock too. More in [Local mock servers](/local-mocks).
+
+## 5. Chain requests into a collection
+
+Right-click an operation and choose **Add to collection ▸** and a new or existing collection. Add
+a second one, then press the link button next to one of its parameters to pass in a value from
+the first step's response, such as a new order's `id` into `GET /orders/{orderId}`. Press **Run**: the steps go in order, and each one is checked against its
+own spec. Steps can come from different APIs.
+More in [Collections](/collections) and [Passing values between steps](/collections/chaining).
+
+## 6. Let your coding agent use it
+
+Open the **MCP** tab, press **Start**, and copy the one-line setup for Claude Code, Cursor or
+another client. Your agent can then read your specs, send requests, start local mocks and run
+collections through Studio. Studio asks you before an agent's first request to each host.
+More in [Local MCP server](/mcp). To chat with an agent inside Studio instead, see
+[Agent chat](/agent-chat).
+
+## What's next
+
+- [Auth, environments and secrets](/auth-environments) for base URLs, tokens and secrets per server
+- [Schemas](/schemas) and the [schema graph](/schema-graph) to read the data model
+- [Keyboard shortcuts](/shortcuts)
+- [Signing in to Spec0](/connect) if your team uses it, for your organisation's APIs and hosted
+  mocks. Everything above works without it.
+
+## Like it? Star it on GitHub
+
+Studio is MIT licensed and built in the open at
+[github.com/spec-0/studio](https://github.com/spec-0/studio). If it saves you time,
+[a star on GitHub](https://github.com/spec-0/studio) helps other developers find it. Bugs and
+ideas are welcome in [Issues](https://github.com/spec-0/studio/issues) and
+[Discussions](https://github.com/spec-0/studio/discussions).
