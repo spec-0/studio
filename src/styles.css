@@ -4302,3 +4302,40 @@ tr:hover .row-actions .icon-btn, .row-actions .icon-btn:focus-visible { opacity:
 
 .schema-fields td.type-cell { white-space: normal; overflow-wrap: anywhere; }
 .detail .tbl.schema-fields { table-layout: fixed; width: 100%; }
+
+/* The graph's toolbar, over the canvas: what it shows, where it's centred, a legend */
+.graph-wrap { --sg-label-bg: hsl(var(--bg)); }
+.graph-toolbar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+.graph-toolbar > * { pointer-events: auto; }
+.graph-toolbar > .spacer { flex: 1; pointer-events: none; }
+.graph-toolbar .segmented { background: hsl(var(--surface)); box-shadow: 0 1px 2px hsl(0 0% 0% / 0.06); }
+.graph-focus { display: inline-flex; align-items: center; gap: 6px; }
+.graph-focus .select { height: 28px; min-width: 140px; font-family: var(--font-mono); font-size: 12px; background-color: hsl(var(--surface)); }
+.graph-simple { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-small); color: hsl(var(--ink-2)); white-space: nowrap; }
+.graph-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 10px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 7px;
+  background: hsl(var(--surface));
+  white-space: nowrap;
+}
+.graph-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.legend-line { display: inline-block; width: 16px; height: 0; border-top: 1.5px solid hsl(var(--primary)); }
+.legend-line.uses { border-top: 1.5px dashed hsl(var(--ink-3)); }
+/* Zoom and fit sit bottom right, out of the way of the toolbar and the truncation note. */
+.graph-wrap .react-flow__controls { left: auto; right: 10px; bottom: 10px; box-shadow: none; border: 1px solid hsl(var(--border)); border-radius: 7px; overflow: hidden; }
+@media (max-width: 1100px) { .graph-legend > span:last-child { display: none; } }
