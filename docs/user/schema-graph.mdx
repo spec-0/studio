@@ -8,8 +8,8 @@ A **schema** is a named data model in an OpenAPI spec, such as `Order` or `Custo
 live under `components/schemas`, and they point at each other with `$ref` links. An `Order` might
 have a `customer` field that is a `$ref` to `Customer`.
 
-The schema graph draws those links. Each schema is a box, and each `$ref` is a line between two
-boxes. You can also show the operations, with a line to each schema they use.
+The schema graph draws those links. Each schema is a box listing its first few fields and their
+types, and each `$ref` is a line between two boxes, labelled with the field that refers. You can also show the operations, with a line to each schema they use.
 
 ## Opening the graph
 
@@ -21,7 +21,8 @@ of the API views.
 
 ## Moving around
 
-The graph opens on the schema with the most links. It doesn't draw every schema at once, because a
+The graph opens on the schema with the most links. **Focus** in the toolbar centres it on another
+one. It doesn't draw every schema at once, because a
 large spec can have hundreds.
 
 - **Click a schema** to expand it. Its neighbours, the schemas it refers to and the schemas that
@@ -29,13 +30,13 @@ large spec can have hundreds.
 - **The side panel** shows the schema you clicked: its fields, what it uses, what uses it, and an
   example. It is the same view as the **Schemas** tab. You can drag its edge to make it wider, or
   close it to give the canvas the whole window.
-- **Zoom and pan** with the controls in the corner, your trackpad, or the mouse wheel.
+- **Zoom and pan** with the controls in the bottom-right corner, your trackpad, or the mouse wheel.
 
 <Clip
   src="/media/studio-graph.mp4"
   poster="/media/studio-graph-poster.webp"
-  label="Screen recording: opening the Graph view, clicking a schema to expand it, turning on Operations, and viewing the schema's example in the side panel."
-  caption="Expanding a schema, turning on Operations, and reading the side panel. 14 seconds, no sound."
+  label="Screen recording: opening the Graph view, clicking a schema to expand it, choosing With operations, and viewing the schema's example in the side panel."
+  caption="Expanding a schema, choosing With operations, and reading the side panel. 14 seconds, no sound."
   width={1400}
   height={900}
 />
@@ -46,21 +47,22 @@ in total. Click a neighbour to keep exploring from there.
 Schemas that refer back to themselves, directly or through others (for example
 `Customer → Order → Customer`), are marked as recursive. The graph doesn't follow them forever.
 
-## The toggles
+## The toolbar
 
-Two checkboxes sit in the top-left corner of the canvas.
+The toolbar sits along the top of the canvas.
 
-- **Operations** adds a box for each operation, such as `GET /orders/{orderId}`, with a line to
+- **Schemas | With operations**. **With operations** adds a box for each operation, such as `GET /orders/{orderId}`, with a line to
   each schema it uses. It is off when the graph opens.
+- **Focus** picks the schema the graph centres on.
 - **Simple types** shows schemas that have no structure of their own: named strings, enums, and
   empty marker objects. They are hidden by default because they add a lot of boxes and not much
-  meaning. This checkbox only appears when the spec has some. A simple type you click on is always
+  meaning. This switch only appears when the spec has some. A simple type you click on is always
   shown.
 
 <Screenshot
   src="/images/product/studio-schema-graph.webp"
   alt="The Graph view of a Catalog API with operations shown. Product is selected, linked to ProductList, Money and three operations, and the side panel shows Product's example JSON."
-  caption="Product selected, with Operations on: the lines show which operations use it and which schemas it links to."
+  caption="Product selected, with operations shown: the lines show which operations use it and which schemas it links to."
   width={1600}
   height={798}
   minWidth={640}
@@ -70,7 +72,7 @@ Two checkboxes sit in the top-left corner of the canvas.
 
 - **Learning a large spec.** Start from the most-connected schema and follow the links. It is
   often quicker than reading the YAML top to bottom.
-- **Finding what a change affects.** Before you change a schema, turn on **Operations** and click
+- **Finding what a change affects.** Before you change a schema, choose **With operations** and click
   it. You see the schemas that include it and the operations that send or return it.
 - **Spotting recursive models.** A model that refers back to itself is marked on the canvas, which
   is easy to miss in a file.
