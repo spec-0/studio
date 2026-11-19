@@ -4299,3 +4299,6 @@ tr:hover .row-actions .icon-btn, .row-actions .icon-btn:focus-visible { opacity:
 .agent-choice-title .chip { font-size: 10.5px; }
 .agent-folder { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 420px; }
 .agent-section { margin-top: 20px; }
+
+.schema-fields td.type-cell { white-space: normal; overflow-wrap: anywhere; }
+.detail .tbl.schema-fields { table-layout: fixed; width: 100%; }
