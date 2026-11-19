@@ -1,3 +1,5 @@
+import { useMemo, useState } from "react";
+import { buildSchemaGraph } from "@spec0/schema-graph";
 import { SchemaGraphView } from "@spec0/schema-graph/react";
 import { X } from "lucide-react";
 import { Resizer } from "./Resizer";
@@ -16,6 +18,12 @@ interface Props {
 
 /** The schema graph, with a narrow panel for the selected schema. */
 export function GraphView({ spec, focus, onFocus, panelWidth, onPanelWidth, onSelectOperation }: Props) {
+  const [operations, setOperations] = useState(false);
+  const [simple, setSimple] = useState(false);
+  const graph = useMemo(() => buildSchemaGraph(spec.doc), [spec.doc]);
+  const names = useMemo(() => graph.schemas.map((s) => s.name).sort((a, b) => a.localeCompare(b)), [graph]);
+  const simpleCount = graph.schemas.filter((s) => s.simple).length;
+
   return (
     <div className="split graph-split">
       {/* The canvas keeps every pixel the panel isn't using: the detail
@@ -24,12 +32,60 @@ export function GraphView({ spec, focus, onFocus, panelWidth, onPanelWidth, onSe
       <div className="graph-wrap">
         <SchemaGraphView
           key={spec.sourceName}
-          spec={spec.doc}
+          graph={graph}
           initialSchema={focus ?? undefined}
           height="100%"
           hidePanel
+          toolbar={false}
+          operations={operations}
+          simple={simple}
           onSelectSchema={onFocus}
         />
+        <div className="graph-toolbar">
+          <div className="segmented" role="radiogroup" aria-label="What the graph shows">
+            <button type="button" role="radio" aria-checked={!operations} className="segment" onClick={() => setOperations(false)}>
+              Schemas
+            </button>
+            <button type="button" role="radio" aria-checked={operations} className="segment" onClick={() => setOperations(true)}>
+              With operations
+            </button>
+          </div>
+          {names.length > 0 && (
+            <label className="graph-focus">
+              <span className="meta">Focus</span>
+              <select className="select" value={focus ?? ""} onChange={(event) => onFocus(event.target.value || null)}>
+                {!focus && <option value="">Most connected</option>}
+                {names.map((name) => (
+                  <option key={name}>{name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {simpleCount > 0 && (
+            <label className="graph-simple" title="Named primitives, enums and arrays of scalars: nothing to expand">
+              <input
+                type="checkbox"
+                className="switch"
+                role="switch"
+                checked={simple}
+                onChange={(event) => setSimple(event.target.checked)}
+              />
+              Simple types <span className="mono meta">{simpleCount}</span>
+            </label>
+          )}
+          <span className="spacer" />
+          <div className="graph-legend meta" aria-label="Legend">
+            <span>
+              <span className="legend-line ref" aria-hidden /> field refers to
+            </span>
+            {operations && (
+              <span>
+                <span className="legend-line uses" aria-hidden /> operation uses
+              </span>
+            )}
+            <span>Click a schema for its fields</span>
+          </div>
+        </div>
       </div>
       {focus && (
         <>
