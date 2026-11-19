@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AlertTriangle, GripVertical, Link2Off, MoreHorizontal, Unlink } from "lucide-react";
+import { AlertTriangle, Check, GripVertical, Link2, Link2Off, Loader2, MoreHorizontal, Unlink, X } from "lucide-react";
 import { describeExpected, expectedStatusOf, type Collection } from "../../lib/collection";
 import { describeTarget, type StepLink } from "../../lib/collectionLink";
 import type { StepResult } from "../../lib/collectionRun";
@@ -19,6 +19,8 @@ interface Props {
   onRemove: (index: number) => void;
   /** How many links into each step can't work, by step index. */
   brokenLinks?: Record<number, number>;
+  /** The values each step takes from earlier steps, as lines: `paymentId ← step 1 body.id`. */
+  chainIn?: Record<number, string[]>;
 }
 
 /** What to call a step in the list and in messages. */
@@ -37,7 +39,7 @@ export function stepTitle(collection: Collection, index: number): string {
  * warning when the spec changed under it, a cross when its operation is gone,
  * and the last run's result.
  */
-export function StepList({ collection, links, results, runningIndex, selected, onSelect, onMove, onMenu, onRemove, brokenLinks = {} }: Props) {
+export function StepList({ collection, links, results, runningIndex, selected, onSelect, onMove, onMenu, onRemove, brokenLinks = {}, chainIn }: Props) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<number | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -59,6 +61,7 @@ export function StepList({ collection, links, results, runningIndex, selected, o
         aria-label="Steps, in the order they run. Alt+Up and Alt+Down move the selected step, Delete removes it, Shift+F10 opens its menu."
       >
         {collection.steps.map((step, index) => {
+          const manyApis = Object.keys(collection.apis).length > 1;
           const link = links[index];
           const result = results.find((r) => r.key === step.key);
           const spec = link && "spec" in link ? (link.spec ?? null) : null;
@@ -143,47 +146,59 @@ export function StepList({ collection, links, results, runningIndex, selected, o
               >
                 <GripVertical size={13} className="step-grip" aria-hidden />
                 <span className="step-index">{index + 1}</span>
-                <span className={`run-dot ${state}`} aria-hidden />
                 <span className="step-main">
-                  <span className="step-line">
+                  <span className="step-name">{step.name || (link && "op" in link ? link.op.summary : undefined) || stepTitle(collection, index)}</span>
+                  <span className="step-line" title={spec || step.target ? describeTarget(step.target, spec) : undefined}>
                     <span className={`method ${method.toLowerCase()}`}>{method}</span>
                     <span className="path">{path}</span>
-                    {expected && (
-                      <span className="step-expect" title={`This step passes when the server answers ${describeExpected(expected)}.`}>
-                        expects {describeExpected(expected)}
+                    {manyApis && <span className="step-api">{apiTitle}</span>}
+                  </span>
+                  {chainIn?.[index]?.map((line) => (
+                    <span className="step-chain" key={line}>
+                      <Link2 size={11} aria-hidden /> {line}
+                    </span>
+                  ))}
+                  {(link?.kind === "stale" || link?.kind === "unresolved" || link?.kind === "unlinked" || brokenLinks[index] > 0) && (
+                    <span className="step-markers">
+                    {link?.kind === "stale" && (
+                      <span className="step-marker warn" title={link.reasons.join("\n")}>
+                        <AlertTriangle size={13} aria-hidden />
+                        changed
                       </span>
                     )}
-                  </span>
-                  <span className="summary">
-                    {step.name ? `${step.name} · ` : ""}
-                    {apiTitle}
-                    {spec || step.target ? ` · ${describeTarget(step.target, spec)}` : ""}
-                  </span>
+                    {link?.kind === "unresolved" && (
+                      <span className="step-marker danger" title={link.reason}>
+                        <Link2Off size={13} aria-hidden />
+                        missing
+                      </span>
+                    )}
+                    {brokenLinks[index] > 0 && (
+                      <span className="step-marker danger" title="A value this step takes from another step can't be filled. See the Chain view.">
+                        <Link2Off size={13} aria-hidden />
+                        {brokenLinks[index] === 1 ? "broken link" : `${brokenLinks[index]} broken links`}
+                      </span>
+                    )}
+                    {link?.kind === "unlinked" && (
+                      <span className="step-marker" title="Not linked to an operation in any spec, so its response isn't checked.">
+                        <Unlink size={13} aria-hidden />
+                        not in any spec
+                      </span>
+                    )}
+                    </span>
+                  )}
                 </span>
-                {link?.kind === "stale" && (
-                  <span className="step-marker warn" title={link.reasons.join("\n")}>
-                    <AlertTriangle size={13} aria-hidden />
-                    changed
+                <span className="step-result">
+                  <span className={`step-result-icon ${state}`} aria-hidden>
+                    {state === "pass" ? <Check size={10} /> : state === "fail" ? <X size={10} /> : state === "running" ? <Loader2 size={11} className="spin" /> : null}
                   </span>
-                )}
-                {link?.kind === "unresolved" && (
-                  <span className="step-marker danger" title={link.reason}>
-                    <Link2Off size={13} aria-hidden />
-                    missing
-                  </span>
-                )}
-                {brokenLinks[index] > 0 && (
-                  <span className="step-marker danger" title="A value this step takes from another step can't be filled. See the Chain view.">
-                    <Link2Off size={13} aria-hidden />
-                    {brokenLinks[index] === 1 ? "broken link" : `${brokenLinks[index]} broken links`}
-                  </span>
-                )}
-                {link?.kind === "unlinked" && (
-                  <span className="step-marker" title="Not linked to an operation in any spec, so its response isn't checked.">
-                    <Unlink size={13} aria-hidden />
-                    not in any spec
-                  </span>
-                )}
+                  {result?.status ? (
+                    <span className={`mono step-status${state === "fail" ? " bad" : ""}`}>{result.status}</span>
+                  ) : expected ? (
+                    <span className="mono step-status muted" title={`This step passes when the server answers ${describeExpected(expected)}.`}>
+                      {describeExpected(expected)}
+                    </span>
+                  ) : null}
+                </span>
                 <span id={`step-state-${index}`} className="sr-only">
                   {link?.kind === "stale"
                     ? `Changed in the spec: ${link.reasons.join(" ")}`

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Copy, Download, ListChecks, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Copy, Download, ListChecks, Minus, Trash2, X } from "lucide-react";
 import { absoluteTime, relativeTime } from "../../lib/history";
 import {
   describeCause,
   describeCounts,
   describeSchema,
   describeTargetKind,
+  runHeadline,
   runLogText,
   timeline,
   type RunLog,
@@ -71,14 +72,17 @@ export function RunLogView({ runs, selectedId, onSelect, onClear, onExport }: Pr
                   onClick={() => onSelect(run.id)}
                   title={absoluteTime(run.startedAt)}
                 >
-                  <span className={`run-dot ${!run.counts ? "not_run" : failed ? "fail" : "pass"}`} aria-hidden />
                   <span className="runlog-run-main">
-                    <span className="runlog-run-when">{run.counts ? relativeTime(run.startedAt) : "Running…"}</span>
+                    <span className="runlog-run-when">{run.counts ? runHeadline(run) : "Running…"}</span>
                     <span className="summary">
-                      {describeCounts(run)}
+                      {relativeTime(run.startedAt)}
+                      {run.ms !== undefined ? ` · ${run.ms} ms` : ""}
                       {run.environment ? ` · ${run.environment}` : ""}
-                      {run.startedBy ? ` · by ${run.startedBy}` : ""}
+                      {` · ${run.startedBy ?? "you"}`}
                     </span>
+                  </span>
+                  <span className={`step-result-icon ${!run.counts ? "not_run" : failed ? "fail" : "pass"}`} aria-hidden>
+                    {!run.counts ? null : failed ? <X size={10} /> : <Check size={10} />}
                   </span>
                 </button>
               </li>
@@ -134,16 +138,21 @@ function RunDetail({
     <section className="runlog-detail" aria-label="Run log">
       <header className="runlog-head">
         <div className="runlog-title-row">
-          <h2>{absoluteTime(log.startedAt)}</h2>
-          <span className={`meta ${(log.counts?.failed ?? 0) > 0 ? "warn" : ""}`}>{describeCounts(log)}</span>
+          <h2 className="h2" title={absoluteTime(log.startedAt)}>
+            {runHeadline(log)}
+          </h2>
+          <span className="meta">
+            {absoluteTime(log.startedAt)}
+            {log.ms !== undefined ? ` · ${log.ms} ms` : ""}
+          </span>
           <span className="spacer" />
-          <button type="button" className="btn tight" onClick={onCopy}>
-            <Copy size={12} aria-hidden /> Copy as text
+          <button type="button" className="btn ghost tight" onClick={onCopy}>
+            <Copy size={12} aria-hidden /> Copy log
           </button>
-          <button type="button" className="btn tight" onClick={() => onExport("json")} disabled={!log.counts}>
+          <button type="button" className="btn ghost tight" onClick={() => onExport("json")} disabled={!log.counts}>
             <Download size={12} aria-hidden /> Export JSON…
           </button>
-          <button type="button" className="btn tight" onClick={() => onExport("txt")} disabled={!log.counts}>
+          <button type="button" className="btn ghost tight" onClick={() => onExport("txt")} disabled={!log.counts}>
             Export text…
           </button>
         </div>
@@ -190,10 +199,17 @@ function RunDetail({
                   {step.url && <span className="runlog-url">{step.url}</span>}
                 </span>
                 <span className="runlog-status">
-                  {step.status !== undefined ? step.status : step.error ? "error" : ""}
-                  {step.ms !== undefined ? ` · ${step.ms} ms` : ""}
+                  {step.status !== undefined ? (
+                    <span className={`status-badge s${String(step.status)[0]}`}>{step.status}</span>
+                  ) : step.error ? (
+                    <span className="chip sans bad">error</span>
+                  ) : null}
+                  {step.ms !== undefined && <span className="mono meta">{step.ms} ms</span>}
                 </span>
-                <span className={`runlog-verdict ${step.verdict}`}>{verdictLabel[step.verdict]}</span>
+                <span className={`step-result-icon ${step.verdict}`} title={verdictLabel[step.verdict]}>
+                  {step.verdict === "pass" ? <Check size={10} aria-hidden /> : step.verdict === "fail" ? <X size={10} aria-hidden /> : <Minus size={10} aria-hidden />}
+                  <span className="sr-only">{verdictLabel[step.verdict]}</span>
+                </span>
               </button>
               {step.verdict !== "pass" && step.reason && (
                 <p className="runlog-reason">

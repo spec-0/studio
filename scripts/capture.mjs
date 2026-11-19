@@ -117,6 +117,16 @@ const clickLabel = (label) =>
   }, label);
 
 /** A tab in the top bar (`.nav-tab`), the API bar (`.segment`) or Settings (`.settings-tab`). */
+// A step's tabs: "Last response" sits after the request's own tabs (Body,
+// Params…, or Request for a step with no operation).
+const stepTab = (which) =>
+  page.evaluate((want) => {
+    const tabs = [...document.querySelectorAll('.step-editor [role="tab"]')];
+    const tab = want === "response" ? tabs.find((t) => t.textContent?.trim().startsWith("Last response")) : tabs[0];
+    tab?.click();
+    return Boolean(tab);
+  }, which);
+
 const clickTab = (selector, text) =>
   page.evaluate(
     (sel, needle) => {
@@ -516,8 +526,8 @@ const openAddApi = async () => {
   await wait(300);
   return page.evaluate(() => ({
     title: document.querySelector("#open-dialog-title")?.textContent,
-    tabs: [...document.querySelectorAll('[aria-labelledby="open-dialog-title"] [role="tab"]')].map((t) => t.textContent),
-    selected: document.querySelector('[aria-labelledby="open-dialog-title"] [role="tab"][aria-selected="true"]')?.textContent,
+    tabs: [...document.querySelectorAll('[aria-labelledby="open-dialog-title"] [role="tab"]')].map((t) => t.textContent?.trim()),
+    selected: document.querySelector('[aria-labelledby="open-dialog-title"] [role="tab"][aria-selected="true"]')?.textContent?.trim(),
   }));
 };
 {
@@ -865,7 +875,7 @@ const setField = (selector, value) =>
 /** Choose an option in the step's "Send to" picker, by the start of its value. */
 const sendStepTo = (prefix) =>
   page.evaluate((wanted) => {
-    const select = [...document.querySelectorAll(".step-field select")].find((s) =>
+    const select = [...document.querySelectorAll("select.addr-target-select")].find((s) =>
       [...s.options].some((o) => o.textContent.includes("(first server)")),
     );
     const value = [...select.options].find((o) => o.value.startsWith(wanted)).value;
@@ -1038,14 +1048,15 @@ console.log("43-collection-detail-light");
 
 // Run it.
 await clickByText(".collection-head .btn.primary", "Run");
-await page.waitForFunction(() => document.querySelector(".collection-meta")?.textContent?.includes("Last run"), {
+// Finished: Run is back in the header (it reads Stop while a run goes).
+await page.waitForFunction(() => ![...document.querySelectorAll(".collection-head .btn")].some((b) => b.textContent?.trim() === "Stop") && document.querySelector('.collection-views [role="tab"]:last-child .c'), {
   timeout: 15000,
 });
 await wait(600);
 // A run started from the collection's page opens its log; the verdicts are on the step list.
 await collectionView("Steps");
 const verdicts = await page.evaluate(() =>
-  [...document.querySelectorAll(".step-row .run-dot")].map((dot) => [...dot.classList].find((c) => c !== "run-dot")),
+  [...document.querySelectorAll(".step-row .step-result-icon")].map((icon) => [...icon.classList].find((c) => c !== "step-result-icon")),
 );
 if (verdicts.join(",") !== "pass,pass,fail") throw new Error(`Expected pass,pass,fail, got ${verdicts.join(",")}`);
 const orderCall = collectionCalls.find((c) => c.method === "GET");
@@ -1177,7 +1188,7 @@ await collectionView("Steps");
 
 // A value in step 1's response, clicked: use it in a later step.
 await selectStep(1);
-await must(clickTab(".step-tabs .ptab", "Response"), "the Response tab");
+await must(stepTab("response"), "the Last response tab");
 await wait(300);
 await page.evaluate(() => document.querySelector(".json-tree .json-value")?.click());
 await page.waitForSelector(".context-menu", { timeout: 5000 });
@@ -1210,7 +1221,7 @@ await page.waitForSelector(".sidebar .row", { timeout: 15000 });
 await must(clickTab(".nav-tab", "Collections"), "the Collections tab");
 await page.waitForSelector(".step-row", { timeout: 5000 });
 await selectStep(3);
-await must(clickTab(".step-tabs .ptab", "Request"), "the Request tab");
+await must(stepTab("request"), "the step's first request tab");
 await page.waitForSelector(".step-marker.warn", { timeout: 5000 }).catch(async (error) => {
   await page.screenshot({ path: `${outDir}/debug-stale.png` });
   throw error;
@@ -1491,9 +1502,9 @@ await wait(500);
 const imported = await page.evaluate(() => ({
   steps: document.querySelectorAll(".step-row").length,
   notInSpec: [...document.querySelectorAll(".step-marker")].filter((m) => m.textContent?.includes("not in any spec")).length,
-  expects: [...document.querySelectorAll(".step-expect")].map((e) => e.textContent?.trim()),
+  expects: [...document.querySelectorAll(".step-status.muted")].map((e) => e.textContent?.trim()),
 }));
-if (imported.steps !== 8 || imported.notInSpec !== 1 || !imported.expects.includes("expects 404")) {
+if (imported.steps !== 8 || imported.notInSpec !== 1 || !imported.expects.includes("404")) {
   throw new Error(`Unexpected imported collection: ${JSON.stringify(imported)}`);
 }
 await page.screenshot({ path: `${outDir}/54-imported-collection-light.png` });
@@ -1501,13 +1512,14 @@ console.log("54-imported-collection-light");
 
 // Run it: the environment it made is active, so the token and ids resolve.
 await clickByText(".collection-head .btn.primary", "Run");
-await page.waitForFunction(() => document.querySelector(".collection-meta")?.textContent?.includes("Last run"), {
+// Finished: Run is back in the header (it reads Stop while a run goes).
+await page.waitForFunction(() => ![...document.querySelectorAll(".collection-head .btn")].some((b) => b.textContent?.trim() === "Stop") && document.querySelector('.collection-views [role="tab"]:last-child .c'), {
   timeout: 15000,
 });
 await wait(600);
 await collectionView("Steps");
 const importedVerdicts = await page.evaluate(() =>
-  [...document.querySelectorAll(".step-row .run-dot")].map((dot) => [...dot.classList].find((c) => c !== "run-dot")),
+  [...document.querySelectorAll(".step-row .step-result-icon")].map((icon) => [...icon.classList].find((c) => c !== "step-result-icon")),
 );
 if (!importedVerdicts.length || importedVerdicts.some((v) => v !== "pass")) {
   await page.screenshot({ path: `${outDir}/debug-import-run.png` });
@@ -1517,7 +1529,7 @@ const created = collectionCalls.find((c) => c.method === "POST" && c.url.endsWit
 if (created?.auth !== "Bearer demo-token-7f3a9c") throw new Error("The imported token didn't come from the environment");
 console.log("imported collection run: all pass, including an expected 404");
 await selectStep(4);
-await must(clickTab(".step-tabs .ptab", "Response"), "the Response tab");
+await must(stepTab("response"), "the Last response tab");
 await wait(400);
 await page.screenshot({ path: `${outDir}/55-expected-404-light.png` });
 console.log("55-expected-404-light");
@@ -1525,7 +1537,7 @@ await toggleTheme();
 await page.screenshot({ path: `${outDir}/55-expected-404-dark.png` });
 console.log("55-expected-404-dark");
 await selectStep(8);
-await must(clickTab(".step-tabs .ptab", "Request"), "the Request tab");
+await must(stepTab("request"), "the step's first request tab");
 await wait(300);
 await page.screenshot({ path: `${outDir}/56-not-in-any-spec-dark.png` });
 console.log("56-not-in-any-spec-dark");

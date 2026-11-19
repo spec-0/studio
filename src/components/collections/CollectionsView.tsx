@@ -10,6 +10,7 @@ import {
   Play,
   Plus,
   Save,
+  Search,
   Square,
   X,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import {
   checkLink,
   dependentsOf,
   describeLinkTarget,
+  describeSourcePath,
   editLink,
   linkableFields,
   linksBrokenByMove,
@@ -38,9 +40,10 @@ import {
 import type { Collection } from "../../lib/collection";
 import { findLibraryEntry, type StepLink } from "../../lib/collectionLink";
 import { describeRun, summariseRun } from "../../lib/collectionRun";
+import { plural } from "../../lib/plural";
 import { exampleFor, mediaExample } from "../../lib/example";
 import type { LibraryEntry } from "../../lib/library";
-import { fileName, shortcut } from "../../lib/platform";
+import { fileName, isMac, shortcut } from "../../lib/platform";
 import { inTauri } from "../../lib/request";
 import { bodyModeFor } from "../../lib/spec";
 import type { CollectionsApi } from "../../hooks/useCollections";
@@ -83,6 +86,15 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
   const [dropping, setDropping] = useState(false);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [confirming, setConfirming] = useState<Confirming | null>(null);
+  const [filter, setFilter] = useState("");
+  const needle = filter.trim().toLowerCase();
+  const shownCollections = needle
+    ? collections.filter(
+        (c) =>
+          c.name.toLowerCase().includes(needle) ||
+          Object.values(c.apis).some((a) => a.title.toLowerCase().includes(needle)),
+      )
+    : collections;
   /** Only files: dragging a step to reorder it is a drag too. */
   const carriesFiles = (event: React.DragEvent) => [...event.dataTransfer.types].includes("Files");
 
@@ -191,8 +203,16 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
             {api.openError}
           </div>
         )}
+        {collections.length > 1 && (
+          <div className="search">
+            <label className="filter-field">
+              <Search size={13} aria-hidden />
+              <input value={filter} placeholder="Filter collections" aria-label="Filter collections" onChange={(event) => setFilter(event.target.value)} />
+            </label>
+          </div>
+        )}
         <div className="list" role="list">
-          {collections.map((collection) => {
+          {shownCollections.map((collection) => {
             const run = api.runs[collection.id];
             const summary = run && !run.running ? summariseRun(run.results) : null;
             return (
@@ -657,6 +677,7 @@ function CollectionDetail({
     <div className="collection">
       <header className="collection-head">
         <div className="collection-title-row">
+          <div className="collection-name-col">
           <input
             className="collection-title"
             aria-label="Collection name"
@@ -677,6 +698,24 @@ function CollectionDetail({
               }
             }}
           />
+            <div className="collection-sub meta">
+              <span>
+                {plural(collection.steps.length, "step")} ·{" "}
+                {Object.values(collection.apis)
+                  .map((a) => a.title)
+                  .join(", ") || "no APIs yet"}
+              </span>
+              <span aria-hidden>·</span>
+              {collection.file ? (
+                <span className="collection-src" title={collection.file.path}>
+                  <FileText size={11} aria-hidden /> <span className="mono">{fileName(collection.file.path)}</span>
+                  {collection.file.dirty ? " · unsaved" : ""}
+                </span>
+              ) : (
+                <span>Kept in Studio</span>
+              )}
+            </div>
+          </div>
           <span className="spacer" />
           <label className="history-check" title="Stop at the first step that fails">
             <input
@@ -759,26 +798,6 @@ function CollectionDetail({
             selected={shown}
             onSelect={show}
           />
-          <span className="meta">
-            {collection.steps.length} step{collection.steps.length === 1 ? "" : "s"} ·{" "}
-            {Object.values(collection.apis)
-              .map((a) => a.title)
-              .join(", ") || "no APIs yet"}
-          </span>
-          {collection.file ? (
-            <span className="tag src-file" title={collection.file.path}>
-              <FileText size={11} aria-hidden /> {fileName(collection.file.path)}
-              {collection.file.dirty ? " · unsaved" : ""}
-            </span>
-          ) : (
-            <span className="chip sans">Kept in Studio</span>
-          )}
-          {summary && (
-            <span className={`run-line${summary.failed ? " bad" : " ok"}`} role="status">
-              {summary.failed ? <X size={12} aria-hidden /> : <Check size={12} aria-hidden />} Last run{" "}
-              {describeRun(summary)}
-            </span>
-          )}
           {running && <span className="meta" role="status">Running step {results.length + 1} of {collection.steps.length}…</span>}
         </div>
       </header>
@@ -933,6 +952,22 @@ function CollectionDetail({
           />
         </div>
       ) : collection.steps.length ? (
+        <>
+        {summary && (
+          <div className={`run-bar${summary.failed ? " bad" : " ok"}`} role="status">
+            <span className="run-bar-icon" aria-hidden>
+              {summary.failed ? <X size={11} /> : <Check size={11} />}
+            </span>
+            <b>{summary.failed ? "Last run failed" : "Last run passed"}</b>
+            <span className="meta">
+              {summary.passed} of {plural(summary.total, "step")} · <span className="mono">{summary.ms} ms</span>
+            </span>
+            <span className="spacer" />
+            <button type="button" className="btn ghost" onClick={() => show("runs")}>
+              Open run log
+            </button>
+          </div>
+        )}
         <div className="collection-body">
           <div className="collection-steps">
             <StepList
@@ -947,13 +982,23 @@ function CollectionDetail({
               onMove={requestMove}
               onMenu={(i, at) => setMenu({ ...at, items: stepMenu(i), label: `Actions for step ${i + 1}` })}
               onRemove={requestRemove}
+              chainIn={views.reduce<Record<number, string[]>>((acc, v) => {
+                if (v.sourceIndex < 0) return acc;
+                const name = "name" in v.target ? v.target.name : describeLinkTarget(v.target);
+                (acc[v.targetIndex] ??= []).push(`${name} ← step ${v.sourceIndex + 1} ${describeSourcePath(v.source.path)}`);
+                return acc;
+              }, {})}
               brokenLinks={views.reduce<Record<number, number>>((acc, v) => {
                 if (v.check.state === "broken") acc[v.targetIndex] = (acc[v.targetIndex] ?? 0) + 1;
                 return acc;
               }, {})}
             />
+            <button type="button" className="btn ghost add-step" onClick={() => api.addBlankStep(collection.id)}>
+              <Plus size={13} aria-hidden /> Add step
+            </button>
             <div className="field-meta step-list-hint">
-              Drag to reorder, or {`Alt+↑ / Alt+↓`}. Right-click a step for more. Right-click an operation in an API to add a step.
+              Or right-click an operation in any API and choose Add to collection. Drag to reorder;{" "}
+              <span className="kbd">{isMac ? "⌥" : "Alt+"}↑</span> <span className="kbd">{isMac ? "⌥" : "Alt+"}↓</span> move the selected step.
             </div>
           </div>
           {step && link && (
@@ -1006,6 +1051,7 @@ function CollectionDetail({
             />
           )}
         </div>
+        </>
       ) : (
         <div className="empty">
           <p>
