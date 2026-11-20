@@ -11,10 +11,10 @@ as if they could be relaxed. The reasons below say why they can't.
 
 Studio is often used with private, internal APIs, so it only talks to servers the user points it
 at, when the user says so. A background request, an update check or a listening socket the user
-didn't start would each break that promise. Several later rules apply this one: [21](#21-the-reference-tab-shows-the-document-studio-has),
-[28](#28-update-checks-run-only-when-asked), [29](#29-the-local-mcp-server-is-off-until-started-and-agents-act-where-the-developer-can-see-them),
-[30](#30-a-local-mock-listens-only-after-it-is-started-and-only-for-this-computer) and
-[31](#31-a-spec0-link-is-a-suggestion-never-an-instruction).
+didn't start would each break that promise. Several later rules apply this one: [22](#22-the-reference-tab-shows-the-document-studio-has),
+[29](#29-update-checks-run-only-when-asked), [30](#30-the-local-mcp-server-is-off-until-started-and-agents-act-where-the-developer-can-see-them),
+[31](#31-a-local-mock-listens-only-after-it-is-started-and-only-for-this-computer) and
+[32](#32-a-spec0-link-is-a-suggestion-never-an-instruction).
 
 ## 2. Everything works without an account
 
@@ -168,7 +168,15 @@ The spec already says whether an endpoint takes JSON, a form or a file, so Studi
 response's content type isn't trusted: servers often label responses wrongly, and
 `application/octet-stream` is often JSON. A response that decodes cleanly as UTF-8 is shown as text.
 
-## 21. The Reference tab shows the document Studio has
+## 21. Certificate checks are per host and deliberate
+
+There is no global "ignore TLS errors" switch, and there shouldn't be one: it teaches people to stop
+reading warnings, and it tends to get left on. Adding a private CA bundle is the preferred option,
+and it is not the same thing, since it still checks certificates, so it must not show the same
+warning. When a request goes to a host with checks turned off, the address bar says so at send
+time. See `src/lib/connection.ts`.
+
+## 22. The Reference tab shows the document Studio has
 
 The renderer gets the spec text from the library, the same text the Raw tab shows. Giving it a URL
 would break offline use and could make the two tabs disagree. Its own "send request" feature is off
@@ -176,13 +184,13 @@ for good: it would send from the web view with an `Origin` (rule [3](#3-requests
 and skip environments, auth, certificates and history. It loads lazily because it is the largest
 dependency, and draws only the lines on screen. See `src/components/ScalarReference.tsx`.
 
-## 22. Studio's own actions sit in Studio's interface
+## 23. Studio's own actions sit in Studio's interface
 
 The reference renderer comes with a toolbar, including a button for its maker's hosted product.
 That toolbar is hidden. Putting Studio's buttons in its place would tie them to a third-party
 layout that can change with any upgrade.
 
-## 23. Git details describe the file, never a deployment
+## 24. Git details describe the file, never a deployment
 
 A branch name next to an API can be read as "this is what production runs", which Studio can't
 know. The wording says "this file", a commit id is never shown for content edited since, and a test
@@ -190,20 +198,20 @@ checks the wording has no deployment language. Detection is best-effort and sile
 `/usr/bin/git`, because on a Mac without the Command Line Tools that opens an Xcode installer. See
 `src-tauri/src/git.rs`.
 
-## 24. Use the reported mock version when there is one
+## 25. Use the reported mock version when there is one
 
 When spec0 reports which spec version a hosted mock serves, compare it with the version Studio has;
 that is a fact. The older "synced after the mock was attached" check is only a fallback for when no
 version is reported. A wrong "out of date" message makes people distrust the drift check it
 supports.
 
-## 25. Consumers are shown as a count
+## 26. Consumers are shown as a count
 
 Who uses an API is managed in spec0, with its own permissions and approvals. Copying part of it into
 Studio would give a second place to read it that could be out of date. Studio shows the number and
 links to spec0. Pending access requests are counted, because they are real consumers.
 
-## 26. You publish specs you brought in, and Studio never chooses the version
+## 27. You publish specs you brought in, and Studio never chooses the version
 
 Publishing is offered for specs opened from a file or a URL, because Studio stores their full text
 and what gets published is exactly what Studio shows. It isn't offered for a spec pulled from
@@ -212,20 +220,20 @@ sample. The version defaults to `info.version` and is never increased automatica
 sent only when the file has no uncommitted changes. "No changes" and "version unchanged" are shown
 as such, not folded into "published". See `src/lib/publish.ts`.
 
-## 27. One cookie jar per API
+## 28. One cookie jar per API
 
 A shared jar could pass one API's session to another API's host on a redirect between them. Jars
 live in Rust while the app runs (`src-tauri/src/cookies.rs`) and are never written to disk; keeping
 a session across restarts would be a decision about credentials nobody made.
 
-## 28. Update checks run only when asked
+## 29. Update checks run only when asked
 
 An update check is a request (rule [1](#1-studio-makes-no-request-you-didnt-ask-for)). It runs from
 the menu or Settings, or at start only if the user turned that on; the setting is off by default,
 and a test checks that. The check runs in Rust (`src-tauri/src/updates.rs`) so it uses the proxy
 from Network settings.
 
-## 29. The local MCP server is off until started, and agents act where the developer can see them
+## 30. The local MCP server is off until started, and agents act where the developer can see them
 
 A listening socket is the same kind of promise as rule [1](#1-studio-makes-no-request-you-didnt-ask-for),
 so the server doesn't start by itself unless the user turned on "start when Studio opens" (off by
@@ -251,7 +259,7 @@ relaxed:
 How the server is built, and how it refuses other hosts and web pages, is in
 [ARCHITECTURE.md](../ARCHITECTURE.md#an-mcp-tool-call).
 
-## 30. A local mock listens only after it is started, and only for this computer
+## 31. A local mock listens only after it is started, and only for this computer
 
 Each mock is one API on its own port on `127.0.0.1` (and `[::1]`), 4010 upwards, remembered per
 API, so the spec's paths work unchanged; one shared port with a prefix per API would make every
@@ -262,7 +270,7 @@ at it; instead it refuses other hosts and other websites, as described in
 `example.ts` rules as the request editor, so what Studio pre-fills and what the mock returns can't
 drift apart.
 
-## 31. A `spec0://` link is a suggestion, never an instruction
+## 32. A `spec0://` link is a suggestion, never an instruction
 
 Any web page can trigger one, so Studio asks before it downloads anything and shows the host the
 spec comes from, which is what the user agrees to. Rust (`src-tauri/src/deep_link.rs`) only
@@ -271,17 +279,17 @@ receives and queues links; it has no command that fetches. The rules (only `spec
 `src/lib/deepLink.ts`. A spec already in the library opens from the saved copy, still after the
 same confirmation. Cancel has focus, so a reflexive Enter does nothing.
 
-## 32. Studio talks to spec0 only through its public API
+## 33. Studio talks to spec0 only through its public API
 
 `src/lib/spec0.ts` uses spec0's public API (`/api/v1/public/**`, with a bearer token and an
 organisation header), the one the [spec0 CLI](https://github.com/spec-0/cli) uses. When checking
 what that API offers, go by its published OpenAPI document rather than a generated client, which
 can fall behind it.
 
-## 33. No hard-coded colours
+## 34. No hard-coded colours
 
 The design tokens are in `src/styles.css`. Use them, so both themes stay right.
 
-## 34. No gradients, one accent per area, and dark code blocks in both themes
+## 35. No gradients, one accent per area, and dark code blocks in both themes
 
 The visual style is settled. Effort goes into typography, spacing and motion.
