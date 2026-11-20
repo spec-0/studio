@@ -1,0 +1,54 @@
+---
+title: What a response check means
+description: What "matches the schema" checks, what it doesn't, and why an extra field counts as drift.
+docType: concept
+---
+
+Every JSON response Studio receives is compared with the schema the spec declares for its status
+code. The result sits at the right of the response header: **Matches Order**, or
+**2 differences from Order** with the list below it. This happens for every request, including
+collection steps, runs against the spec and requests sent by agents, so nobody has to write tests to
+get it.
+
+## What is checked
+
+Studio finds the declared response the way OpenAPI describes: the exact status code first (`404`),
+then its range (`4XX`), then `default`. It then compares the body with that response's schema and
+reports, each at its JSON path (such as `items[0].sku`):
+
+- a required field that's missing
+- a field with the wrong type, or a value outside its `enum`
+- a field the schema never mentions
+
+`nullable` fields and OpenAPI 3.1's `type: [T, "null"]` accept `null`, including through `$ref` and
+`allOf`.
+
+## What isn't checked
+
+- Bodies that aren't JSON.
+- Headers and content types.
+- A status code the spec doesn't list. The result says **Not checked**, because there is nothing to
+  compare with.
+
+A match means the body has the shape the spec promises. It doesn't mean the values are right: an
+order with the wrong total still matches `Order`.
+
+## Drift
+
+Drift is when an API and its spec no longer describe the same thing. The field the spec never
+mentions is usually the first sign. A server that has quietly started returning a new field is
+still "valid" to most validators, because specs rarely set `additionalProperties: false`. Studio
+reports it anyway, because that is exactly the change a developer needs to know about before
+clients start to rely on it, or before the spec is published without it.
+
+When Studio reports drift, either the server or the spec is wrong. Studio can't tell which. Fix the
+one that's behind, then send the request again.
+
+A hosted mock that's behind your spec isn't drift; the response pane says the mock is behind
+instead.
+
+## Where results are kept
+
+Each result is saved with its request in [History](/requests#history), and an old response can be
+checked again against the current spec. To check many operations at once, use
+[Run against the spec](/checking-responses#checking-a-whole-tag-run-against-the-spec).

@@ -4,24 +4,22 @@ description: Create a mock server on Spec0 for any API in your library, call it 
 docType: how-to
 ---
 
-A **hosted mock** runs on Spec0, not on your computer, so anyone in your organisation with its
-address and key can call it: teammates, CI, a deployed preview. Hosted mocks need a Spec0 account.
-For a mock that's just for you, a [local mock](/local-mocks) needs no account.
+A **hosted mock** runs on Spec0, so anyone in your organisation with its address and key can call
+it, including CI. It needs a Spec0 account. For a mock just for you, a
+[local mock](/local-mocks) needs none.
 
 ## Create a hosted mock
 
-Studio has one guided dialog, **Create a mock server**, that takes an API from your library to a
-running mock. Open it from any of these:
+Open the **Create a mock server** dialog from:
 
 - **Create mock** in the bar of an open API
 - **Create hosted mock…** in the **⋯** menu on the API's card in the library
 - **Create hosted mock** in the **Mocks** tab, which then asks which API
 - the end of an API's row in **Add API → Spec0**
 
-If the API already has a hosted mock, the API bar and the card's menu show **Hosted mock** instead,
-and open it.
+If the API already has a hosted mock, the API bar and the card's menu show **Hosted mock** instead.
 
-The dialog has four steps. A step that's already done is ticked, with the reason, and skipped.
+Steps already done are ticked and skipped.
 
 <Steps>
 <Step>
@@ -32,23 +30,23 @@ The dialog has four steps. A step that's already done is ticked, with the reason
 </Step>
 <Step>
 
-**Choose a team.** Pick the team that owns this API. You can move it to another team later in
-Spec0. Skipped if the API is already on Spec0, or if you belong to one team or none.
+**Choose a team.** Pick the team that owns this API (you can move it later). Skipped if the API is
+already on Spec0, or you belong to one team or none.
 
 </Step>
 <Step>
 
-**Publish to your organisation.** A hosted mock is built from a spec on Spec0, so an API you added
-from a file or a URL is published first. It's visible only inside your organisation. Choose the
-**API name** (lower-case letters, digits and dashes) and the **Version** (taken from
-`info.version`). If Spec0 finds breaking changes against a version already published under the same
-number, the dialog says so. Skipped if the API is already on Spec0.
+**Publish to your organisation.** A hosted mock serves a published spec version (see
+[The spec is the source of truth](/source-of-truth)), so an API added from a file or URL is
+published first, visible only inside your organisation. Choose the **API name** (lower-case letters,
+digits and dashes) and the **Version** (from `info.version`). The dialog warns about breaking
+changes against a version already published under that number. Skipped if the API is already on
+Spec0.
 
 </Step>
 <Step>
 
-**Create the mock.** Spec0 builds the mock from the published spec, and gives it an address and a
-key.
+**Create the mock.** Spec0 builds it from the published spec and gives it an address and a key.
 
 </Step>
 </Steps>
@@ -62,26 +60,20 @@ key.
   minWidth={640}
 />
 
-When it's ready, the dialog shows the address and the key (hidden until you show it), each with a
-copy button, and **Send a test request**, which opens one of the API's operations, points it at the
-mock and sends it.
+**Send a test request** sends one of the API's operations to the new mock.
 
-From then on, Studio sends that API's requests to the mock. The address bar, the response and
+From then on, Studio sends that API's requests to the mock, and the address bar, response and
 History say **Hosted mock**. To go back to a real server, pick it in the address bar.
 
 ## The address and the key
 
-Each hosted mock has its own address and its own key. The key goes in an `X-Mock-API-Key` header on
-every request.
+Each hosted mock has its own address and key. Send the key in an `X-Mock-API-Key` header.
 
-You don't need to copy the key into Studio. Studio gets it from Spec0, keeps it on your computer,
-and adds the header when you send a request to the mock. If Studio can't get the key (for example,
-because you're signed out), it asks you to paste it, and you can copy it from the mock's page in
-Spec0.
+Studio gets the key from Spec0, keeps it on your computer, and adds the header. If it can't (for
+example, you're signed out), it asks you to paste it from the mock's page in Spec0.
 
-Spec0 can't show a key it made before it started keeping keys in a form it can show again. For a
-mock like that, Studio says so and offers **Make a new key**. The new key works straight away and
-the old one stops working, so anything else using the old key needs the new one too.
+Spec0 can't show some older keys. For those, Studio offers **Make a new key**. The old key stops
+working at once, so update anything else using it.
 
 <Callout type="warn">
 Treat the key like a password. Anyone with the address and the key can call the mock. If a key has
@@ -90,7 +82,7 @@ been shared too widely, [regenerate it](#regenerate-the-key).
 
 ## Call it from anywhere
 
-A hosted mock is an ordinary HTTPS address. Copy the address and the key from Studio, then:
+A hosted mock is an ordinary HTTPS address:
 
 ```bash
 MOCK_URL="<the mock's address, copied from Studio>"
@@ -103,56 +95,40 @@ Replace `/orders` with a path from your spec.
 
 ## What it answers with
 
-For each response, a hosted mock looks, in order, for:
+For each response, a hosted mock uses the first of:
 
 1. examples on the response's media type (`example` or `examples`)
 2. examples on the schema, then on each property
 3. defaults and enum values, for fields with no example
-4. generated values for anything left, based on the field's type and format
+4. generated values based on the field's type and format
 
 ## Rebuild
 
-A hosted mock serves the spec as it was when the mock was created. If you publish a new version of
-the API, the mock keeps serving the old one until you rebuild it.
+A hosted mock keeps serving the spec version it was built from. **Rebuild mock** makes it serve the
+version on Spec0 now. The address and key stay the same, so callers don't change.
 
-**Rebuild mock** makes the mock serve the spec as it is on Spec0 now. The address and the key stay
-the same, so nothing that calls the mock has to change.
-
-When the mock is behind the spec you have open, Studio says so: the library card shows **Mock is
-behind**, with both versions, and the response pane mentions it, so the difference isn't mistaken
-for drift.
-
-If you changed the spec on your computer, publish the new version first, then rebuild.
+When the mock is behind the spec you have open, the library card shows **Mock is behind** with both
+versions, and the response pane says so, so you don't mistake it for drift. If you changed the spec
+locally, publish it first, then rebuild.
 
 ## Regenerate the key
 
-**Regenerate key** gives the mock a new key. Studio asks first, because the old key stops working
-straight away, for everyone. Studio saves the new key and keeps using it. The address doesn't
-change.
+**Regenerate key** gives the mock a new key and keeps the address. Studio asks first, because the
+old key stops working at once, for everyone.
 
 ## Limits
 
-Your organisation's plan sets how many mock servers and APIs you can have.
-
-- Before you create a mock or publish an API, the dialog shows how many your organisation is using,
-  when Spec0 reports it.
-- If a limit is already reached, the dialog says so before you start, and suggests removing a mock
-  or API you no longer need.
-- If a limit is reached part-way through, the dialog says how many you've used and on which plan,
-  for example "You've used 3 of 3 mock servers on the Free plan", with a link to Spec0.
-
-**Settings → Account & Spec0** shows which plan your organisation is on.
+Your organisation's plan sets how many mock servers and APIs you can have. The dialog shows your
+usage when Spec0 reports it, and warns before you start if you're at a limit. If you reach one
+part-way, it says so, for example "You've used 3 of 3 mock servers on the Free plan". **Settings →
+Account & Spec0** shows your plan.
 
 ## If something goes wrong
 
-| What happened | What the dialog does |
-|---|---|
-| Your sign-in expired | Goes back to the sign-in step, then carries on. |
-| You cancelled a browser sign-in | Says so. Nothing else has changed. |
-| Spec0 can't be reached | Says so, and you can try again. |
+If your sign-in expired, the dialog returns to sign-in, then carries on. If Spec0 can't be reached,
+you can try again. Cancelling a browser sign-in changes nothing.
 
 ## From the MCP server
 
-With Studio's [local MCP server](/mcp), a coding agent on your computer can get a hosted
-mock's address and key, create a mock for an API that's already published, or rebuild one. These
-tools need you to be signed in to Spec0 in Studio.
+With the [local MCP server](/mcp), a coding agent can get, create or rebuild a hosted mock while
+Studio is signed in to Spec0.

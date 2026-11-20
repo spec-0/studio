@@ -4,14 +4,10 @@ description: A free, open source desktop app for calling and testing APIs, built
 docType: reference
 ---
 
-**Spec0 Studio** is a desktop app for calling and testing APIs, built around your OpenAPI spec. It
-runs on macOS, Windows and Linux, it's free and open source (MIT), and it works with no account.
-
-## Who it's for
-
-Developers who already have an OpenAPI spec: the YAML or JSON file that describes an API. You open
-the spec, Studio builds the requests from it, and it checks each JSON response against what the spec
-says. When the API and its spec drift apart, you see it the moment it happens.
+**Spec0 Studio** is a desktop app for calling and testing APIs, built around your OpenAPI spec. You
+open a spec, Studio builds the requests from it, and every JSON response is checked against what the
+spec says. It runs on macOS, Windows and Linux, it's free and open source (MIT), and it works with no
+account and no telemetry. See [Privacy and security](/privacy).
 
 <Screenshot
   src="/images/product/studio-request-check.webp"
@@ -27,94 +23,28 @@ says. When the API and its spec drift apart, you see it the moment it happens.
 
 | Task | How Studio helps |
 |---|---|
-| **Send requests** | Forms come from the spec: real field names, dropdowns for allowed values, bodies filled in. See [Sending requests](/requests). |
-| **Check responses** | Each JSON response is checked against the schema for its status code, including fields the spec never mentions. See [Checking responses](/checking-responses). |
-| **Read the data model** | Browse schemas, and see how they link as a [graph](/schema-graph). |
-| **Run flows across APIs** | A [collection](/collections) runs steps in order, passes values between them, and checks every step against its own spec. |
-| **Mock an API** | Start a [local mock](/local-mocks) of any spec in one click, or share a [hosted mock](/hosted-mocks) with your team. |
-| **Test with your coding agent** | A [local MCP server](/mcp) lets agents like Claude Code or Cursor read your APIs, send requests, start local mocks and run collections through Studio, after you allow where their requests go. |
-| **Chat with an agent in Studio** | The [agent chat](/agent-chat) panel talks to Claude, Codex or Gemini CLI, with the operation or response you're looking at attached. |
+| **Send requests** | Forms come from the spec, with real field names, allowed values and example bodies. See [Sending requests](/requests). |
+| **Check responses** | Each JSON response is checked against its schema, including fields the spec never mentions. See [Checking responses](/checking-responses). |
+| **Read the data model** | Browse [schemas](/schemas) and how they link in the [graph](/schema-graph). |
+| **Run flows across APIs** | A [collection](/collections) runs steps in order and passes values between them. |
+| **Mock an API** | A [local mock](/local-mocks) in one click, or a [hosted mock](/hosted-mocks) to share. |
+| **Work with your coding agent** | Agents use your APIs through the [local MCP server](/mcp), or chat in the [agent panel](/agent-chat). |
 
-## Try it in three minutes
-
-<Steps>
-<Step>
-
-**Install Studio.** Download it for your system from the [install page](/install) and
-open it.
-
-</Step>
-<Step>
-
-**Add an API.** Press `⌘O` (`Ctrl+O` on Windows and Linux), choose **URL**, and paste the
-address of the public Swagger Petstore spec:
-
-```text
-https://petstore3.swagger.io/api/v3/openapi.json
-```
-
-</Step>
-<Step>
-
-**Send a request.** Pick `GET /pet/findByStatus` in the list, choose a status, and press `⌘↵`
-(`Ctrl+Enter`). The response appears on the right, with the result of the schema check above it.
-
-</Step>
-</Steps>
-
-[Quick start](/quick-start) goes a little further: a mock, a collection and your coding agent.
-[Your first request](/first-request) walks through the first steps in more detail.
-
-## Works with no account
-
-Everything in Studio works with no sign-in and no call to Spec0, except the few things that live on
-Spec0 itself: hosted mocks, your organisation's catalog, and publishing a spec. That includes
-collections, local mocks, history, environments and secrets, and the local MCP server. Once an API
-is in your library, it opens with no network at all.
-
-Studio sends no telemetry, analytics or crash reports. See [Privacy and security](/privacy).
-
-If your team uses Spec0, [signing in](/connect) adds your organisation's APIs, their
-environments, and hosted mocks. Signing out takes nothing away.
-
-## How it differs from other API clients
-
-If you use Postman, Insomnia, Bruno or Yaak:
-
-- **It starts from the spec.** Requests are built from the spec, not from a copy you keep alongside
-  it. A collection's steps point at operations in your specs instead of copying them.
-- **It checks responses against the spec.** Other clients show you the response. Studio also tells
-  you whether it matches the contract.
-- **It works with no account and sends no telemetry.** History and environments stay on your
-  computer, and secrets go in your operating system's credential store.
-- **It's younger and does less.** There are no scripts, no shared team workspace, no command-line
-  runner, and no gRPC or WebSocket support. Studio can import a Postman collection, but it doesn't
-  run its scripts. Insomnia and Bruno files can't be imported yet. Mocks run on your computer; a
-  [hosted mock](/hosted-mocks) you can share needs a [Spec0 account](/connect).
+New to Studio? The [quick start](/quick-start) takes about ten minutes, from download to a coding
+agent using your APIs.
 
 ## Finding your way around
 
-The top bar has five tabs: **APIs** (your library and the API you have open), **Collections**,
-**History**, **Mocks** and **MCP**. A green dot on **Mocks** means a local mock is running. On the
-right are the environment picker, **Agent** for the [agent chat](/agent-chat) (`⇧⌘J`),
-**Sign in** (or, once you're signed in, a badge with your organisation's initials), and
-**Settings** (`⌘,`).
+The top bar has five tabs: **APIs**, **Collections**, **History**, **Mocks** (with a green dot while
+a local mock runs) and **MCP**. On its right are the environment picker, **Agent** (`⇧⌘J`),
+**Sign in** or your organisation's badge, and **Settings** (`⌘,`).
 
-When an API is open, a strip of [request tabs](/requests#request-tabs) sits under the top bar, and
-under it one bar for the open tab's API: its name, version and source, four views (**Operations**,
-**Schemas**, **Graph**, **Document**, on `⌘1` to `⌘4`), and buttons for **Local mock**, the hosted
-mock, **Run** and the response pane. **Add API** is in the library, the API switcher (`⌘P`) and on
-`⌘O`.
+With an API open, [request tabs](/requests#request-tabs) sit under the top bar, then the API's bar:
+its name and version, four views (**Operations**, **Schemas**, **Graph**, **Document**, on `⌘1` to
+`⌘4`), **Local mock**, the hosted mock and **Run**. `⌘O` adds an API and `⌘P` switches between them.
 
-The status bar at the bottom is the same on every page. On the left: how many local mocks are
-running (click to open **Mocks**) and the active environment (click to edit environments). On the
-right: the progress of a running [collection](/collections/running), whether requests go out
-through the app or the browser preview, the last request's status, time and check, and the
-**Console** button ([Console and logs](/console)).
+The status bar shows running local mocks and the active environment on the left, and on the right a
+running [collection](/collections/running), the last request's status and check, and the
+[Console](/console).
 
-## Open source
-
-Studio is developed in the open at [github.com/spec-0/studio](https://github.com/spec-0/studio).
-Questions and ideas go in [Discussions](https://github.com/spec-0/studio/discussions), and bugs in
-[Issues](https://github.com/spec-0/studio/issues). The repository also explains how to build Studio
-from source.
+The code is at [github.com/spec-0/studio](https://github.com/spec-0/studio).
