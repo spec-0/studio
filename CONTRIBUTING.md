@@ -1,28 +1,16 @@
 # Contributing
 
-Thanks for taking a look. Studio is built with Tauri v2 (a Rust shell around a
-web view), React 19, TypeScript and Vite. It ships for macOS, Windows and Linux;
-the Mac build has had the most use so far.
-
-Most of this file is a list of rules, each with the reason behind it. The reason
-is the useful part: it tells you when a rule applies and when it doesn't.
+Studio is a Tauri v2 app (a Rust shell around a web view) with React 19, TypeScript and Vite. It
+ships for macOS, Windows and Linux; the Mac build has had the most use.
 
 ## Sending a change
 
-You don't need any access to this repository to contribute. Like most projects
-on GitHub, changes come in as pull requests from your own copy of it, called a
-fork. The repository shows you as read-only; that's expected, and you can
-still open a pull request.
+Send changes as a pull request from your fork.
 
-1. **Find or open an issue.** Issues labelled
-   [good first issue](https://github.com/spec-0/studio/labels/good%20first%20issue)
-   are a good place to start. For anything bigger than a small fix, say on the
-   issue what you plan to do before you start, so we can agree on the approach
-   first.
-2. **Fork the repository.** Press **Fork** at the top of
-   [github.com/spec-0/studio](https://github.com/spec-0/studio). You get your own
-   copy at `github.com/<your-username>/studio`.
-3. **Clone your fork and make a branch:**
+1. Find or open an issue. [Good first issues](https://github.com/spec-0/studio/labels/good%20first%20issue)
+   are a good start. For anything bigger than a small fix, say on the issue what you plan before you
+   start, so we can agree on the approach.
+2. Fork the repository, clone your fork, and make a branch:
 
    ```bash
    git clone https://github.com/<your-username>/studio.git
@@ -31,21 +19,12 @@ still open a pull request.
    git checkout -b fix-null-drift
    ```
 
-4. **Set up and run Studio** (see [Setting up](#setting-up) below), then make
-   your change. New logic needs tests, and if the change alters what a user
-   sees or does, update the page in [docs/user](docs/user/) that describes it.
-5. **Run the checks** in [Before you open a pull request](#before-you-open-a-pull-request).
-6. **Push the branch to your fork and open the pull request:**
+3. Make the change. New logic needs tests. If users will see the change, update the page in
+   [docs/user](docs/user/) that describes it.
+4. Run [the checks](#the-checks), push the branch to your fork, and open the pull request. Write
+   `Closes #123` in it so the issue closes on merge.
 
-   ```bash
-   git push -u origin fix-null-drift
-   ```
-
-   GitHub then shows a **Compare & pull request** button, on your fork and on
-   this repository. Fill in the template, and write `Closes #123` with the
-   issue number so the issue closes when the change is merged.
-
-If `main` moves on while you work, bring your branch up to date with:
+To bring your branch up to date with `main`:
 
 ```bash
 git fetch upstream
@@ -53,484 +32,98 @@ git rebase upstream/main
 git push --force-with-lease
 ```
 
-### What happens after you open it
+### After you open it
 
-- **The checks wait for a maintainer the first time.** GitHub doesn't run a
-  first-time contributor's code in our CI until a maintainer presses **Approve
-  and run**. After your first pull request is merged, checks start by
-  themselves.
-- **CI runs the same checks as below,** plus the Rust tests on macOS, Linux and
-  Windows. If one fails, the log is linked from the pull request.
-- **A maintainer reviews it.** We may suggest changes, or push a small fix to
-  your branch ourselves if you left **Allow edits by maintainers** ticked.
-- **It's merged as one commit** (a squash merge), and goes out in the next
-  release.
-
-We're a small team, so a review can take a few days. If a pull request has had
-no reply for a week, a comment on it is welcome.
+- A maintainer approves CI for your first pull request; later ones run by themselves.
+- CI runs the checks below, plus the Rust tests on macOS, Linux and Windows.
+- A maintainer reviews it, and may push a small fix if **Allow edits by maintainers** is ticked.
+- It's squash-merged, so the title and description become the commit message, and it ships in the
+  next release. If there's been no reply for a week, comment on it.
 
 ## Setting up
 
 You need:
 
-- **Node.js 24**, the version in [`.nvmrc`](.nvmrc) and the one CI uses. 22.12 is the
-  oldest that works.
+- **Node.js 24**, the version in [`.nvmrc`](.nvmrc) and the one CI uses. 22.12 is the oldest that
+  works.
 - **Rust 1.90 or later**, installed with [rustup](https://rustup.rs).
-- **The system libraries Tauri needs on your operating system.** Tauri's
-  [prerequisites page](https://v2.tauri.app/start/prerequisites/) lists them:
-  the Xcode Command Line Tools on macOS, the Microsoft C++ Build Tools and
-  WebView2 on Windows, and WebKitGTK and a few build packages on Linux.
+- **The system libraries Tauri needs**, listed on Tauri's
+  [prerequisites page](https://v2.tauri.app/start/prerequisites/): the Xcode Command Line Tools on
+  macOS, the Microsoft C++ Build Tools and WebView2 on Windows, WebKitGTK 4.1 and a few build
+  packages on Linux.
 
-Then, from the repository folder:
+Then:
 
 ```bash
-npm ci        # install the interface's dependencies
+npm ci        # install dependencies
 npm run app   # build and open Studio, reloading as you edit
 ```
 
-The first `npm run app` compiles the Rust side and takes a few minutes; later
-runs are quick.
+The first `npm run app` compiles the Rust side and takes a few minutes.
 
-A development build uses the same settings and library folder as an installed
-Studio, and on Windows and Linux it registers itself for `spec0://` links. If
-you also use Studio day to day, run the development build under its own name and
-link scheme so the two don't get mixed up:
+`npm run dev` opens the interface in a browser, which is useful for styling. Requests to other
+sites fail there on CORS; test requests in `npm run app`.
+
+A development build uses the same settings and library as an installed Studio. If you also use
+Studio day to day, give the development build its own name and link scheme:
 
 ```bash
 npm run app -- --config '{"identifier":"io.spec0.studio.dev","productName":"Studio Dev","plugins":{"deep-link":{"desktop":{"schemes":["spec0-dev"]}}}}'
 ```
 
-## Reporting bugs and asking for features
+## The checks
 
-Questions, ideas and general feedback are best in
-[Discussions](https://github.com/spec-0/studio/discussions).
-
-For a bug or a specific feature request, open an
-[issue](https://github.com/spec-0/studio/issues/new/choose). For a bug, the most
-helpful things are your operating system, the Studio version (shown under
-*About*), what you did, what you expected, and what happened. If you can
-share a small spec that shows the problem, even better. Please remove any tokens
-or private URLs first.
-
-Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
-
-**Security problems:** please don't open a public issue. See
-[SECURITY.md](SECURITY.md) for how to report one privately.
-
-## Before you open a pull request
+All four must pass:
 
 ```bash
-npm run type-check          # TypeScript check
+npm run type-check          # TypeScript
 npm test                    # unit tests (vitest)
 npm run build               # production build of the interface
-npx tauri build             # builds the Rust shell and the app
+npx tauri build             # the Rust shell and the app
 ```
 
-All four should pass. CI also runs two more checks:
+CI also runs:
 
 ```bash
-npm run test:csp            # runs the built app in Chrome under its real security policy
-cd src-tauri && cargo test  # the Rust tests, on macOS, Linux and Windows
+npm run test:csp            # the built app in Chrome under its real content security policy
+cd src-tauri && cargo test  # the Rust tests
 ```
 
-`test:csp` exists because unit tests run in Node, which has no Content Security
-Policy. Code that the app's policy blocks (for example a library that uses
-`eval`) can pass every unit test and still fail in the real app.
+`test:csp` exists because unit tests run in Node, which has no content security policy. Code the
+app's policy blocks (a library that uses `eval`, for example) can pass every unit test and still
+fail in the app.
 
-For interface changes, also run the app (`npm run app`) and try the feature.
-A passing type-check shows the code compiles, not that it works. `npm run dev`
-gives a quicker browser preview for styling, but requests to other sites will be
-blocked by CORS there. That's expected; the status bar shows which mode you're in.
-
-Changes to the user guide also need `npm run check:docs` (see
-[Improving the docs](#improving-the-docs)).
+For interface changes, also try the feature in `npm run app`. For changes to the user guide, run
+`npm run check:docs`.
 
 ## The two main rules
 
-**1. Everything works locally, without an account.** Opening a spec (local or
-remote), browsing operations and schemas, setting up auth, sending requests,
-checking responses, and using environments and history must all work with no
-account, no sign-in, and no network call to spec0. A change that puts any of
-this behind a connection to spec0 is the wrong change.
+1. **Everything works without an account.** Opening specs, sending and checking requests,
+   environments, history, collections, local mocks and the MCP server need no sign-in and no
+   network call to spec0. ([Design rule 2](docs/design-rules.md#2-everything-works-without-an-account))
+2. **Requests go out through Rust, with no `Origin` header.** Outbound HTTP goes through
+   `src-tauri/src/http.rs`, never `tauri-plugin-http`.
+   ([Design rule 3](docs/design-rules.md#3-requests-go-out-through-rust-with-no-origin-header))
 
-**2. Requests don't carry an `Origin` header.** Outbound HTTP goes through our
-own Rust command in `src-tauri/src/http.rs`, not `tauri-plugin-http`. That plugin
-adds the web view's origin to every request, and servers with CORS rules then
-reject it. A desktop app isn't a browser and has no origin. Please don't bring
-the plugin back.
+## Where to read next
 
-## How the code is organised
+- [ARCHITECTURE.md](ARCHITECTURE.md): where the code is, and how a request, an MCP call and a
+  local mock pass through it.
+- [docs/design-rules.md](docs/design-rules.md): the rules the code follows, and why. Read the ones
+  near your change before you start.
+- [docs/user/README.md](docs/user/README.md): how to write and preview the user guide, published
+  at [studio-docs.spec0.io](https://studio-docs.spec0.io/).
 
-- **Rust has thirteen modules**: outbound HTTP (`http.rs`) and its cookie jars
-  (`cookies.rs`), the local listener used during OAuth sign-in (`oauth.rs`,
-  because a web view can't open a socket), file reading and writing
-  (`storage.rs`), the OS credential store (`secrets.rs`, because only native code
-  can reach it), checking for and installing updates (`updates.rs`), the app menu
-  (`menu.rs`), the local MCP server's socket (`mcp.rs`, for the same reason as
-  sign-in), the sockets of local mocks (`local_mock.rs`, likewise), receiving
-  `spec0://` links from the OS (`deep_link.rs`), reading a spec file's git
-  details (`git.rs`), starting the agent chat's agent process (`acp.rs`), and
-  writing Studio's instructions for that agent (`agent_profile.rs`).
-  `lib.rs` wires them together. Everything else is React.
-- **Secrets go through narrow commands.** The web view passes an environment id
-  and a variable name; Rust builds the credential store entry under one fixed
-  service name. There is no command that reads an arbitrary keychain item.
-  Credential stores can't be listed in a portable way, so Rust keeps an index of
-  what it wrote (names only, never values). That index is how a renamed or
-  deleted variable gets cleaned up. The logic around it (moving values out of the
-  old plain file, falling back to that file when the store can't be reached,
-  cleaning up) is in `src/lib/secrets.ts` and tested there. A value that can't
-  reach the store falls back to the local file and the interface says so; it is
-  never dropped.
-- **File access uses narrow commands, not the `fs` plugin.** "Read the file the
-  user just picked" and "read `~/.spec0/config.json`" are different kinds of
-  access and shouldn't share one permission. For the first, the file picker is
-  the user's consent. Writing works the same way: `write_collection` writes a
-  collection file where the user chose to save it, and refuses any file whose
-  name doesn't end in `.spec0-collection.yaml`. `write_run_log` is the same for
-  an exported collection run log (`.spec0-run.json` or `.spec0-run.txt`).
-- **`src/lib/` holds the logic, `src/components/` holds the interface.** Spec
-  parsing, example generation, validation, environments, history and the spec0
-  client don't depend on React and can be tested without it.
-- **`src/hooks/` holds React state and effects.** Each hook owns one area (the
-  library, environments, history, sending a request, and so on). `App.tsx` only
-  connects hooks to components; new behaviour goes in a hook or in `src/lib/`,
-  not in `App.tsx`.
-- **Swagger 2.0 is converted on opening, in `src/lib/swagger2.ts`.** Everything
-  after `readDocument` in `src/lib/spec.ts` sees OpenAPI 3 only; the library
-  keeps the imported text, which the Raw tab shows. It is our own converter
-  rather than `swagger2openapi`, which is written for Node (an HTTP client, a
-  CLI, a validator) and would need shimming to run in the web view. Publishing
-  sends the converted OpenAPI 3.0 text, because Spec0 takes 3.0 and 3.1.
-- **Never expand a whole spec.** `$ref` references are looked up when needed,
-  with a record of what has been seen. That keeps large specs fast (Stripe's
-  parses in about 30 ms) and stops schemas that refer to themselves from looping
-  forever.
+## Bugs, ideas and security
 
-## Tests
+- Questions and ideas go in [Discussions](https://github.com/spec-0/studio/discussions).
+- For a bug, [open an issue](https://github.com/spec-0/studio/issues/new/choose) with your
+  operating system, the Studio version, what you did, what you expected and what happened. A small
+  spec that shows the problem helps. Remove tokens and private URLs first.
+- Report security problems privately, as [SECURITY.md](SECURITY.md) describes.
 
-- New logic in `src/lib/` needs tests. `scripts/smoke.ts` runs the parse,
-  example and validate steps over real specs and is the main safety net for spec
-  handling. Add to it rather than writing a separate harness.
-- `scripts/capture.mjs` drives the real interface in headless Chrome, takes a
-  screenshot of each view, and fails on page errors.
-- Anything touching auth, secrets, or the works-without-an-account rule needs a
-  test that would fail if the rule were broken.
-
-## Improving the docs
-
-The user guide at [studio-docs.spec0.io](https://studio-docs.spec0.io/)
-is written in [docs/user](docs/user/), next to the code, and [site/](site/)
-builds it into a static site. When a change alters what a user sees or does,
-update the page that describes it in the same pull request.
-
-[docs/user/README.md](docs/user/README.md) explains how pages map to the site,
-which components you can use, where images go and how to preview the site on
-your computer. Run `npm run check:docs` before you push. On a pull request that
-touches `docs/user` or `site/`, CI checks the pages, builds the site and keeps
-the result as a preview you can download. The site is published when a release
-is, so it always describes the app people can download.
-
-## Design rules, and why
-
-**No secrets stored per API.** Auth values go in an environment as secret
-variables, used as `{{token}}`. A separate token store per API would be a second,
-weaker place for secrets.
-
-**Environments hold values, not destinations.** Where a request goes is its
-*target*: a server from the spec, a mock, a spec0 environment, or a typed URL.
-Don't add a URL field to `Environment`, and don't list client environments as
-targets. The word "environment" means two opposite things here. A **spec0
-environment** is a real place the API runs, reported by spec0. A **client
-environment** is a local set of values for testing, never synced. Both can be
-active at once, and neither should turn into the other.
-
-**Don't choose the destination for the user.** spec0 environments appear in the
-target list but are never selected by default. The default stays the spec's own
-first server, because that is what the document says. Where a request goes is
-the user's choice; Studio offers options and doesn't decide.
-
-**Use the reported mock version when there is one.** When spec0 reports which
-spec version a mock serves, compare that with the version Studio has; that is a
-fact. The older "synced after the mock was attached" check is only a fallback
-for when no version is reported. A wrong "out of date" message makes people
-distrust the drift check it supports.
-
-**Keep the scratch pad small.** There is one scratch request. It has no name and
-isn't saved as an item, only its contents are kept, like a text buffer. No second
-pad, no names, no folders. A scratch request has no schema, so none of Studio's
-checks apply to it. It exists as an escape hatch. Requests worth keeping are
-worth describing in a spec, and a flow worth keeping goes in a collection.
-
-**Collections point at specs; they never replace them.** A collection step names
-an API and an operation in it (by `operationId`, with method and path as the
-fallback) and keeps only its own inputs: parameter values, headers, a body and a
-target. It never copies the operation. That is what lets Studio check each
-step's response against its spec, and tell you when a step no longer matches
-the spec it came from (an operation that moved or disappeared, a parameter that
-became required). A collection that held its own copy of each request would be
-exactly the second, drifting source of truth Studio exists to avoid. So:
-
-- A step that can't find its operation is shown as missing, with a way to link
-  it to another one. It isn't quietly turned into a free-standing request.
-- Unlinked requests exist (for requests brought in from other tools), run like
-  scratch requests, and say that nothing checks them until they're linked.
-- The file (`*.spec0-collection.yaml`, versioned, see `src/lib/collection.ts`)
-  refers to specs by their source, written relative to the collection file when
-  both are in one folder, so a collection and its specs can live in one
-  repository. It never holds secret values: known secrets are written as
-  `{{references}}` and a literal auth value is left out, with a warning.
-- A value from an earlier step is a reference, `{{steps.<key>.body.id}}`, picked
-  by clicking it. There is no scripting. A reference that can't be filled fails
-  the step before anything is sent, with the reason.
-- A linked file is re-read when the collection opens and when the window gets
-  focus. It is reloaded if nothing in Studio is unsaved; otherwise the user
-  chooses. Saving never overwrites a file that changed since Studio read it.
-- A local mock is stored as a target kind, never as an address: its port
-  belongs to this computer and can change.
-
-**OAuth settings live with the API; the client secret doesn't.** Client id,
-token and authorization URLs and scopes belong to the API and are saved with it
-in the library. The client secret is saved as a `{{reference}}` to a secret in
-the environment, never as a literal, so that `library.json` never holds secrets.
-Tokens Studio receives are a cache, kept per API *and* per environment (staging
-and production credentials are different), in their own file that shouldn't be
-committed. A test fails if a secret reaches the library file; please don't relax
-it.
-
-**A bulk run never makes up a parameter value.** Required parameters come from
-the active environment by name. If a value isn't there, the operation is
-**skipped, with the reason shown**. Studio generates example values elsewhere,
-which is fine for a form someone will read before sending. It's wrong here: an
-invented `{orderId}` gives a 404 that means nothing, and a page of those looks
-like real findings. For the same reason, the exported report lists what was
-skipped, so it doesn't read as "all clear" when it isn't.
-
-**Bulk runs send read-only requests by default.** Requests that change data are
-opt-in for each run and clearly marked. In "run all", the user didn't pick each
-request, which is different from deliberately sending one DELETE. Requests run
-one at a time, too: many requests at once against an internal service is a load
-test nobody asked for.
-
-**Files go to Rust as paths, not bytes.** A file upload passes a path and Rust
-reads the file. Sending the bytes across the bridge (as base64) would make every
-upload a third bigger and hold the whole file in the web view's memory; a 200 MB
-upload should cost the same as a 200 KB one. The file picker is already the
-consent to read it. It works the other way too: a binary **response** is written
-to a temporary file and only previewed, with a size limit, so *Save as…* copies
-the file instead of downloading it again, and `history.json` doesn't fill up with
-response bodies.
-
-**The response pane only shows the answer to the request on screen, and never
-an old answer as if it were new.** Picking another operation, another API or the
-scratch pad takes it off screen, and a send still in flight when you move goes to
-History only. Going back to a request later in the same session (from its tab or
-the sidebar) brings its last answer back, but always marked as restored, with the
-time it was sent, and saying so when the request has been edited since: a bare
-response next to a request reads as that request's answer. These answers live in
-memory only (`src/lib/responsePane.ts`); after a restart, an operation's last
-response is in History, with the time it ran.
-
-**Unsent changes belong to the operation, not to the tab.** Drafts
-(`src/lib/drafts.ts`) are kept per API and operation, so closing a tab loses
-nothing and the sidebar still shows the dot. A draft is "changed" against what
-was last sent from it, or against the spec's examples when nothing was; a
-successful send makes the sent values the starting point, and Discard goes back
-to the spec. `drafts.json` is written like the collections file: known secret
-values become `{{references}}`, and an auth value that isn't a reference stays in
-memory for the session and is never written. Tabs (`src/lib/tabs.ts`) are only a
-list of open operations; a collection step is edited in its collection.
-
-**⌘W belongs to the macOS menu.** File → Close Tab (`src-tauri/src/menu.rs`)
-closes the request tab on screen and only closes the window when there is none,
-with ⇧⌘W for the window. The web view is told whether a tab is on screen; it
-doesn't handle ⌘W itself in the macOS app, or one press would close two tabs.
-On Windows and Linux there is no menu item for it and Ctrl+W is handled in the
-web view.
-
-**The content type picks the body editor.** The spec already says whether an
-endpoint takes JSON, a form or a file, so Studio doesn't ask. But don't trust the
-content type when *reading* a response: servers often label responses wrongly,
-and `application/octet-stream` is often JSON. A response that decodes cleanly as
-UTF-8 text is shown as text, whatever the header said.
-
-**Certificate checks are per host and deliberate.** There is no global "ignore
-TLS errors" switch, and there shouldn't be one: a switch like that teaches people
-to stop reading warnings, and it tends to get left on. Adding a private CA bundle
-is the preferred option, and it is *not* the same thing, since it still checks
-certificates. So it must not show the same warning, or the warning stops meaning
-anything. When a request goes to a host with checks turned off, the address bar
-says so at send time.
-
-**The Reference tab shows the document Studio has, never a fetched copy.** The
-renderer gets the spec *text* from the library, the same text the Raw tab shows.
-Giving it a URL would break offline use and could make the two tabs disagree
-about the spec. The renderer's own "send request" feature is turned off for good:
-it would send requests from the web view, with an `Origin` (rule 2), and skip
-environments, auth, certificate settings and history. Requests go through Studio;
-that tab is for reading. It loads lazily (`React.lazy`) because it is by far the
-largest dependency, so a session that never opens it doesn't pay for it. It also
-only draws the lines currently on screen, so large specs stay fast.
-
-**Git details describe the file, never a deployment.** A branch name next to an
-API can easily be read as "this is what production runs", which Studio can't
-know. So the wording says "this file", the changed-file flag makes sure a commit
-id is never shown for content that has since been edited, and a test checks the
-wording has no deployment language. Detection is best-effort and silent: no repo,
-no git, or a spec that isn't a file shows nothing. It never runs `/usr/bin/git`,
-because on a Mac without the Command Line Tools that pops up an Xcode installer,
-and opening a spec shouldn't do that.
-
-**Consumers are shown as a count.** Who uses an API is managed in spec0 itself,
-with its own permissions and approvals. Copying part of that into Studio would
-give a second place to read it that could be out of date. Studio shows the number
-and links to spec0. Pending access requests are counted, because they are real
-consumers and leaving them out would understate who a change might affect.
-
-**You publish specs you brought in, and Studio never chooses the version.**
-Publishing is offered for specs opened from a file or a URL. Studio stores the
-full text of both, and adding one was the user's choice, so what gets published
-is exactly the document Studio shows. It isn't offered for a spec pulled from
-spec0, which is identical to what spec0 already has (Studio has no editor, so
-publishing it back would change nothing but the version), or for the bundled
-sample, which isn't a real API. Where the button would be, Studio explains why
-it isn't there. The version defaults to `info.version`
-and is never increased automatically; choosing a version is the user's call. A
-commit id is sent **only when the file has no uncommitted changes**, because
-otherwise the commit doesn't describe the file. Show the actual result: "no
-changes" and "version unchanged" are both worth knowing and shouldn't be folded
-into "published".
-
-**Studio's own actions sit in Studio's interface.** The reference renderer comes
-with a toolbar, including a button for its maker's hosted product. That toolbar
-is hidden. Putting our own buttons in its place would tie them to a third-party
-layout that can change with any upgrade.
-
-**One cookie jar per API.** A shared jar could pass one API's session to another
-API's host on a redirect between them. Jars live in Rust while the app runs and
-are never written to disk; keeping a session across restarts would be a decision
-about credentials that nobody made.
-
-**No update check the user didn't ask for.** Studio promises it makes no request
-you didn't ask for, and an update check is a request. It runs from the menu or
-from Settings, or at start only if the user turned that setting on. The setting is off by default,
-and a test checks that. The check runs in Rust (`updates.rs`) so it can use the
-proxy from Network settings; the updater's JavaScript API isn't available to
-the web view.
-
-**The local MCP server is off until the user starts it, and an agent acts
-through Studio only where the developer can see it and has said yes.** It
-listens on `127.0.0.1` only, requires the per-install bearer token on every
-request, and refuses any `Host` other than its own loopback address and any
-browser `Origin`, which is what stops a web page reaching it through DNS
-rebinding. Studio makes no request you didn't ask for, and a listening socket is
-the same kind of promise, so the server doesn't start by itself unless the user
-turned on "start when Studio opens" (off by default). The one other start is
-the agent chat: when the user sends the first message of a chat with "Give the
-agent Studio's tools" on (the default, and said in Settings and in the empty
-chat), the chat starts the server so the agent it just started can use it.
-
-Agents can send requests, run collections and start local mocks through Studio,
-because that is how a developer working through an agent tests an API. What
-keeps that consistent with "no request you didn't ask for" is in
-`src/lib/agentPolicy.ts` and `src/lib/agentControl.ts`, and none of it should be
-relaxed:
-
-- The first request to each host waits for the developer's answer in a dialog
-  (once, for the session, or no). `DELETE`, `PUT` and `PATCH` to a host that
-  isn't on this computer need their own answer. Blocked hosts are refused
-  without asking, and there is a cap per minute.
-- Starting a local mock asks too (it opens a port), and saving a collection file
-  asks every time, with the path shown.
-- The agent never sees a secret value. It writes `{{token}}`, Studio fills it in
-  when it sends, credential headers are hidden in what comes back, and every
-  tool result is redacted again on its way out (`answerCall` in
-  `src/lib/mcpServer.ts`).
-- Everything an agent does is visible: the console names the agent, its runs are
-  marked in the Runs view, and the MCP tab keeps an activity log. Stop agents
-  refuses whatever is waiting and stops the server.
-- Collections an agent creates are drafts, and agents change only their own
-  drafts. A collection the developer made or kept is read-only to agents.
-
-Rust owns the socket, the checks and the protocol (a small hand-written subset
-of MCP's Streamable HTTP transport: one `POST /mcp`, JSON responses). Its only
-session is a label: `initialize` returns an `Mcp-Session-Id` so Studio can say
-which agent (by its `clientInfo` name) made each call; the token is still what
-lets a client in. Tool calls go to the web view as `studio://mcp-call` events.
-Tools that only read are answered by `src/lib/mcp.ts`, which reads what Studio
-stored rather than what's on screen. Tools that act are in
-`src/lib/mcpAgent.ts`, and reach the running app (the active environment with
-its secret values, collections, local mocks) through `useAgentApp`, so a run an
-agent starts goes through the same code as one the developer starts. Tools that
-can wait for the developer are marked `waitsForUser` and get a long timeout in
-Rust; stopping the server answers every call still waiting. The exception is
-`list_environments`, answered in Rust from `environments.json` alone: it never
-touches the credential store and drops the value of anything marked secret, so
-no bug in the interface can make a secret come back. Tool definitions live in
-`src/lib/mcp-tools.json`, read by both sides. Don't add a tool that repeats what
-the remote Spec0 MCP server already offers for the whole organisation; this one
-is for what only Studio knows.
-
-**A local mock listens only after the user starts it, and only for this
-computer.** Each mock is one API on its own port on `127.0.0.1` (and `[::1]` where
-there is IPv6, so `localhost` reaches it however it resolves; 4010 upwards,
-remembered per API), so the spec's paths work unchanged under
-`http://127.0.0.1:<port>`; one shared port with a prefix per API would make
-every frontend rewrite its base path. There is no "start with Studio" setting,
-and the MCP tool that starts one asks the developer first: a listening socket is
-something the user turns on. It refuses any `Host` that isn't a loopback name (DNS rebinding) and
-any browser `Origin` other than `http(s)://localhost`, `127.0.0.1` or `[::1]`
-on any port, `null` included. That refusal covers simple requests as well as
-preflights, because a GET needs no preflight and would otherwise let any
-website probe the mock and read what it serves. A browser request with no
-`Origin` (a `<script src>` or `<img src>` load) is refused too when
-`Sec-Fetch-Site` says another page sent it and its `Referer` isn't a page on
-this computer: its load and error events would tell a 200 from a 404. Every
-response says `X-Content-Type-Options: nosniff`. Pages on localhost get CORS
-headers, since frontend developers are who the mock is for. There is no auth:
-it's local, and a token would stop the frontend from simply pointing at it.
-
-Rust owns the socket, those checks and CORS preflights. Every other request goes
-to the web view as a `studio://local-mock-request` event and is answered by
-`src/lib/localMock.ts`, which matches the path, picks the response and builds
-the body with the same `example.ts` rules as the request editor, so what Studio
-pre-fills and what the mock returns can't drift apart. That logic is plain
-TypeScript and tested without a socket; Rust only frames what comes back, and
-drops any header that could break the framing or widen CORS.
-
-**A `spec0://` link is a suggestion, never an instruction.** Any web page can
-trigger one, so Studio asks before it downloads anything, and shows the host
-the spec comes from, because that is what the user is agreeing to. Rust
-(`src-tauri/src/deep_link.rs`) only receives links, queues them and brings the
-window forward; it has no command that fetches. Parsing and the rules (only
-`spec0://open`, only `https` on a public host, no credentials in the address,
-the name shown as plain text) are in `src/lib/deepLink.ts` and tested there; the
-dialog's state is in `src/hooks/useDeepLinks.ts`. Pressing Open goes through the
-ordinary add-from-URL path. A spec already in the library opens from the saved
-copy, still after the same confirmation, so a page can't switch what's on screen
-without the user noticing. Cancel has focus, so a reflexive Enter does nothing.
-The scheme is registered by the macOS bundle, the Windows installer and the
-`.deb`'s desktop entry; an AppImage and development builds register themselves
-at start. On Windows and Linux, `tauri-plugin-single-instance` passes a link
-from a second launch to the running copy.
-
-**No `tauri-plugin-http` and no `fs` plugin** (see above).
-
-**No hard-coded colours.** The design tokens are in `src/styles.css`.
-
-**No gradients, at most one accent colour per area, and dark code blocks in both
-themes.** The visual style is settled; effort goes into typography, spacing and
-motion.
-
-## Talking to spec0
-
-`src/lib/spec0.ts` uses only spec0's public API (`/api/v1/public/**`, with an
-`Authorization: Bearer` token and an organisation header), the same one the
-[spec0 CLI](https://github.com/spec-0/cli) uses. When checking what that API
-offers, go by its published OpenAPI document rather than a generated client,
-which can fall behind it.
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Licence
 
-By contributing, you agree that your contribution is licensed under the
-[MIT licence](LICENSE), the same as the rest of the project.
+By contributing, you agree that your contribution is licensed under the [MIT licence](LICENSE).

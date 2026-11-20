@@ -9,4 +9,4 @@ Closes #
 - [ ] For changes users will notice: updated the page in `docs/user`, and `npm run check:docs` passes
 - [ ] For changes to auth, secrets or offline use: a test that would fail if the rule broke
 
-See [CONTRIBUTING.md](https://github.com/spec-0/studio/blob/main/CONTRIBUTING.md) for the design rules.
+See [CONTRIBUTING.md](https://github.com/spec-0/studio/blob/main/CONTRIBUTING.md), [ARCHITECTURE.md](https://github.com/spec-0/studio/blob/main/ARCHITECTURE.md) and the [design rules](https://github.com/spec-0/studio/blob/main/docs/design-rules.md).
