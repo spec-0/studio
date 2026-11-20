@@ -1,7 +1,7 @@
 # Agent chat: how it's built
 
 Notes for working on the Agent panel. What it does for users is in the
-[README](../README.md#agent-chat).
+[user guide](https://studio-docs.spec0.io/agent-chat/).
 
 ## The pieces
 

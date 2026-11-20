@@ -11,7 +11,7 @@ choose **Document** (`⌘4`).
 
 Two tabs, because the two readings answer different questions.
 
-**Raw** is the document exactly as you imported it — YAML stays YAML, JSON stays JSON — with line
+**Raw** is the document exactly as you imported it (YAML stays YAML, JSON stays JSON), with line
 numbers and syntax highlighting. This is what you want when you are about to edit the file, or
 working out why a parser disagrees with you. There is a copy button, and the header tells you the
 line count and which syntax it is.
@@ -24,8 +24,8 @@ work offline and can never disagree with each other about what the spec says.
 
 <Callout type="info" title="Nothing is fetched to render a reference">
 The renderer is handed the document, not a URL, and the app blocks outbound requests from that
-view entirely. A spec whose description references a remote image will not load it — that request
-would tell whoever wrote the spec that you opened it, and for internal APIs that is a disclosure.
+view entirely. A remote image in a spec's description isn't loaded. That request would tell whoever wrote the
+spec that you opened it, which for an internal API is a disclosure.
 </Callout>
 
 Large documents stay usable. Only the lines on screen are highlighted, so a multi-megabyte spec
@@ -41,9 +41,8 @@ If the file has uncommitted changes, the chip says **uncommitted**, and it means
 the commit id no longer describes the bytes you are reading.
 
 <Callout type="warn" title="This describes the file, not a deployment">
-Provenance is about the document on your disk. It is **not** a statement about which commit any
-environment is running — Studio has no way to know that, and never infers it. If you need to know
-what is deployed where, that is a fact the platform reports, not one a client can guess.
+This describes the file on your disk. It says nothing about what any environment runs. What is
+deployed where is something your platform reports; Studio doesn't guess it.
 </Callout>
 
 Nothing shows when the spec came from a URL or from Spec0, when the file is not in a repository, or
@@ -51,8 +50,8 @@ when git is unavailable. None of those are errors and none of them block anythin
 
 ## Publishing a local spec to Spec0
 
-A spec you opened from a file can be published to your organisation from the same header — the
-same operation `spec0 push` performs from CI.
+A spec you opened from a file or a URL can be published to your organisation from the same header.
+It's the same operation `spec0 push` performs from CI.
 
 You choose the API name, the team, and the version. Studio pre-fills the name from the document
 title and the version from `info.version`, and **never increments a version for you**: the number
@@ -67,14 +66,13 @@ The result tells you what actually happened, which is not always "published":
 | **Already up to date** | The commit this file is on has already been published. Nothing was sent. |
 | **Version unchanged** | The spec changed but `info.version` did not, so this replaced the existing version rather than adding one. |
 
-That last one is worth reading when it appears — it is the case that quietly overwrites a published
-version in place.
+**Version unchanged** means the published version was replaced in place.
 
 If the working file has uncommitted changes, Studio says so before you publish, and does not send
 the commit id along with the document. What you see is what gets published.
 
-<Callout type="info" title="You publish what you opened from disk">
-The button appears for specs opened from a **file**. An API you pulled *from* Spec0 is already
-byte-identical to what the platform holds — Studio has no editor, so publishing it back would add a
-version number to an unchanged document. Where the action is unavailable, the view says why.
+<Callout type="info" title="You publish what you brought in">
+The button appears for specs opened from a file or a URL. An API you pulled from Spec0 is already
+identical to what Spec0 holds, and Studio has no editor, so publishing it back would only add a
+version number. Where the button would be, the view says why it isn't there.
 </Callout>

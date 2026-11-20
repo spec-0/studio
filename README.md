@@ -229,12 +229,11 @@ Details and workarounds are in [Troubleshooting](https://studio-docs.spec0.io/tr
 
 ## Build from source
 
-You need Node 22.12 or later (CI uses Node 24) and Rust 1.90 or later. On Linux
-you also need [Tauri's system packages](https://v2.tauri.app/start/prerequisites/#linux)
-(WebKitGTK 4.1 and a few others).
+You need Node, Rust and Tauri's system packages, at the versions listed in
+[CONTRIBUTING.md](CONTRIBUTING.md#setting-up).
 
 ```bash
-npm install
+npm ci
 npm run app            # run the desktop app
 npm run dev            # preview the interface in a browser at localhost:5173
 ```

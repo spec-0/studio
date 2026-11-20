@@ -1,0 +1,31 @@
+# Pull requests are squash-merged, so a pull request's title and body become
+# the commit message on main. This stops one that credits an AI model as an
+# author (a Co-Authored-By line naming a model, or a "Generated with" footer).
+# The rule is in scripts/check-attribution.mjs.
+
+name: Attribution
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  attribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # Passed as environment variables, never pasted into the script, so text
+      # in a pull request can't run as a command.
+      - run: node scripts/check-attribution.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}

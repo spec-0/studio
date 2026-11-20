@@ -33,6 +33,7 @@ one release to the next.
    people using Studio: what's new, what's fixed, anything they need to know.
    They appear on the release page and in the app's update dialog, so a list of
    commit titles won't do. CI stops before building if the file is missing.
+   Add a line for it at the top of [CHANGELOG.md](../CHANGELOG.md).
 3. Commit, then create the tag `vX.Y.Z` and push it.
 4. The `Release` workflow (`.github/workflows/release.yml`) runs these jobs:
 

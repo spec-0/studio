@@ -73,7 +73,8 @@ no reply for a week, a comment on it is welcome.
 
 You need:
 
-- **Node.js 24** (22.12 at the least), with npm.
+- **Node.js 24**, the version in [`.nvmrc`](.nvmrc) and the one CI uses. 22.12 is the
+  oldest that works.
 - **Rust 1.90 or later**, installed with [rustup](https://rustup.rs).
 - **The system libraries Tauri needs on your operating system.** Tauri's
   [prerequisites page](https://v2.tauri.app/start/prerequisites/) lists them:
@@ -110,6 +111,8 @@ helpful things are your operating system, the Studio version (shown under
 *About*), what you did, what you expected, and what happened. If you can
 share a small spec that shows the problem, even better. Please remove any tokens
 or private URLs first.
+
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 **Security problems:** please don't open a public issue. See
 [SECURITY.md](SECURITY.md) for how to report one privately.
@@ -158,14 +161,17 @@ the plugin back.
 
 ## How the code is organised
 
-- **Rust does eight things**: outbound HTTP (`http.rs`), the local listener used
-  during OAuth sign-in (`oauth.rs`, because a web view can't open a socket), file
-  reading and writing (`storage.rs`), the OS credential store (`secrets.rs`,
-  because only native code can reach it), checking for and installing updates
-  (`updates.rs`, with the menu in `menu.rs`), the local MCP server's socket
-  (`mcp.rs`, for the same reason as sign-in), the sockets of local mocks
-  (`local_mock.rs`, likewise), and receiving `spec0://` links from the OS
-  (`deep_link.rs`). Everything else is React.
+- **Rust has thirteen modules**: outbound HTTP (`http.rs`) and its cookie jars
+  (`cookies.rs`), the local listener used during OAuth sign-in (`oauth.rs`,
+  because a web view can't open a socket), file reading and writing
+  (`storage.rs`), the OS credential store (`secrets.rs`, because only native code
+  can reach it), checking for and installing updates (`updates.rs`), the app menu
+  (`menu.rs`), the local MCP server's socket (`mcp.rs`, for the same reason as
+  sign-in), the sockets of local mocks (`local_mock.rs`, likewise), receiving
+  `spec0://` links from the OS (`deep_link.rs`), reading a spec file's git
+  details (`git.rs`), starting the agent chat's agent process (`acp.rs`), and
+  writing Studio's instructions for that agent (`agent_profile.rs`).
+  `lib.rs` wires them together. Everything else is React.
 - **Secrets go through narrow commands.** The web view passes an environment id
   and a variable name; Rust builds the credential store entry under one fixed
   service name. There is no command that reads an arbitrary keychain item.
