@@ -4,19 +4,16 @@ description: Fixes for common problems installing and using Studio, and answers 
 docType: reference
 ---
 
-Fixes for the problems people run into most, and short answers to common questions. If yours isn't
-here, ask in [Discussions](https://github.com/spec-0/studio/discussions) or
+If your problem isn't here, ask in [Discussions](https://github.com/spec-0/studio/discussions) or
 [open an issue](https://github.com/spec-0/studio/issues).
 
 ## Installing
 
 ### Windows says "Windows protected your PC"
 
-The Windows installer isn't code-signed yet, so SmartScreen warns about it and calls the publisher
-unknown. Click **More info**, then **Run anyway**.
-
-To check the file first, compare its hash with `SHA256SUMS.txt` on the
-[releases page](https://github.com/spec-0/studio/releases/latest). In PowerShell:
+The installer isn't code-signed yet. Click **More info**, then **Run anyway**. To check the file
+first, compare its hash with `SHA256SUMS.txt` on the
+[releases page](https://github.com/spec-0/studio/releases/latest):
 
 ```powershell
 Get-FileHash .\spec0-studio-windows-x64-setup.exe
@@ -24,136 +21,106 @@ Get-FileHash .\spec0-studio-windows-x64-setup.exe
 
 ### macOS warns that the app can't be checked
 
-It shouldn't: the Mac app is signed and notarized by Apple. A warning means something is wrong with
-the download. Don't open it; check it against `SHA256SUMS.txt`, as described in
-[Install](/install), and download it again if it doesn't match.
+The Mac app is notarized, so a warning means the download is bad. Don't open it. Download it
+again, and check it against `SHA256SUMS.txt` as described in [Install](/install).
 
 ### Studio won't start on Linux
 
-Studio needs WebKitGTK 4.1: Ubuntu 22.04, Debian 12 or newer, or another distribution of about that
-age. Builds are x86_64 only. If an AppImage won't run, check that it's executable
-(`chmod +x`).
+Studio needs WebKitGTK 4.1 (Ubuntu 22.04, Debian 12 or newer). Builds are x86_64 only. Make an
+AppImage executable with `chmod +x`.
 
 ## Specs
 
 ### My Swagger 2.0 spec looks different
 
-Studio converts Swagger 2.0 to OpenAPI 3.0 when you open it. The **Raw** tab shows the original
-file; everything else uses the converted spec. Where the conversion may not be exact, such as a
-`tsv` list format, Studio says so. See [Swagger 2.0 specs](/library#swagger-20-specs).
-
-Swagger 1.2 and older don't open.
+Studio converts it to OpenAPI 3.0. The **Raw** tab shows the original. Swagger 1.2 and older
+don't open. See [Swagger 2.0 specs](/library#swagger-20-specs).
 
 ### A `$ref` to another file doesn't resolve
 
-Studio doesn't follow references to other files or URLs. Bundle the spec into one file first, for
+Studio doesn't follow references to other files or URLs. Bundle the spec into one file, for
 example with `npx @redocly/cli bundle openapi.yaml -o bundled.yaml`.
 
 ### I edited the spec file, but Studio shows the old version
 
-Studio works from its own copy of the spec. Choose **Re-read from source** in the **⋯** menu on the API's card in the
-library. See [What Studio keeps](/library#what-studio-keeps).
+Studio works from its own copy. Choose **Re-read from source** in the **⋯** menu on the API's card.
+See [What Studio keeps](/library#what-studio-keeps).
 
 ### The request goes to the wrong server, or to a path like `/api/v3`
 
-The base URL is yours to set: type it in the address bar, or pick a server from the target menu. A
-spec from a local file whose server is a path (such as `/api/v3`) has nothing to resolve it against,
-so type the full address. See [The address bar](/requests#the-address-bar).
+Pick a server in the address bar, or type a base URL. A local spec whose server is a path needs the
+full address typed. See [The address bar](/requests#the-address-bar).
+
+### A request body has values like `"string"`
+
+That's a placeholder, used when the spec gives nothing better. Replace it, or add an example to the
+spec.
 
 ## Networks
 
+Studio may send HTTP requests to any host, because an API client has to reach whatever address you
+give it.
+
 ### Requests fail behind a corporate proxy
 
-Studio uses `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` from your environment. If Studio was started
-from somewhere those aren't set, such as the Dock, set the proxy in **Settings → Network**. See
+Studio reads `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`. When it's started without them, such as
+from the Dock, set the proxy in **Settings → Network**. See
 [Proxy](/network#proxy).
 
 ### "Certificate" or "unknown issuer" errors
 
-The server's certificate comes from a CA your system doesn't trust, which is common for internal
-APIs. In **Settings → Network**, trust the CA's PEM bundle for that host. Skipping verification also
-works, but only use it when you have no bundle. See [Certificates](/network#certificates).
+Your system doesn't trust the server's CA. In **Settings → Network**, trust the CA's PEM bundle
+for that host. Skip verification only when you have no bundle. See
+[Certificates](/network#certificates).
 
 ### Check for Updates fails at work
 
-The update check uses Studio's proxy setting, but not its certificate settings. If your network
-inspects encrypted traffic, the check can fail. Download the new version from the
+The update check uses Studio's proxy setting but not its certificate settings. A network with a
+private CA, or one that inspects encrypted traffic, can block it. Download the new version from the
 [releases page](https://github.com/spec-0/studio/releases/latest) instead.
 
 ## Secrets
 
 ### Secrets aren't in the keyring on Linux
 
-Studio keeps secret values in the Secret Service. With no keyring running, or a locked one, it
-falls back to a local file that isn't encrypted, and the Environments dialog says so. Install or
-unlock a keyring such as GNOME Keyring or KWallet, then restart Studio: the values move into it.
-
-This also happens in a session with no desktop.
+With no keyring running, a locked one, or no desktop session, Studio keeps secrets in an
+unencrypted local file, and the Environments dialog says so. Install or unlock a keyring such as
+GNOME Keyring or KWallet, then restart Studio. The values move into it.
 
 ### A long token won't save on Windows
 
-Windows limits how long a stored credential can be. A token over that limit stays in Studio's local
-file instead, and the Environments dialog says how many values that affects.
+Windows limits stored credential length. A longer token stays in Studio's local file, and the
+Environments dialog says how many values that affects.
 
 ## Ports
 
 ### The local mock didn't start on port 4010
 
-Another program is using it. Studio uses the next free port, up to `4099`, and shows the one it
-picked. An API keeps its port the next time. If every port from 4010 to 4099 is taken, stop another
-local mock or free a port.
+Another program has it. Studio picks the next free port up to `4099` and keeps it for that API. If
+none is free, stop another local mock or free a port.
 
 ### The MCP server started on a different port
 
-Port `47321` was taken, so Studio used the next free one and told you. Copy the setup text from the
-MCP tab again: it has the new address. You can also choose a port in the MCP tab.
+Port `47321` was taken, so Studio used the next free one. Copy the setup text from the MCP tab
+again, or choose a port there.
 
 ## Agents
 
-### Studio didn't ask before my agent's request
+### My agent's request wasn't asked about, or was refused
 
-It asks once per host. If you chose **Allow for this session** earlier, requests to that host go
-through until you press **Stop agents** in the MCP tab or quit Studio. `DELETE`, `PUT` and `PATCH`
-to a host that isn't on your computer are still asked about separately.
-
-### My agent says its request was refused
-
-Studio refused it for one of these reasons, and tells the agent which:
-
-- you chose **Don't allow**, or nobody answered within five minutes
-- the host is in **Blocked hosts** in the MCP tab
-- agents sent more requests this minute than **Requests a minute** allows
-- you pressed **Stop agents**
+Studio asks once per host. After **Allow for this session**, that host goes through until you press
+**Stop agents** or quit. A refusal tells the agent why: you chose **Don't allow**, nobody answered
+in five minutes, the host is blocked, or agents went over **Requests a minute**. See
+[Approving what agents do](/mcp#approving-what-agents-do).
 
 ### My agent can't change a collection
 
-Agents can change only the drafts they created. Once you keep a draft, or for a collection you
-made, an agent can read and run it, or copy it into a new draft. See
-[Collections agents build](/mcp#collections-agents-build).
+Agents can change only their own drafts. See [Collections agents build](/mcp#collections-agents-build).
 
 ### Agent chat doesn't find my agent, or it needs signing in
 
-See [Troubleshooting agent chat](/agent-chat/troubleshooting), which covers agents
-Studio can't find, signing in, the Anthropic API key for Claude Agent, and chats that don't have
-Studio's tools.
-
-## Collections
-
-### A step says the local mock isn't running
-
-Steps don't start mocks. Start the API's [local mock](/local-mocks), or pick another
-target in the step's address box.
-
-### A step failed with a value that couldn't be found
-
-A [link](/collections/chaining) couldn't be filled: the earlier step failed, didn't
-run, or its response didn't have that field. Open the run log to see which value, and the Chain
-view to fix the link.
-
-### A step is marked "changed"
-
-Its spec changed since the step was made, and the step no longer matches it. The step says what
-changed. See [When a spec changes](/collections#when-a-spec-changes).
+Agent chat is new and its ACP adapters are young. A past chat can be read but not continued. See
+[Troubleshooting agent chat](/agent-chat/troubleshooting).
 
 ## Questions
 
@@ -163,8 +130,7 @@ No. Only hosted mocks, your organisation's catalog, and publishing need one.
 
 ### Does Studio send my data anywhere?
 
-No. It sends no telemetry, and your history, environments, secrets and collections stay on your
-computer. See [Privacy and security](/privacy).
+No. There's no telemetry, and your data stays on your computer. See [Privacy and security](/privacy).
 
 ### Can I run a collection from CI?
 
@@ -172,8 +138,8 @@ Not yet. Collections run in Studio only.
 
 ### Does Studio run Postman scripts?
 
-No. When you [import from Postman](/collections/postman), status checks and
-saved response values are converted; other scripts are listed, not run.
+No. A [Postman import](/collections/postman) converts status checks and saved response values.
+Other scripts aren't run, and the import summary says what was skipped.
 
 ### Is there support for GraphQL, gRPC or WebSockets?
 

@@ -1,0 +1,48 @@
+---
+title: The spec is the source of truth
+description: Why Studio builds requests, mocks, checks and collections from your OpenAPI spec, and what happens when the spec changes.
+docType: concept
+---
+
+In Studio, the OpenAPI spec is the one place an API is described. Everything else is built from it:
+
+- the request form: its parameters, allowed values, auth and a body filled in from the examples
+- the check on each response, against the schema the spec declares for that status
+- [local mocks](/local-mocks), which answer from the spec's examples with the same rules as the
+  request form
+- [collection](/collections) steps, which point at operations in the spec instead of copying them
+
+Because nothing keeps its own copy of the API, nothing can quietly fall out of step with it. When
+the API changes, you change the spec, and the requests, mocks, checks and collections follow.
+
+## Studio works from its own copy
+
+When you add an API, Studio keeps the spec's text. That's why it opens with no network, and still
+works if the file moves or its server goes away. It also means an edit to the file doesn't reach
+Studio until you ask: choose **Re-read from source** on the API's card in the library. A spec from
+Spec0 changes only when you apply an update. See [What Studio keeps](/library#what-studio-keeps).
+
+## When the spec changes
+
+Re-reading a spec or applying an update replaces Studio's copy, and Studio tells you what that did
+to the things you had set up:
+
+- operations that were added or removed
+- History entries whose operation is gone
+- a server you were sending to that the spec no longer declares
+- a hosted mock that's now behind the spec
+- collection steps that no longer match their operation, marked **changed** with the reason (see
+  [When a spec changes](/collections#when-a-spec-changes))
+
+None of these break anything, but each would be confusing if Studio said nothing.
+
+## What isn't built from a spec
+
+Two things work without one, and Studio says so where it matters:
+
+- The [scratch pad](/requests#the-scratch-pad) holds one ad-hoc request with no spec. Nothing
+  checks its response.
+- A collection step that isn't linked to an operation (usually one imported from Postman) runs as a
+  plain request, marked **not in any spec**, until you link it.
+
+Requests worth keeping are worth describing in the spec. That's what lets Studio check them.

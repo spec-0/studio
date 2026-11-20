@@ -24,7 +24,8 @@ the exact code first (`404`), then its range (`4XX`), then `default`.
 | **Type mismatches** | A field is there, but has the wrong type. |
 | **Not checked** | The spec doesn't describe this response, so there's nothing to check against. |
 
-Each finding points at the exact JSON path, such as `items[0].sku`.
+Each finding points at the exact JSON path, such as `items[0].sku`. What a match does and doesn't
+prove is in [What a response check means](/response-checks).
 
 The extra-fields result is the one to watch. A response that has quietly grown a field is often
 the first sign that an API and its spec have drifted apart, and most API clients won't tell you.

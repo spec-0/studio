@@ -1,0 +1,49 @@
+---
+title: Targets and environments
+description: Where a request goes is chosen in the address bar. An environment holds the values a request uses. Why Studio keeps the two apart.
+docType: concept
+---
+
+Two separate choices decide what a request does:
+
+- The **target** is where it goes. You choose it in the address bar.
+- The **environment** holds values the request uses, such as a token or an id. You choose it in
+  the top bar.
+
+## Targets
+
+The address bar's target menu lists every place this API can be reached:
+
+- the servers the spec declares
+- the environments Spec0 knows the API is deployed to, if you're [signed in](/connect)
+- its [hosted mock](/hosted-mocks) and, while one runs, its [local mock](/local-mocks)
+- **Custom URL…**, for any base URL you type, such as `http://localhost:8080`
+
+A new request goes to the spec's first server, because that's what the document says. Studio never
+picks a Spec0 environment or a mock for you; where a request goes is your choice. A collection step
+keeps its own target, and a local mock is kept as "the local mock", not as an address, because its
+port belongs to your computer and can change.
+
+## Environments
+
+A Studio environment is a named set of variables, such as `token` or `customerId`, used as
+`{{name}}` in parameters, headers, auth and the body. Switching environment switches every value at
+once, so staging credentials and production credentials are two environments. Variables marked
+secret are kept in your operating system's credential store. See
+[Auth, environments and secrets](/auth-environments).
+
+## Why they stay separate
+
+Many API clients put the base URL in the environment. Studio doesn't, for two reasons.
+
+The spec already says where the API runs. Copying those addresses into environments makes a second
+list that drifts from the first. Keeping the destination in the address bar means the choices come
+from the spec, Spec0 and your mocks, and you can always see which one a request used. History
+records it too.
+
+The word "environment" also means two things. A Spec0 environment is a real place the API is
+deployed, reported by Spec0, and it appears as a target. A Studio environment is your own set of
+values for testing and never leaves your computer. You'll often use both at once: the Spec0
+environment `staging` as the target, and your Studio environment "Staging (me)" for the token.
+
+You can still put a variable in a base URL. Choose **Custom URL…** and type `{{baseUrl}}/v1`.

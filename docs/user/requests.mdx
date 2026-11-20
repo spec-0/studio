@@ -4,33 +4,26 @@ description: Build a request from the spec, choose where it goes, work across re
 docType: how-to
 ---
 
-This page covers building and sending a request, the request tabs, and History. For auth and
-variables, see [Auth, environments and secrets](/auth-environments).
+For auth and variables, see [Auth, environments and secrets](/auth-environments).
 
 ## The request editor
 
-Open an API, pick an operation in the **Operations** view, and the editor fills itself in from the
-spec. Its sections are tabs: **Body**, **Params**, **Headers**, **Auth** and **Docs**, with a count
-on each (a dot on Body when the spec requires one). An operation opens on the first tab that needs
-input, path parameters first, and remembers the tab you chose for the rest of the session.
+Pick an operation in the **Operations** view and the editor fills itself in from the spec. Its tabs
+are **Body**, **Params**, **Headers**, **Auth** and **Docs**. An operation opens on the first tab
+that needs input.
 
-- **Parameters** get the right kind of field. A list of allowed values becomes a dropdown, and a
-  true/false becomes a toggle. A required parameter starts with the parameter's own example, or
-  its schema's.
-- **Descriptions** are formatted, including the simple HTML some specs use. Links open in your
-  browser, and a link to a page relative to the API's own docs shows as text.
-- **Bodies** start filled in with the real field names, and example values that fit each field's
-  type and format. The spec's own examples are used where it has them. The body editor has line
-  numbers and highlighting; **Format** indents the JSON and **Reset to example** puts the spec's
-  example back. The body's schema is a row under the editor that opens to its fields.
-- **Headers** lists the spec's headers, the `Content-Type` the body sets, and any you add. Secrets
-  go in an environment, as `{{name}}`.
-- **Docs** has everything the spec says about the operation: its description (or its summary when
-  there is none), each parameter, the request body and its fields, and each response with its
-  description and schema.
+- Parameters get the right kind of field: a dropdown for allowed values, a toggle for true/false. A
+  required parameter starts with its example from the spec.
+- Bodies start with the real field names and example values that fit each field's type and format,
+  or the spec's own examples where it has them. When the spec gives nothing better, a value can be
+  a placeholder such as `"string"`. **Format** indents the JSON and **Reset to example** puts the
+  spec's example back.
+- **Headers** lists the spec's headers, the `Content-Type` the body sets, and any you add. Put
+  secrets in an environment and refer to them as `{{name}}`.
+- **Docs** shows everything the spec says about the operation, including each response's schema.
 
 Press **Send** or `⌘↵` (`Ctrl+Enter`). The arrow next to **Send** has **Copy as cURL** (`⇧⌘C`,
-`Ctrl+Shift+C`), which copies the request exactly as Send would build it, and **Add to collection…**.
+`Ctrl+Shift+C`), which copies the request exactly as Send builds it, and **Add to collection…**.
 
 ### Bodies and files
 
@@ -39,56 +32,52 @@ The editor follows the content type the spec declares:
 | Content type | Editor |
 |---|---|
 | JSON and other text | A text body, filled in from the schema. |
-| `application/x-www-form-urlencoded` | Key and value rows. Repeated keys are kept, and the encoding is done for you. |
+| `application/x-www-form-urlencoded` | Key and value rows. Repeated keys are kept, and Studio does the encoding. |
 | `multipart/form-data` | One row per part, named from the schema, each with a file picker. |
 
-Files are read when you send, from the path you picked, so there's no upload size limit in Studio.
+Files are read from disk when you send, so Studio has no upload size limit.
 
 ### Responses that aren't text
 
-Images show inline. Anything else binary, such as a PDF or a zip, shows its type and size, and
-**Save as…** writes the bytes that came back to a file. Binary bodies aren't kept in History; the
-entry records the size.
+Images show inline. Other binary responses, such as a PDF or a zip, show their type and size, and
+**Save as…** writes the bytes to a file. History records only the size of a binary body.
 
-If a response says it's binary but is really readable text (servers often send JSON as
-`application/octet-stream`), Studio shows it as text.
+Servers often send JSON as `application/octet-stream`. If a binary response is really readable
+text, Studio shows it as text.
 
 ## The address bar
 
-The address bar is one box: the method, where the request goes, and the operation's path.
+The address bar holds the method, where the request goes, and the operation's path. Where it goes
+is chosen here, separately from your environment. See
+[Targets and environments](/targets-and-environments).
 
-- **The target** is named once. A server shows its host, an environment its name, and a mock says
-  **Local mock** with its port (`:4011`) or **Hosted mock**. The field then shows only the path; the
-  full address is in the target's tooltip and its menu.
-- **The target menu** lists the spec's servers, the environments Spec0 knows the API is deployed
-  to, its [hosted mock](/hosted-mocks), its [local mock](/local-mocks) when one is running, and
+- The target shows a server's host, an environment's name, **Local mock** (with its port) or
+  **Hosted mock**. Its tooltip has the full address.
+- The target menu lists the spec's servers, the environments Spec0 knows the API is deployed to,
+  its [hosted mock](/hosted-mocks), its [local mock](/local-mocks) when one is running, and
   **Custom URL…**.
-- **Any base URL.** Choose **Custom URL…** to type one, such as `http://localhost:8080`, or a host
-  the spec never mentions. The path follows what you type. A base URL written as `{{baseUrl}}` is
-  always shown as written. A spec with no `servers` works too.
-- **The path isn't editable.** It belongs to the operation; its `{parameters}` are highlighted.
+- **Custom URL…** takes any base URL, such as `http://localhost:8080`. A spec with no `servers`
+  works too.
+- The path belongs to the operation, so you can't edit it. Its `{parameters}` are highlighted.
 
-Nothing is chosen for you: a new API starts on the spec's first server. The answer in the response
-pane says where it came from, and History records it, so you always know whether you just called a
-real server.
+A new API starts on the spec's first server. The response pane and History say where each request
+went, so you know whether you called a real server.
 
-Some specs give their server as a path, such as `/api/v3`. For a spec added from a URL, Studio
-resolves it against the spec's own address, as OpenAPI describes. A spec from a local file has
-nothing to resolve against, so type the base URL yourself.
-
-To keep an address you typed, the bookmark icon saves it as `baseUrl` in the active
+If the spec's server is a path, such as `/api/v3`, Studio resolves it against the address of a
+spec added from a URL. A spec from a local file has nothing to resolve against, so type the base
+URL yourself. The bookmark icon saves a typed address as `baseUrl` in the active
 [environment](/auth-environments#environments).
 
 <Callout title="No CORS">
-Requests are sent by the app itself, not by a web page, so browser CORS rules don't apply. There's
-no preflight and no proxy to set up.
+The app sends requests itself, so browser CORS rules don't apply. There's no preflight and no proxy
+to set up.
 </Callout>
 
 ## Request tabs
 
-Every operation you open gets a tab above the API bar, like a browser tab; the bar below describes
-the open tab's API. **+** at the end of the strip opens a new request without a spec (Scratch). Tabs work across APIs, so you can keep a
-request from the Orders API next to one from the Payments API and move between them.
+Every operation you open gets a tab above the API bar. Tabs work across APIs, so a request from the
+Orders API can sit next to one from the Payments API. **+** opens a [scratch](#the-scratch-pad)
+request.
 
 <Screenshot
   src="/images/product/studio-request-tabs.webp"
@@ -99,40 +88,25 @@ request from the Orders API next to one from the Payments API and move between t
   minWidth={640}
 />
 
-| To | Do this |
-|---|---|
-| Open a tab | Open an operation: from the list, a schema's links, History's **Open as new request**, or an Open in Studio link |
-| Close a tab | Its **×**, a middle-click, or `⌘W` (`Ctrl+W`) |
-| Next or previous tab | `Ctrl+Tab` and `Ctrl+Shift+Tab` on every system; also `⇧⌘]` and `⇧⌘[` on macOS |
+Close a tab with its **×**, a middle-click or `⌘W` (`Ctrl+W`). `Ctrl+Tab` and `Ctrl+Shift+Tab` move
+between tabs (also `⇧⌘]` and `⇧⌘[` on macOS). With no tab on screen, `⌘W` closes the window.
 
-Tabs come back when Studio reopens.
-
-<Callout title="Good to know">
-- Studio keeps up to 20 tabs. Opening another closes the one you used longest ago, but never one
-  with unsent changes.
-- Tabs are for operations. A [collection](/collections) step is edited in its
-  collection.
-- On macOS, `⌘W` closes the tab on screen. When no tab is on screen, it closes the window.
-  `⇧⌘W` always closes the window.
-</Callout>
+Tabs come back when Studio reopens. Studio keeps up to 20. Opening another closes the one you used
+longest ago, but never one with unsent changes.
 
 ## Unsent changes
 
-What you type into a request stays with that operation when you move to another request, another
-API or another tab, and after a restart.
+What you type into a request stays with it when you switch away, and after a restart. A dot on the
+tab and next to the operation marks unsent changes. **Discard changes** goes back to the values the
+spec suggests. Once you send, the request opens with what you sent.
 
-- A **dot** on the tab and next to the operation shows which requests have **unsent changes**.
-- **Discard changes** goes back to the values the spec suggests.
-- Once a request is sent, what you sent is what it opens with next time, and the dot goes away.
-
-Auth values you type straight into a request are kept only until Studio quits. A `{{reference}}` to
-an environment variable is kept. Secret values are never written into saved changes.
+Auth values typed straight into a request are kept only until Studio quits. A `{{reference}}` to an
+environment variable is kept. Secret values are never written into saved changes.
 
 ## The last response comes back
 
-Going back to a request you sent earlier in the same session shows its last response again, with a
-note: "Sent at 14:03:12, earlier in this session. Not sent again since." If you've edited the
-request since, the note says that response isn't the answer to what's on screen now.
+Going back to a request you sent earlier in the session shows its last response. If you've edited
+the request since, a note says that response doesn't match what's on screen.
 
 <Screenshot
   src="/images/product/studio-restored-response.webp"
@@ -143,43 +117,31 @@ request since, the note says that response isn't the answer to what's on screen 
   maxWidth={560}
 />
 
-Responses are kept for this session only. After a restart, earlier responses are in
-[History](#history).
+After a restart, earlier responses are in [History](#history).
 
 ## The scratch pad
 
-Sometimes you just have a URL and want to send one request. **Scratch**, pinned first in your
-library, is for that: method, URL, headers, body, send. Environment variables work there too.
-
-There's one pad, with no save and no second request. A request without a spec has nothing to check
-against, so the response pane says there's no check rather than leaving a blank. Scratch requests
-are kept in History like any other.
+**Scratch**, pinned first in your library, sends one request to a URL you type. Environment
+variables work there. There's one pad and nothing to save. With no spec there's nothing to check
+the response against, and the response pane says so. Scratch requests go to History.
 
 ## History
 
-History is a read-only log of every request you've sent. It's kept on your computer for 30 days and
-never synced anywhere.
+History is a read-only log of every request you've sent. It stays on your computer for 30 days and
+is never synced.
 
-**History** in the top bar lists every API's requests, and scratch requests, in one list, by day.
-Each row shows the API, where the request went and any differences from the spec, with the status
-and time on the right. The chips above it filter by API, by status (2xx, 3xx, 4xx, 5xx or errors),
-by mock (local or hosted) or real server, or to responses that drifted from the spec (**Drift
-only**), and the field above them searches. For one API's requests, open the API and choose
-**History** in the sidebar.
+**History** in the top bar lists every request by day, scratch ones included. Chips filter by API,
+by status, by mock or real server, or to **Drift only**. For one API, choose **History** in its
+sidebar.
 
-Open an entry to see:
+An entry shows what was sent and received, the environment, where it went, and the
+[schema check](/checking-responses) from that time. If the spec has changed since, **Re-check
+against current spec** runs the check again. The spec decides what counts as correct.
+See [The spec is the source of truth](/source-of-truth).
 
-- what was sent: method, full URL, headers and body
-- what came back: status, time, size, headers and body
-- when it ran, which API and environment it used, and where it went: a server, a local mock (with
-  its address), the hosted mock, or a URL you typed
-- the [schema check](/checking-responses) from when it ran. If the spec has changed
-  since, **Re-check against current spec** shows what the check says now.
-
-A recording has no Send button, so it always shows what happened. To run it again, choose
-**Open as new request**, which fills the editor from the recording. **Add to collection** adds it
-as a [collection](/collections) step, with the values it was sent with.
+An entry can't be re-sent, so it always shows what happened. **Open as new request** fills the
+editor from it. **Add to collection** adds it as a [collection](/collections) step with the values
+it was sent with.
 
 To delete everything, use **Clear all history…** in the list's **⋯** menu, or **Clear history** in
-**Settings → Data & privacy**. Secret values are
-never written into History.
+**Settings → Data & privacy**. Secret values are never written into History.

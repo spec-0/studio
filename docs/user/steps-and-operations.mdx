@@ -1,0 +1,52 @@
+---
+title: Collection steps point at operations
+description: Why a collection step refers to an operation in your spec instead of copying the request, and what happens when that operation changes.
+docType: concept
+---
+
+In most API clients, a collection holds its own copy of each request: the URL, the headers, the
+body. In Studio, a step points at an operation in a spec, and keeps only what is its own:
+
+- the parameter values, headers and body you set
+- the [target](/targets-and-environments) it's sent to
+- values it takes from earlier steps, such as `{{steps.createOrder.body.id}}`
+
+Everything else (the path, the method, which parameters exist, what the response should look like)
+comes from the spec each time the step runs.
+
+## Why
+
+A copy of a request is a second description of the API, and it starts going stale the day it's
+made. Pointing at the operation means:
+
+- each step's response is [checked against its spec](/response-checks), like any other request
+- when the spec changes, Studio can say which steps no longer match it
+- a step can come from any API in your library, so one collection can create an order in one API
+  and pay for it in another
+
+## How a step finds its operation
+
+A step names its API and the operation's `operationId`, or its method and path when there is no
+`operationId`. So an operation can move to a new path and the step still finds it.
+
+## When the operation changes
+
+Each time the collection opens or the spec is re-read, Studio compares every step with the current
+operation. A step that no longer fits is marked **changed**, with the reason:
+
+- the operation was renamed or moved
+- a parameter the step sets was removed, or a new one became required
+- the body is missing a field the spec now requires
+- the server the step targets is no longer in the spec
+
+Nothing is changed for you; the step shows what to fix. A step whose operation is gone stays in the
+collection, marked missing, and **Change operation…** points it at another one. It's never quietly
+turned into a plain request, because then nothing would check it.
+
+## Steps without an operation
+
+A request imported from Postman that matches no spec in your library becomes a plain step, marked
+**not in any spec**. It runs, but its response isn't checked. **Link to an operation…** links it once
+you've added the API.
+
+See [Collections](/collections) and [Passing values between steps](/collections/chaining).

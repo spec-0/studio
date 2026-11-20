@@ -46,7 +46,7 @@ result, much as with code. So an API tool has to work for both of them.
 | Tests fall behind when the API changes with every prompt | One click starts a local mock, and a collection can be re-run after every change |
 | Requests, mocks and checks drift away from the spec | All of them are built from the spec, and every JSON response is checked against the schema it declares |
 
-It's young, and we'd like to hear what breaks.
+It's young. Tell us what breaks in [Discussions](https://github.com/spec-0/studio/discussions).
 
 ## What you can do
 
@@ -61,7 +61,7 @@ including fields the spec doesn't mention.
   <sub>A response that matches the schema the spec declares.</sub>
 </p>
 
-→ Read more: [Requests](https://studio-docs.spec0.io/requests/) · [Checking responses](https://studio-docs.spec0.io/checking-responses/)
+See [Requests](https://studio-docs.spec0.io/requests/) and [Checking responses](https://studio-docs.spec0.io/checking-responses/).
 
 ### See how the schemas fit together
 
@@ -73,7 +73,7 @@ them. Click a schema to see its fields and an example.
   <sub>The Graph tab of a Catalog API.</sub>
 </p>
 
-→ Read more: [Schemas](https://studio-docs.spec0.io/schemas/) · [Schema graph](https://studio-docs.spec0.io/schema-graph/)
+See [Schemas](https://studio-docs.spec0.io/schemas/) and [Schema graph](https://studio-docs.spec0.io/schema-graph/).
 
 ### Chain requests into collections, and see why a run failed
 
@@ -102,7 +102,7 @@ each run gets a log that says why a step failed. Postman collections can be
 </p>
 </details>
 
-→ Read more: [Collections](https://studio-docs.spec0.io/collections/)
+See [Collections](https://studio-docs.spec0.io/collections/).
 
 ### Mock any API on your computer in one click
 
@@ -113,7 +113,7 @@ no account and no network, and it stops when Studio quits.
   <img alt="A request sent to a local mock at 127.0.0.1:4010, marked LOCAL MOCK, with a response that matches the schema" src=".github/assets/readme/local-mock.png" width="720">
 </p>
 
-→ Read more: [Local mocks](https://studio-docs.spec0.io/local-mocks/) · [Hosted mocks](https://studio-docs.spec0.io/hosted-mocks/)
+See [Local mocks](https://studio-docs.spec0.io/local-mocks/) and [Hosted mocks](https://studio-docs.spec0.io/hosted-mocks/).
 
 ### Let a coding agent work with your APIs
 
@@ -127,7 +127,7 @@ and test them through Studio. To stay in Studio, press **Agent** in the top bar
   <sub>A coding agent asks Studio which APIs are open, then calls a mock.</sub>
 </p>
 
-→ Read more: [Local MCP server](https://studio-docs.spec0.io/mcp/) · [Agent chat](https://studio-docs.spec0.io/agent-chat/)
+See [Local MCP server](https://studio-docs.spec0.io/mcp/) and [Agent chat](https://studio-docs.spec0.io/agent-chat/).
 
 <details>
 <summary><b>More screenshots</b></summary>
@@ -171,12 +171,9 @@ ask (*Check for Updates…*), and every update is signed.
 > MCP server all run on your computer, without signing in.
 
 > [!NOTE]
-> The Windows installer isn't code-signed yet, because we don't have a Windows
-> code-signing certificate. Windows SmartScreen will probably say "Windows
-> protected your PC" and call the publisher unknown. To continue, click
-> **More info**, then **Run anyway**. If you'd rather not, check the file against
-> `SHA256SUMS.txt` first (in PowerShell: `Get-FileHash .\spec0-studio-windows-x64-setup.exe`),
-> or [build Studio from source](#build-from-source).
+> The Windows installer isn't code-signed yet, so SmartScreen will probably warn you. Click
+> **More info**, then **Run anyway**, or see [Install](https://studio-docs.spec0.io/install/) to
+> check the download first.
 
 ## How it differs
 
@@ -199,7 +196,7 @@ servers you point it at.
   start them. An agent's first request to each host waits for your approval.
 - Update checks happen only when you ask.
 
-→ [Everything Studio does and doesn't send](https://studio-docs.spec0.io/privacy/)
+See [everything Studio does and doesn't send](https://studio-docs.spec0.io/privacy/).
 
 > [!WARNING]
 > If the credential store can't be reached (mostly on Linux without a running,
@@ -209,44 +206,24 @@ servers you point it at.
 
 ## Known limitations
 
-<details open>
-<summary><b>What Studio doesn't do yet</b></summary>
+- Only JSON response bodies are checked. Headers, content types and undeclared status codes aren't.
+- Collections run in Studio only. There is no command-line runner.
+- The Windows and Linux builds are x86_64 only, and have had less use than the Mac build.
+- Linux needs WebKitGTK 4.1: Ubuntu 22.04, Debian 12 or newer.
+- A local mock answers from examples and keeps no state. A `POST` doesn't change the next `GET`.
 
-- **Only JSON response bodies are checked.** Headers, content types and undeclared status codes aren't.
-- **Collections run in Studio only.** There is no command-line runner, and an OAuth step uses the token Studio already holds.
-- **A Postman import doesn't bring everything across.** Scripts aren't run; the summary says what was skipped.
-- **The Windows and Linux builds are new**, x86_64 only, and have had much less use than the Mac build.
-- **Linux needs WebKitGTK 4.1**: Ubuntu 22.04, Debian 12 or newer.
-- **Update checks don't use your certificate settings**, so a network with a private CA may block them.
-- **A local mock answers from examples, not state.** A `POST` doesn't change the next `GET`, and XML is sent as JSON.
-- **Some example values are placeholders**, like `"string"`, when the spec gives nothing better.
-- **Agent chat is new.** The ACP adapters are young, and a past chat can be read but not continued.
-- **The app may make HTTP requests to any host**, because an API client has to reach whatever address you give it.
-
-Details and workarounds are in [Troubleshooting](https://studio-docs.spec0.io/troubleshooting/).
-
-</details>
+More, with workarounds, in [Troubleshooting](https://studio-docs.spec0.io/troubleshooting/).
 
 ## Build from source
-
-You need Node, Rust and Tauri's system packages, at the versions listed in
-[CONTRIBUTING.md](CONTRIBUTING.md#setting-up).
 
 ```bash
 npm ci
 npm run app            # run the desktop app
-npm run dev            # preview the interface in a browser at localhost:5173
+npm run app:build      # installers for your platform
 ```
 
-The browser preview is handy for styling, but requests to other sites will be
-blocked by CORS there, because it is a web page. In the desktop app they go out
-through Rust. The status bar tells you which one you are in.
-
-```bash
-npm test               # unit tests
-npm run type-check     # TypeScript check
-npm run app:build      # installers for your platform (.dmg, .AppImage/.deb, .exe)
-```
+What you need installed first, the checks, and how to send a change are in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Feedback and contributing
 
