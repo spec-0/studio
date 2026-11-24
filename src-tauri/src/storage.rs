@@ -11,6 +11,9 @@
 //!    save dialog (or opened before), and only a file whose name says it is one.
 //!  - `write_run_log` writes an exported collection run log at a path the user
 //!    chose in a save dialog, and only a `*.spec0-run.json` or `.txt` file.
+//!  - `write_spec` writes a new OpenAPI document (Describe as a spec) at a path
+//!    the user chose in a save dialog: only a `.yaml` or `.yml` file, and only
+//!    text that starts as an OpenAPI document does.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -106,6 +109,34 @@ pub fn write_run_log(path: String, contents: String) -> Result<(), String> {
     fs::write(&target, contents).map_err(|error| format!("{path}: {error}"))
 }
 
+/// What a described spec's name must end with.
+const SPEC_SUFFIXES: [&str; 2] = [".yaml", ".yml"];
+
+/// A YAML file that isn't a collection, and whose text is an OpenAPI document:
+/// its first line that isn't blank or a comment is `openapi: ...`.
+fn spec_path(path: &str, contents: &str) -> Result<PathBuf, String> {
+    let target = path_with_suffix(path, &SPEC_SUFFIXES, ".yaml or .yml")?;
+    if collection_path(path).is_ok() {
+        return Err(format!("that name is for collection files: {path}"));
+    }
+    let first = contents
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && !line.starts_with('#'))
+        .unwrap_or_default();
+    if !first.starts_with("openapi:") {
+        return Err("only an OpenAPI document can be written here".into());
+    }
+    Ok(target)
+}
+
+/// Write an OpenAPI document Studio drafted, where the user chose to save it.
+#[tauri::command]
+pub fn write_spec(path: String, contents: String) -> Result<(), String> {
+    let target = spec_path(&path, &contents)?;
+    fs::write(&target, contents).map_err(|error| format!("{path}: {error}"))
+}
+
 /// Write a collection file the user saved to a folder.
 #[tauri::command]
 pub fn write_collection(path: String, contents: String) -> Result<(), String> {
@@ -163,6 +194,19 @@ mod tests {
         assert!(run_log_path(&absolute(".spec0-run.json")).is_err());
         assert!(run_log_path(&absolute("x.spec0-collection.yaml")).is_err());
         assert!(run_log_path("relative.spec0-run.json").is_err());
+    }
+
+    #[test]
+    fn spec_files_only() {
+        let doc = "# drafted\n\nopenapi: 3.1.0\ninfo: {}\n";
+        assert!(spec_path(&absolute("orders.openapi.yaml"), doc).is_ok());
+        assert!(spec_path(&absolute("Orders.YML"), doc).is_ok());
+        assert!(spec_path(&absolute("orders.yaml"), "name: ci\non: push\n").is_err());
+        assert!(spec_path(&absolute(".bashrc"), doc).is_err());
+        assert!(spec_path(&absolute("orders.json"), doc).is_err());
+        assert!(spec_path(&absolute(".yaml"), doc).is_err());
+        assert!(spec_path(&absolute("x.spec0-collection.yaml"), doc).is_err());
+        assert!(spec_path("relative.yaml", doc).is_err());
     }
 
     #[test]

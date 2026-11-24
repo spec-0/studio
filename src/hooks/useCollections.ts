@@ -40,6 +40,7 @@ import {
   targetFromAddress,
   linkStep,
   relinkStep as relinkIn,
+  linkStepsTo,
   removeStep as removeIn,
   resolveTarget,
   stepValuesFromHistory,
@@ -70,6 +71,7 @@ import { fileName } from "../lib/platform";
 import { appFetch, describeBody, inTauri, send, type AuthState } from "../lib/request";
 import { declaredResponse, describeSendError, storedResponseBody } from "../lib/response";
 import { SCRATCH_OPERATION_ID, SCRATCH_TITLE, scratchLabel, scratchPath, type ScratchPad } from "../lib/scratch";
+import { plural } from "../lib/plural";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "../lib/spec";
 import { DEFAULT_API_URL, absoluteMockUrl, type Session } from "../lib/spec0";
 import { mockCredentials, sentFields, sentTargetOf } from "../lib/targets";
@@ -781,6 +783,29 @@ export function useCollections({
   );
 
   /**
+   * Link a collection's unlinked steps to the operations a described spec
+   * wrote for them, and say how many were linked.
+   */
+  const linkToSpec = useCallback(
+    (id: string, entry: LibraryEntry, spec: ParsedSpec, byKey: Parameters<typeof linkStepsTo>[3]) => {
+      const collection = latest.current.find((c) => c.id === id);
+      if (!collection) return;
+      const { collection: next, linked } = linkStepsTo(collection, entry, spec, byKey);
+      if (linked) {
+        update(id, () => next);
+        setRevision((n) => n + 1);
+      }
+      notify(id, {
+        kind: "info",
+        text: linked
+          ? `Linked ${plural(linked, "step")} to operations in ${entry.title}. Their responses are checked from now on.`
+          : `Added ${entry.title} to your library. No step matched one of its operations.`,
+      });
+    },
+    [update, notify],
+  );
+
+  /**
    * Add an operation as a step, to an existing collection or to a new one
    * (`collectionId` null). Returns the collection it went into.
    */
@@ -1345,6 +1370,7 @@ export function useCollections({
     duplicateStep,
     editChain,
     relinkStep,
+    linkToSpec,
     addOperation,
     addRecorded,
     addBlankStep,

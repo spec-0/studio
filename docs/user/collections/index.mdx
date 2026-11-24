@@ -142,6 +142,11 @@ that matches no spec in your library. It's marked **not in any spec**. It runs,
 but its response isn't checked. **Link to an operation…** in the step menu links it once you've added
 the API.
 
+If there's no spec for it yet, choose **Describe as a spec…** in the collection's **⋯** menu, or on
+the step. Studio writes a draft spec from what these steps sent and got back, as it does
+[for scratch requests](/requests#describe-them-as-a-spec), adds it to your library, and links each
+step to its new operation, so their responses are checked from the next run.
+
 <Callout title="Good to know">
 - Collections run in Studio only. There's no command-line runner yet.
 - A step that uses OAuth uses the token Studio already holds for that API and environment. Get one

@@ -153,6 +153,30 @@ export function useLibrary({
   );
 
   /**
+   * Add a document Studio wrote itself (Describe as a spec) to the library, and
+   * open it when `open` is set. Unlike `ingest` it throws, so the dialog that
+   * saved the file can say what went wrong, and it returns the entry and the
+   * parsed spec for linking steps to.
+   */
+  const addWritten = useCallback(
+    async (text: string, name: string, source: ApiSource, open: boolean) => {
+      const parsed = parseSpec(text, name, documentUrlOf(source));
+      const entry = await library.addToLibrary({
+        title: parsed.title || name,
+        version: parsed.version,
+        source,
+        text,
+        operations: parsed.operations.length,
+        schemas: parsed.schemas.length,
+      });
+      setEntries(await library.loadLibrary());
+      if (open) openSpec(parsed, entry, text);
+      return { entry, spec: parsed };
+    },
+    [openSpec],
+  );
+
+  /**
    * Refresh the cached environment list for a spec0-sourced API.
    *
    * Fire-and-forget on open: the API is already usable without it, so a platform that
@@ -390,6 +414,7 @@ export function useLibrary({
     setSyncReport,
     fileInput,
     ingest,
+    addWritten,
     openEntry,
     openFile,
     addFromUrl,

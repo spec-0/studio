@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Copy, History, ListPlus, Loader2, Plus, Send, SquareDashed, Trash2, TriangleAlert, X } from "lucide-react";
+import { Copy, FileCode2, History, ListPlus, Loader2, Plus, Send, SquareDashed, Trash2, TriangleAlert, X } from "lucide-react";
 import { interpolate, unresolved } from "../lib/env";
 import type { HistoryEntry } from "../lib/history";
 import { HistoryList } from "./HistoryList";
@@ -21,6 +21,8 @@ interface Props {
   onRemove: (id: string) => void;
   /** Open the "Add to a collection" menu for this request, at a point on screen. */
   onAddToCollection: (request: ScratchRequest, position: { x: number; y: number }) => void;
+  /** Open Describe as a spec, for what these requests got back. */
+  onDescribe: () => void;
   vars: Record<string, string>;
   sending: boolean;
   onSend: () => void;
@@ -283,8 +285,10 @@ function ScratchSidebar({
   onRemove,
   history,
   onOpenRecord,
+  onDescribe,
   record = null,
 }: Props) {
+  const answered = history.filter((entry) => entry.status > 0).length;
   const [side, setSide] = useState<"requests" | "history">("requests");
   return (
     <aside className="pane sidebar">
@@ -350,6 +354,20 @@ function ScratchSidebar({
             )}
           </>
         )}
+      </div>
+      <div className="scratch-foot">
+        <button
+          className="btn ghost"
+          disabled={!answered}
+          onClick={onDescribe}
+          title={
+            answered
+              ? "Write a draft OpenAPI spec from what these requests got back. Nothing is sent."
+              : "Send a request first: the spec is written from the responses in History"
+          }
+        >
+          <FileCode2 size={13} /> Describe as a spec
+        </button>
       </div>
     </aside>
   );

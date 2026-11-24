@@ -2512,6 +2512,17 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 
 .modal.import-summary { width: min(620px, 100%); }
 .import-summary .modal-foot .spacer { flex: 1; }
+/* Describe as a spec */
+.describe-body { display: grid; gap: 12px; }
+.describe-lead { margin: 0; font-size: 13px; }
+.describe-section { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid hsl(var(--border)); }
+.describe-section h3 { margin: 0; font-size: 12px; font-weight: 600; }
+.describe-ops { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 180px; overflow: auto; }
+.describe-ops li { display: flex; align-items: baseline; gap: 10px; min-width: 0; font-size: 12.5px; }
+.describe-ops .method { flex: 0 0 auto; }
+.describe-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.describe-statuses { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.describe-yaml { max-height: 320px; }
 .import-headline { margin: 0 0 12px; font-size: 13.5px; }
 .import-section { padding: 10px 0; border-top: 1px solid hsl(var(--border)); display: grid; gap: 6px; }
 .import-section h3 { margin: 0; font-size: 12px; font-weight: 600; }
@@ -4355,6 +4366,8 @@ tr:hover .row-actions .icon-btn, .row-actions .icon-btn:focus-visible { opacity:
    on hover or keyboard focus, as quiet as the operation list. */
 .scratch-new { width: calc(100% - 12px); margin: 6px 6px 4px; justify-content: flex-start; }
 .scratch-new .kbd { margin-left: auto; }
+.scratch-foot { flex: none; padding: 6px; border-top: 1px solid hsl(var(--border)); }
+.scratch-foot .btn { width: 100%; justify-content: flex-start; }
 .scratch-row { position: relative; }
 .scratch-row .row { width: 100%; padding-right: 56px; }
 .scratch-row-actions {

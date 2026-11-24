@@ -103,6 +103,33 @@ export async function pickSpecFile(): Promise<{ path: string; text: string } | n
 }
 
 /**
+ * Ask where to save a spec Studio drafted. The name gets `.yaml` if it has no
+ * YAML extension, since Rust only writes `.yaml` and `.yml` files there.
+ */
+export async function pickSpecSaveTarget(suggested: string): Promise<string | null> {
+  if (!inTauri) return null;
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const picked = await save({ defaultPath: suggested, filters: [{ name: "OpenAPI (YAML)", extensions: ["yaml", "yml"] }] });
+  if (typeof picked !== "string") return null;
+  return /\.ya?ml$/i.test(picked) ? picked : `${picked}.yaml`;
+}
+
+/** Write a drafted spec. Rust refuses anything that isn't a YAML OpenAPI document. */
+export async function writeSpecFile(path: string, text: string): Promise<void> {
+  await invoke("write_spec", { path, contents: text });
+}
+
+/** In the browser preview there is no path to write, so a file downloads instead. */
+export function downloadText(name: string, text: string, type = "application/yaml"): void {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
  * Pick a CA bundle and read it.
  *
  * The content is what gets stored, not the path: the dialog is the consent step

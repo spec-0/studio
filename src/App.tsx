@@ -24,6 +24,7 @@ import { RunDialog } from "./components/RunDialog";
 import { SchemaView } from "./components/SchemaView";
 import { RequestTabs } from "./components/RequestTabs";
 import { ScratchView } from "./components/ScratchView";
+import { DescribeSpecDialog } from "./components/DescribeSpecDialog";
 import { AccountSettings } from "./components/settings/AccountSettings";
 import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { DataSettings } from "./components/settings/DataSettings";
@@ -47,6 +48,7 @@ import { useBoot } from "./hooks/useBoot";
 import { useBulkRun } from "./hooks/useBulkRun";
 import { useCollections } from "./hooks/useCollections";
 import { useConnectionSettings } from "./hooks/useConnectionSettings";
+import { useDescribeSpec } from "./hooks/useDescribeSpec";
 import { useDeepLinks } from "./hooks/useDeepLinks";
 import { useDrafts } from "./hooks/useDrafts";
 import { useDialogs } from "./hooks/useDialogs";
@@ -258,6 +260,7 @@ export default function App() {
     setSyncReport,
     fileInput,
     ingest,
+    addWritten,
     openEntry,
     openFile,
     addFromUrl,
@@ -292,6 +295,7 @@ export default function App() {
     ),
   });
   useAgentApp({ entries, vars, activeEnv, connection, session, localMocks, collections, setRequests });
+  const describe = useDescribeSpec({ history: requests, vars, addWritten, linkToSpec: collections.linkToSpec });
 
   const {
     showPublish,
@@ -781,7 +785,7 @@ export default function App() {
             </>
           ) : route === "collections" ? (
             <>
-              <CollectionsView api={collections} entries={entries} onGoLibrary={goLibrary} />
+              <CollectionsView api={collections} entries={entries} onGoLibrary={goLibrary} onDescribe={describe.fromCollection} />
             </>
           ) : route === "mocks" ? (
             <>
@@ -835,6 +839,7 @@ export default function App() {
                 onDuplicate={(id) => void scratch.duplicate(id)}
                 onRemove={removeScratch}
                 onAddToCollection={(request, position) => collections.openScratchMenu(position, request)}
+                onDescribe={describe.fromScratch}
                 vars={vars}
                 sending={sending}
                 onSend={() => void doScratchSend()}
@@ -1311,6 +1316,14 @@ export default function App() {
           key={`${collections.naming.title}|${collections.naming.initial}`}
           state={collections.naming}
           onClose={collections.closeNaming}
+        />
+      )}
+      {describe.describing && (
+        <DescribeSpecDialog
+          samples={describe.describing.samples}
+          collectionName={describe.describing.collection?.name}
+          onClose={describe.close}
+          onSave={describe.save}
         />
       )}
       <AddToCollectionMenu
