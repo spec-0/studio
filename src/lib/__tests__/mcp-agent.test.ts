@@ -152,6 +152,7 @@ function world(overrides: Partial<AgentToolDeps> = {}): World {
     gateRequest: async () => null,
     gateMockStart: async () => null,
     gateSave: async () => null,
+    gateOpenSpec: async () => null,
     stopGeneration: () => 0,
     recordActivity: () => undefined,
     recordHistory: async (record) => void history.push(record),
@@ -160,6 +161,10 @@ function world(overrides: Partial<AgentToolDeps> = {}): World {
     fetchText: async () => specText.value,
     applyUpdate: async () => undefined,
     specChanged: () => undefined,
+    addSpec: async () => {
+      throw new Error("not used here");
+    },
+    libraryChanged: () => undefined,
     ...overrides,
   };
   return {

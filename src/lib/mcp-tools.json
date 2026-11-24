@@ -443,6 +443,22 @@
     "waitsForUser": true
   },
   {
+    "name": "open_spec",
+    "title": "Add a spec to the library",
+    "description": "Adds an OpenAPI or Swagger 2.0 spec to Studio's library from a file or an http(s) URL, the same as Open in Studio, and returns its id, title, version and operation count for the other tools. The user approves the path or URL in Studio first, and a URL follows the same host rules as send_request. A spec already in the library isn't added again: reload_spec reads it again.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string", "description": "Absolute path of a .yaml, .yml or .json spec file, or an http(s) URL to fetch it from." }
+      },
+      "required": ["source"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true },
+    "requiresSignIn": false,
+    "waitsForUser": true
+  },
+  {
     "name": "reload_spec",
     "title": "Reload a spec",
     "description": "Reads an API's spec again from its file or URL, after it has been changed, and reports what changed: version, operations and schemas added, removed or changed, and servers.",

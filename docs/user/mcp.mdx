@@ -5,9 +5,9 @@ docType: how-to
 ---
 
 Studio can run an [MCP](https://modelcontextprotocol.io) server on your computer. A coding agent,
-such as Claude Code or Cursor, can then read the specs in your library (published or not), send
-requests, start local mocks, build and run collections, and check a running server against its
-spec.
+such as Claude Code or Cursor, can then read the specs in your library (published or not), add
+specs to it, send requests, start local mocks, build and run collections, and check a running
+server against its spec.
 
 Requests go through Studio, so they use your environments, proxy and certificate settings, and
 responses are checked against the spec. You decide which hosts an agent may call.
@@ -152,10 +152,11 @@ Tools marked **sign-in** need Studio to be signed in to Spec0.
 
 ### Specs
 
-| Tool | What it does |
-|---|---|
-| `reload_spec` | Reads a spec again from its file or URL and reports what changed: version, servers, and operations and schemas added, removed or changed. |
-| `validate_spec` | Reports problems that stop a spec loading or make operations hard to use, such as a broken reference or an undeclared path parameter. |
+| Tool | What it does | |
+|---|---|---|
+| `open_spec` | Adds a spec to your library from a file path or an `http(s)` URL, the same as **Open**, and returns its id, title, version and number of operations. Swagger 2.0 is converted as it is when you open it. A spec that's already in the library isn't added twice; the agent is told to use `reload_spec`. | asks |
+| `reload_spec` | Reads a spec again from its file or URL and reports what changed: version, servers, and operations and schemas added, removed or changed. | |
+| `validate_spec` | Reports problems that stop a spec loading or make operations hard to use, such as a broken reference or an undeclared path parameter. | |
 
 ### Hosted mocks
 
@@ -179,9 +180,12 @@ Studio asks you in a dialog before an agent:
   when you've already allowed the host.
 - starts a local mock.
 - saves a collection to a file. Studio asks every time and shows the path.
+- adds a spec to your library. Studio asks every time and shows the path or URL. A URL is fetched
+  with one `GET` request, so blocked hosts are refused and the fetch counts towards the request
+  limit. Allowing it doesn't allow the agent to send other requests to that host.
 
 Answers are **Don't allow**, **Allow once** and **Allow for this session** (until you stop agents
-or quit Studio). Saving a file can only be allowed once.
+or quit Studio). Saving a file and adding a spec can only be allowed once.
 
 **Don't allow** is selected by default, and `Esc` does the same, so a stray key press lets nothing
 through. An unanswered approval is refused after five minutes.

@@ -238,8 +238,8 @@ from Network settings.
 A listening socket is the same kind of promise as rule [1](#1-studio-makes-no-request-you-didnt-ask-for),
 so the server doesn't start by itself unless the user turned on "start when Studio opens" (off by
 default). The one other start is the agent chat: with "Give the agent Studio's tools" on, sending
-the first message starts it for that agent. Agents can send requests, run collections and start
-local mocks, because that is how a developer working through an agent tests an API. What keeps
+the first message starts it for that agent. Agents can send requests, run collections, start
+local mocks and add specs to the library, because that is how a developer working through an agent tests an API. What keeps
 that safe is in `src/lib/agentPolicy.ts` and `src/lib/agentControl.ts`, and none of it should be
 relaxed:
 
@@ -248,6 +248,11 @@ relaxed:
   per minute.
 - Starting a local mock asks (it opens a port), and saving a collection file asks every time, with
   the path shown.
+- Adding a spec to the library (`open_spec`) asks every time, with the path or URL shown, and goes
+  through the same parse and Swagger 2.0 conversion as **Open** (`addSpecText` in
+  `src/lib/library.ts`). Fetching a URL is a request, so it follows the host rules above: a blocked
+  host is refused without asking and the fetch counts towards the cap. Allowing it doesn't allow
+  the host for later requests. A spec already in the library isn't added again.
 - The agent never sees a secret value. It writes `{{token}}` and Studio fills it in; every tool
   result is redacted on its way out (`answerCall` in `src/lib/mcpServer.ts`).
 - Everything an agent does is visible: the console names the agent, its runs are marked, and the
