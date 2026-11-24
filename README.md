@@ -66,10 +66,11 @@ See [Requests](https://studio-docs.spec0.io/requests/) and [Checking responses](
 ### See how the schemas fit together
 
 The Graph tab shows which schemas refer to which, and which operations use
-them. Click a schema to see its fields and an example.
+them. Click a schema to see its fields and an example. Drag the boxes around
+and the lines follow; **Tidy up** puts them back.
 
 <p align="center">
-  <img alt="The Graph tab of the sample Orders API: clicking the Order schema opens its fields in the side panel, then the operations that use it are shown and its example is opened" src=".github/assets/readme/schema-graph.gif" width="720"><br>
+  <img alt="The Graph tab of the sample Orders API: the Money, Customer and Address boxes are dragged to new places and their lines follow, then Tidy up puts the graph back in order" src=".github/assets/readme/schema-graph.gif" width="720"><br>
   <sub>The Graph tab of the sample Orders API.</sub>
 </p>
 

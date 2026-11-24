@@ -32,13 +32,14 @@ large spec can have hundreds.
   close it to give the canvas the whole window.
 - **Zoom and pan** with the controls in the bottom-right corner, your trackpad, or the mouse wheel.
 - **Drag a box** to move it. The lines follow it. A line to a box that sits behind the one it
-  starts from runs under the row instead of back across it.
+  starts from goes round the row, over or under it, instead of back across it. **Tidy up** in the
+  toolbar puts the boxes back.
 
 <Clip
   src="/media/studio-graph.mp4"
   poster="/media/studio-graph-poster.webp"
-  label="Screen recording: in the Graph view, clicking the Order schema to open it in the side panel, choosing With operations, and viewing the schema's example."
-  caption="Opening a schema, choosing With operations, and reading its example in the side panel. 13 seconds, no sound."
+  label="Screen recording: in the Graph view of the Orders API, the Money, Customer and Address boxes are dragged to new places and their lines follow them, then Tidy up puts the graph back in order."
+  caption="Dragging boxes, then Tidy up. 13 seconds, no sound."
   width={1400}
   height={836}
 />
@@ -65,10 +66,10 @@ The toolbar sits along the top of the canvas.
 
 <Screenshot
   src="/images/product/studio-schema-graph.webp"
-  alt="The Graph view of the Orders API centred on Address. Each box lists its first fields and their types, lines are labelled with the field that refers (billingAddress, shippingAddress, lineItems), and the side panel shows Address's fields."
-  caption="Address selected. Each box lists its first fields, and each line names the field that refers."
+  alt="The Graph view of the Orders API with Order selected. Each box lists its first fields and their types, straight lines with rounded corners join them, each labelled with the field that refers (customer, billingAddress, shippingAddress, lineItems, unitPrice), and the side panel shows Order's fields."
+  caption="Order selected. Each box lists its first fields, and each line names the field that refers."
   width={1600}
-  height={886}
+  height={838}
   minWidth={640}
 />
 
