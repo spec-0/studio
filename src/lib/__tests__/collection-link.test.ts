@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { newCollection, type Collection, type CollectionStep } from "../collection";
 import {
   addOperationStep,
+  addScratchStep,
   findLibraryEntry,
   inputsFromEditor,
   localMockAddress,
@@ -292,5 +293,34 @@ describe("a local mock as a target", () => {
     expect(resolveTarget({ kind: "local-mock" }, { servers: [], mockUrl: null, localMockUrl: localMockAddress(null) })).toEqual({
       error: expect.stringMatching(/isn't running/),
     });
+  });
+});
+
+describe("addScratchStep", () => {
+  it("adds a scratch request as an unlinked step with what was typed", () => {
+    const pad = {
+      method: "post",
+      url: " https://api.example.com/orders?dryRun=true ",
+      headers: [
+        { key: "Authorization", value: "Bearer {{token}}" },
+        { key: " ", value: "ignored" },
+      ],
+      body: '{"sku":"A1"}',
+    };
+    const once = addScratchStep(newCollection("Try"), pad);
+    const twice = addScratchStep(once, { ...pad, method: "GET" });
+    expect(twice.steps[0]).toEqual({
+      key: "postRequest",
+      name: "POST /orders?dryRun=true",
+      request: { method: "POST", url: "https://api.example.com/orders?dryRun=true" },
+      pathParams: {},
+      queryParams: {},
+      headers: { Authorization: "Bearer {{token}}" },
+      body: '{"sku":"A1"}',
+    });
+    // GET carries no body, and keys stay unique.
+    expect(twice.steps[1].body).toBeUndefined();
+    expect(twice.steps[1].key).toBe("getRequest");
+    expect(addScratchStep(once, pad).steps[1].key).not.toBe("postRequest");
   });
 });

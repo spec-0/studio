@@ -1,17 +1,26 @@
 import { useState, type ReactNode } from "react";
-import { History, Loader2, Plus, Send, TriangleAlert, X } from "lucide-react";
+import { Copy, History, ListPlus, Loader2, Plus, Send, SquareDashed, Trash2, TriangleAlert, X } from "lucide-react";
 import { interpolate, unresolved } from "../lib/env";
 import type { HistoryEntry } from "../lib/history";
 import { HistoryList } from "./HistoryList";
-import { SCRATCH_METHODS, sendsBody, type ScratchPad } from "../lib/scratch";
+import { SCRATCH_METHODS, scratchLabel, sendsBody, type ScratchPad, type ScratchRequest } from "../lib/scratch";
 import { EmptyState } from "./EmptyState";
 import { CodeEditor } from "./CodeEditor";
 import { TabList } from "./TabList";
 import { shortcut } from "../lib/platform";
 
 interface Props {
-  pad: ScratchPad;
-  onChange: (pad: ScratchPad) => void;
+  /** Every scratch request, in the order they were started. */
+  requests: ScratchRequest[];
+  /** The one on screen; null when there are none. */
+  request: ScratchRequest | null;
+  onChange: (id: string, pad: ScratchPad) => void;
+  onSelect: (id: string) => void;
+  onNew: () => void;
+  onDuplicate: (id: string) => void;
+  onRemove: (id: string) => void;
+  /** Open the "Add to a collection" menu for this request, at a point on screen. */
+  onAddToCollection: (request: ScratchRequest, position: { x: number; y: number }) => void;
   vars: Record<string, string>;
   sending: boolean;
   onSend: () => void;
@@ -28,56 +37,75 @@ interface Props {
 }
 
 /**
- * The scratch pad's screen: method, URL, headers, body, send.
+ * The scratch screen: the scratch requests in the sidebar, and the one on
+ * screen with its method, URL, headers, body and send.
  *
- * Deliberately one screen with no persistence controls: no Save, no name, no
- * second tab. The absence is the design: every affordance for keeping a
- * request here is the first step toward a collection manager, and the answer to
- * "I want to keep this" is a spec, not a folder.
+ * There are no names, folders or Save button: a scratch request is kept the
+ * way a text buffer is. Keeping one with others means adding it to a
+ * collection (design rule 12).
  */
-export function ScratchView({
-  pad,
+export function ScratchView(props: Props) {
+  const { request } = props;
+  if (!request) {
+    return (
+      <div className="panes">
+        <ScratchSidebar {...props} />
+        <div className="workarea">
+          <EmptyState
+            icon={<SquareDashed size={18} />}
+            title="No scratch requests"
+            body="A scratch request goes to any URL, without a spec. Use it to try an API before you have one."
+            action={
+              <button className="btn primary" onClick={props.onNew}>
+                <Plus size={13} /> New request
+              </button>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
+  return <ScratchEditor {...props} request={request} />;
+}
+
+function ScratchEditor({
+  request: pad,
   onChange,
   vars,
   sending,
   onSend,
-  history,
-  onOpenRecord,
   record = null,
   notice = null,
   inspector,
-}: Props) {
+  onAddToCollection,
+  ...rest
+}: Props & { request: ScratchRequest }) {
   const [tab, setTab] = useState<"body" | "headers">("body");
   const resolved = interpolate(pad.url, vars);
   const missing = unresolved(pad.url, vars);
   const malformed = pad.url.trim() !== "" && missing.length === 0 && !/^https?:\/\//i.test(resolved);
   const blocked = sending || !pad.url.trim() || malformed || missing.length > 0;
 
-  const patch = (next: Partial<ScratchPad>) => onChange({ ...pad, ...next });
+  const patch = (next: Partial<ScratchPad>) => {
+    const { id: _id, ...contents } = pad;
+    onChange(pad.id, { ...contents, ...next });
+  };
   const setHeader = (index: number, next: Partial<{ key: string; value: string }>) =>
     patch({ headers: pad.headers.map((row, i) => (i === index ? { ...row, ...next } : row)) });
 
   return (
     <div className="panes">
-      <aside className="pane sidebar">
-        <div className="side-head">
-          <div className="tabs">
-            <button className="tab" aria-selected>
-              History <span className="meta mono">{history.length}</span>
-            </button>
-          </div>
-        </div>
-        <div className="side-list">
-          <HistoryList
-            entries={history}
-            selectedId={record?.id ?? null}
-            onOpen={onOpenRecord}
-          />
-          {history.length === 0 && (
-            <EmptyState icon={<History size={18} />} title="Nothing sent yet" body="Requests you send from here are kept in History, on this computer." />
-          )}
-        </div>
-      </aside>
+      <ScratchSidebar
+        {...rest}
+        request={pad}
+        onChange={onChange}
+        vars={vars}
+        sending={sending}
+        onSend={onSend}
+        record={record}
+        inspector={inspector}
+        onAddToCollection={onAddToCollection}
+      />
 
       <div className="workarea">
         {record ? (
@@ -134,10 +162,22 @@ export function ScratchView({
             <div className="op-head">
               <div className="op-title">
                 <span className="op-summary-text">Scratch request</span>
+                <span style={{ flex: 1 }} />
+                <button
+                  className="btn sm"
+                  disabled={!pad.url.trim()}
+                  title={pad.url.trim() ? "Add this request to a collection, to keep it and run it with others" : "Enter a URL first"}
+                  onClick={(event) => {
+                    const box = event.currentTarget.getBoundingClientRect();
+                    onAddToCollection(pad, { x: box.left, y: box.bottom + 4 });
+                  }}
+                >
+                  <ListPlus size={13} /> Add to collection
+                </button>
               </div>
               <div className="op-sub">
                 <span className="op-sub-text">
-                  One pad, on purpose: nothing is generated or checked. Add the API to get both back.
+                  Nothing is generated or checked without a spec. Add it to a collection to keep it.
                 </span>
               </div>
             </div>
@@ -221,5 +261,87 @@ export function ScratchView({
         )}
       </div>
     </div>
+  );
+}
+
+/** The sidebar: the scratch requests, and the History of what they sent. */
+function ScratchSidebar({
+  requests,
+  request,
+  onSelect,
+  onNew,
+  onDuplicate,
+  onRemove,
+  history,
+  onOpenRecord,
+  record = null,
+}: Props) {
+  const [side, setSide] = useState<"requests" | "history">("requests");
+  return (
+    <aside className="pane sidebar">
+      <div className="side-head">
+        <TabList<"requests" | "history">
+          className="tabs"
+          tabClassName="tab"
+          label="Scratch"
+          tabs={[
+            { id: "requests", label: <>Requests <span className="meta mono">{requests.length}</span></> },
+            { id: "history", label: <>History <span className="meta mono">{history.length}</span></> },
+          ]}
+          selected={side}
+          onSelect={setSide}
+        />
+      </div>
+      <div className="side-list">
+        {side === "requests" ? (
+          <>
+            <button className="btn scratch-new" onClick={onNew} title={`New request (${shortcut("N")})`}>
+              <Plus size={13} /> New request <span className="kbd">{shortcut("N")}</span>
+            </button>
+            {requests.map((item) => {
+              const method = item.method.toUpperCase();
+              const label = scratchLabel(item);
+              let host = "";
+              try {
+                host = item.url.trim() ? new URL(item.url.trim()).host : "";
+              } catch {
+                host = "";
+              }
+              return (
+                <div className="scratch-row" key={item.id}>
+                  <button
+                    className="row"
+                    aria-selected={item.id === request?.id && !record}
+                    onClick={() => onSelect(item.id)}
+                    title={item.url.trim() || "No URL yet"}
+                  >
+                    <span className={`method ${method.toLowerCase()}`}>{method === "DELETE" ? "DEL" : method}</span>
+                    <span style={{ minWidth: 0, display: "grid", flex: 1 }}>
+                      <span className="path">{label}</span>
+                      {host && host !== label && <span className="summary">{host}</span>}
+                    </span>
+                  </button>
+                  <span className="scratch-row-actions">
+                    <button className="icon-btn" aria-label={`Duplicate ${method} ${label}`} title="Duplicate" onClick={() => onDuplicate(item.id)}>
+                      <Copy size={12} />
+                    </button>
+                    <button className="icon-btn" aria-label={`Remove ${method} ${label}`} title="Remove" onClick={() => onRemove(item.id)}>
+                      <Trash2 size={12} />
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        ) : (
+          <>
+            <HistoryList entries={history} selectedId={record?.id ?? null} onOpen={onOpenRecord} />
+            {history.length === 0 && (
+              <EmptyState icon={<History size={18} />} title="Nothing sent yet" body="Requests you send from here are kept in History, on this computer." />
+            )}
+          </>
+        )}
+      </div>
+    </aside>
   );
 }

@@ -11,6 +11,7 @@ import { paramsFromEntry } from "./history";
 import { spec0ApiIdOf, type LibraryEntry } from "./library";
 import type { BodyInput } from "./request";
 import { localMockLabel, localMockUrl } from "./localMockServer";
+import { scratchLabel, sendsBody, type ScratchPad } from "./scratch";
 import { bodyModeFor, deref, type OperationSpec, type ParsedSpec } from "./spec";
 
 /**
@@ -319,6 +320,28 @@ export function stepForOperation(
 }
 
 /** Add an operation from a library entry as the last step. */
+/**
+ * Add a scratch request at the end of a collection as an unlinked step, with
+ * what's in its editor: method, URL (query included), headers and body. It
+ * runs like any request, and says nothing checks it until it's linked to an
+ * operation (design rule 9).
+ */
+export function addScratchStep(collection: Collection, pad: ScratchPad): Collection {
+  const method = pad.method.toUpperCase();
+  const headers: Record<string, string> = {};
+  for (const row of pad.headers) if (row.key.trim()) headers[row.key.trim()] = row.value;
+  const step: CollectionStep = {
+    key: uniqueStepKey(`${method.toLowerCase()}Request`, collection.steps.map((s) => s.key)),
+    name: `${method} ${scratchLabel(pad)}`,
+    request: { method, url: pad.url.trim() },
+    pathParams: {},
+    queryParams: {},
+    headers,
+    ...(sendsBody(method) && pad.body.trim() ? { body: pad.body } : {}),
+  };
+  return { ...collection, steps: [...collection.steps, step] };
+}
+
 export function addOperationStep(
   collection: Collection,
   entry: LibraryEntry,

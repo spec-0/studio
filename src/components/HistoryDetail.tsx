@@ -155,7 +155,7 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
             <Copy size={13} />
             {destination.kind === "operation" || scratch
               ? "Open as new request"
-              : "Open in the scratch pad"}
+              : "Open as a scratch request"}
           </button>
           {onAddToCollection && (
             <button
@@ -174,9 +174,6 @@ export function HistoryDetail({ entry, spec, specLoading = false, onCopy, onClos
           )}
           {destination.kind === "scratch" && destination.reason && (
             <span className="record-note">{destination.reason}</span>
-          )}
-          {destination.kind === "scratch" && (
-            <span className="record-note">The scratch pad holds one request; this replaces what's in it.</span>
           )}
         </div>
       </header>

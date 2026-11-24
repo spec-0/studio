@@ -40,9 +40,9 @@ None of these break anything, but each would be confusing if Studio said nothing
 
 Two things work without one, and Studio says so where it matters:
 
-- The [scratch pad](/requests#the-scratch-pad) holds one ad-hoc request with no spec. Nothing
-  checks its response.
-- A collection step that isn't linked to an operation (usually one imported from Postman) runs as a
-  plain request, marked **not in any spec**, until you link it.
+- [Scratch requests](/requests#scratch-requests) go to any URL, with no spec. Nothing checks their
+  responses.
+- A collection step that isn't linked to an operation (a scratch request you added, or one imported
+  from Postman) runs as a plain request, marked **not in any spec**, until you link it.
 
 Requests worth keeping are worth describing in the spec. That's what lets Studio check them.

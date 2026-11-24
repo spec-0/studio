@@ -6,8 +6,8 @@ import type { ValidationResult } from "./validate";
  * What the response pane shows, and which request it belongs to.
  *
  * The pane only ever shows the answer to the request on screen, and never an
- * old answer as if it were new. Picking another operation, another API or the
- * scratch pad takes the response off screen. Going back to an operation (from
+ * old answer as if it were new. Picking another operation, another API or another
+ * scratch request takes the response off screen. Going back to an operation (from
  * its tab, or the sidebar) during the same session brings its last response
  * back, marked as restored with the time it was sent, and the view says when
  * the request has been edited since. Nothing is kept across restarts: after
@@ -106,7 +106,7 @@ function paneFor(owner: string, kept: Record<string, KeptResponse>): ResponsePan
 }
 
 /**
- * Which request the pane belongs to on this screen: the scratch pad, or one
+ * Which request the pane belongs to on this screen: one scratch request, or one
  * operation of one API. Null on screens without a response pane (Settings,
  * History, Mocks…), so passing through them doesn't clear what was there.
  */
@@ -114,8 +114,9 @@ export function paneOwner(
   route: Route,
   apiId: string | undefined,
   operationId: string | undefined,
+  scratchId?: string | null,
 ): string | null {
-  if (route === "scratch") return "scratch";
+  if (route === "scratch") return scratchId ? `scratch:${scratchId}` : null;
   if (route === "api" && apiId && operationId) return `api:${apiId}:${operationId}`;
   return null;
 }

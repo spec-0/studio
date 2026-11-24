@@ -76,8 +76,8 @@ to set up.
 ## Request tabs
 
 Every operation you open gets a tab above the API bar. Tabs work across APIs, so a request from the
-Orders API can sit next to one from the Payments API. **+** opens a [scratch](#the-scratch-pad)
-request.
+Orders API can sit next to one from the Payments API. [Scratch requests](#scratch-requests) get
+tabs too. **+** starts a new one.
 
 <Screenshot
   src="/images/product/studio-request-tabs.webp"
@@ -119,11 +119,24 @@ the request since, a note says that response doesn't match what's on screen.
 
 After a restart, earlier responses are in [History](#history).
 
-## The scratch pad
+## Scratch requests
 
-**Scratch**, pinned first in your library, sends one request to a URL you type. Environment
-variables work there. There's one pad and nothing to save. With no spec there's nothing to check
-the response against, and the response pane says so. Scratch requests go to History.
+A scratch request goes to any URL you type, without a spec. Use them to try a few endpoints of an
+API before you have its spec.
+
+- **New request** (`⌘N`, `Ctrl+N`) starts one from anywhere. It's also in the library, and **+**
+  next to the request tabs does the same.
+- The scratch screen lists your scratch requests next to their History. Each has its own tab and
+  its own last response. Hover over one in the list to duplicate or remove it.
+- Each holds a method, URL, headers and a body. Environment variables work in all of them.
+- They're kept, as you typed them, until you remove them. There's no name and nothing to save.
+- With no spec there's nothing to check the response against, and the response pane says so.
+  Scratch requests go to History.
+
+To keep a few requests together, and run them in order, choose **Add to collection** and pick a
+collection or **New collection…**. Each request becomes a step
+[that isn't in a spec](/collections#steps-that-arent-in-a-spec): it runs, and later steps can use
+values from its response, but nothing checks it until you link it to an operation.
 
 ## History
 

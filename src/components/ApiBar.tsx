@@ -46,7 +46,7 @@ interface ApiProps extends CommonProps {
 export const API_PANEL_ID = "api-panel";
 
 /**
- * The bar under the top bar while an API (or the scratch pad) is open: which
+ * The bar under the top bar while an API (or the scratch screen) is open: which
  * one, its four views as tabs, and the actions that belong to it.
  */
 export function ApiBar(props: Props) {

@@ -80,7 +80,7 @@ an event, and sends back what the web view answers.
 | `responsePane.ts` | Which response the pane shows, and for which request. |
 | `drafts.ts` | Unsent changes, kept per API and operation. |
 | `tabs.ts` | The request tabs open across APIs. |
-| `scratch.ts` | The one scratch request. |
+| `scratch.ts` | Scratch requests: requests to any URL, without a spec. |
 | `history.ts` | The local log of requests sent and what came back. |
 | `redact.ts` | Keeps secret values out of history, errors, logs and reports. |
 | `shortcuts.ts` | Which request ⌘/Ctrl+Enter sends. |

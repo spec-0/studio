@@ -4,7 +4,7 @@ import type { Route } from "./navigation";
 export type SendScreen = Route;
 
 /**
- * Which request ⌘/Ctrl+Enter sends: the one on screen. The scratch pad sends its
+ * Which request ⌘/Ctrl+Enter sends: the one on screen. A scratch request sends its
  * own request, an open API sends the selected operation, and every other screen
  * (the library, history, mocks, MCP, settings) has nothing to send.
  */

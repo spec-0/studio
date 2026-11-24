@@ -9,6 +9,8 @@ export interface ShortcutActions {
   send: () => void;
   /** ⌘/Ctrl+O */
   openAdd: () => void;
+  /** ⌘N / Ctrl+N: a new scratch request. */
+  newRequest: () => void;
   /** ⌘/Ctrl+P */
   openSwitcher: () => void;
   /** ⌘/Ctrl+E */
@@ -63,6 +65,9 @@ export function useShortcuts(actions: ShortcutActions) {
       } else if (meta && event.key === "Enter") {
         event.preventDefault();
         act.send();
+      } else if (meta && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        act.newRequest();
       } else if (meta && event.key === "o") {
         event.preventDefault();
         act.openAdd();

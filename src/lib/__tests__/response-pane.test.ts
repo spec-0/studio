@@ -37,10 +37,27 @@ const answered = run([
 ]);
 
 describe("paneOwner", () => {
-  it("is one operation of one API, or the scratch pad", () => {
+  it("is one operation of one API, or one scratch request", () => {
     expect(paneOwner("api", "petstore", "getPetById")).toBe("api:petstore:getPetById");
     expect(paneOwner("api", "other", "getPetById")).not.toBe(paneOwner("api", "petstore", "getPetById"));
-    expect(paneOwner("scratch", "petstore", "getPetById")).toBe("scratch");
+    expect(paneOwner("scratch", "petstore", "getPetById", "s_1")).toBe("scratch:s_1");
+    expect(paneOwner("scratch", "petstore", "getPetById", "s_2")).not.toBe(paneOwner("scratch", undefined, undefined, "s_1"));
+    expect(paneOwner("scratch", "petstore", "getPetById")).toBeNull();
+  });
+
+  it("brings back each scratch request's own answer", () => {
+    const answered = (owner: string, status: number) => {
+      let pane = paneReducer(EMPTY_PANE, { type: "show", owner });
+      pane = paneReducer(pane, { type: "start", sendId: status });
+      pane = paneReducer(pane, { type: "response", sendId: status, result: { status } as never, validation: null });
+      return paneReducer(pane, { type: "done", sendId: status });
+    };
+    let pane = answered("scratch:a", 200);
+    pane = paneReducer(pane, { type: "show", owner: "scratch:b" });
+    expect(pane.result).toBeNull();
+    pane = paneReducer(pane, { type: "show", owner: "scratch:a" });
+    expect(pane.result?.status).toBe(200);
+    expect(pane.restored).toBe(true);
   });
 
   it("is null on screens without a response pane, or with no operation picked", () => {

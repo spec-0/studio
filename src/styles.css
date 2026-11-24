@@ -1394,7 +1394,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .icon-btn:disabled:hover { background: transparent; color: hsl(var(--ink-2)); }
 
-/* The scratch pad's card. Dashed and unaccented so it reads as a tool sitting
+/* The scratch requests card. Dashed and unaccented so it reads as a tool sitting
    beside the library rather than another API in it. */
 .api-card.scratch {
   border-style: dashed;
@@ -4350,3 +4350,20 @@ tr:hover .row-actions .icon-btn, .row-actions .icon-btn:focus-visible { opacity:
 /* Zoom and fit sit bottom right, out of the way of the toolbar and the truncation note. */
 .graph-wrap .react-flow__controls { left: auto; right: 10px; bottom: 10px; box-shadow: none; border: 1px solid hsl(var(--border)); border-radius: 7px; overflow: hidden; }
 @media (max-width: 1100px) { .graph-legend > span:last-child { display: none; } }
+
+/* The scratch screen's list of requests: a row each, with duplicate and remove
+   on hover or keyboard focus, as quiet as the operation list. */
+.scratch-new { width: calc(100% - 12px); margin: 6px 6px 4px; justify-content: flex-start; }
+.scratch-new .kbd { margin-left: auto; }
+.scratch-row { position: relative; }
+.scratch-row .row { width: 100%; padding-right: 56px; }
+.scratch-row-actions {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: none;
+  gap: 2px;
+}
+.scratch-row:hover .scratch-row-actions,
+.scratch-row:focus-within .scratch-row-actions { display: flex; }

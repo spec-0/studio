@@ -92,8 +92,12 @@ interface Props {
   syncReport: { title: string; lines: string[] } | null;
   onDismissReport: () => void;
   onTrySample: () => void;
-  /** Open the one scratch pad. Fixed, unnamed and not removable by design. */
+  /** Show the scratch requests: requests to an API without a spec. */
   onOpenScratch: () => void;
+  /** Start a new scratch request. */
+  onNewRequest: () => void;
+  /** How many scratch requests there are. */
+  scratchCount: number;
   dragging: boolean;
   busy: string | null;
   error: string | null;
@@ -124,6 +128,8 @@ export function Library({
   onDismissReport,
   onTrySample,
   onOpenScratch,
+  onNewRequest,
+  scratchCount,
   dragging,
   busy,
   error,
@@ -181,9 +187,15 @@ export function Library({
             <button className="btn ghost" onClick={onTrySample}>
               <Sparkles size={13} /> Try the sample API
             </button>
-            <button className="btn ghost" onClick={onOpenScratch}>
-              <SquareDashed size={13} /> Send one request without a spec
-            </button>
+            {scratchCount > 0 ? (
+              <button className="btn ghost" onClick={onOpenScratch}>
+                <SquareDashed size={13} /> Your scratch requests <span className="meta mono">{scratchCount}</span>
+              </button>
+            ) : (
+              <button className="btn ghost" onClick={onNewRequest}>
+                <SquareDashed size={13} /> Try an API without a spec
+              </button>
+            )}
           </div>
           {busy && <p className="meta" style={{ marginTop: 12 }}>{busy}</p>}
           {error && <LoadError error={error} />}
@@ -243,6 +255,9 @@ export function Library({
                 {checking ? "Checking…" : "Check for updates"}
               </button>
             )}
+            <button className="btn" onClick={onNewRequest} title="A request to any URL, without a spec">
+              <SquareDashed size={13} /> New request <span className="kbd">{shortcut("N")}</span>
+            </button>
             <button className="btn primary" onClick={() => onAdd()}>
               <Plus size={13} /> Add API <span className="kbd">{shortcut("O")}</span>
             </button>
@@ -389,19 +404,20 @@ export function Library({
             );
           })}
 
-          {/* Pinned, unnamed, and outside `entries`, so "there is only ever one, and
-              you can't delete it" is structural rather than a rule someone has to
-              remember. Last, and quiet. */}
+          {/* Outside `entries`: scratch requests aren't an API, so the card can't be
+              renamed, refreshed or removed. Last, and quiet. */}
           {!filter.trim() && (
-            <button className="api-card scratch" onClick={onOpenScratch}>
+            <button className="api-card scratch" onClick={scratchCount ? onOpenScratch : onNewRequest}>
               <div className="api-card-top">
                 <span className="api-title">
-                  <SquareDashed size={13} /> Scratch request
+                  <SquareDashed size={13} /> Scratch requests
                 </span>
               </div>
-              <p className="meta">One request with no spec: method, URL, headers, body. Nothing is generated or checked.</p>
+              <p className="meta">Requests to any URL, without a spec: method, URL, headers, body. Nothing is generated or checked.</p>
               <div className="api-card-foot">
-                <span className="meta">Not saved · keeps what you last typed</span>
+                <span className="meta">
+                  {scratchCount === 0 ? "None yet" : scratchCount === 1 ? "1 request" : `${scratchCount} requests`} · kept as you typed them
+                </span>
               </div>
             </button>
           )}

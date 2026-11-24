@@ -4,12 +4,14 @@ import { draftKey } from "./drafts";
  * Request tabs: the operations you have open, across APIs.
  *
  * Opening an operation (from the sidebar, a tab, History, a `spec0://` link or
- * anywhere else) opens its tab, or focuses the one already open. Tabs are
- * operations only; a collection step is edited in its collection.
+ * anywhere else) opens its tab, or focuses the one already open. A scratch
+ * request has a tab too, so trying a few endpoints without a spec works the
+ * same way. A collection step is edited in its collection, not in a tab.
  *
  * Closing a tab never loses anything: unsent changes live in the drafts
  * (`drafts.ts`), not in the tab, so the operation still shows its dot in the
- * sidebar and reopens as it was left.
+ * sidebar and reopens as it was left. A scratch request stays in the scratch
+ * screen's list until it is removed there.
  *
  * There are at most {@link TAB_LIMIT} tabs. Opening one more closes the one
  * used longest ago, skipping tabs with unsent changes; if every other tab has
@@ -22,6 +24,11 @@ import { draftKey } from "./drafts";
 export interface RequestTab {
   /** Same as the operation's draft key: `<apiId> <METHOD /path>`. */
   key: string;
+  /**
+   * A scratch request's tab: `apiId` is `SCRATCH_API_ID` and `operationId` the
+   * request's id. Its method and path are shown from the request itself.
+   */
+  scratch?: true;
   apiId: string;
   operationId: string;
   method: string;
@@ -45,6 +52,7 @@ export const TAB_LIMIT = 20;
 export const EMPTY_TABS: TabsState = { version: 1, tabs: [], activeKey: null, clock: 0 };
 
 export interface TabTarget {
+  scratch?: true;
   apiId: string;
   operationId: string;
   method: string;
@@ -130,6 +138,7 @@ export function parseTabs(raw: unknown): TabsState {
     if (seen.has(key)) continue;
     seen.add(key);
     tabs.push({
+      ...(tab.scratch === true ? { scratch: true as const } : {}),
       key,
       apiId: tab.apiId,
       operationId: tab.operationId,
