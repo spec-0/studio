@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Copy, History, ListPlus, Loader2, Plus, Send, SquareDashed, Trash2, TriangleAlert, X } from "lucide-react";
 import { interpolate, unresolved } from "../lib/env";
 import type { HistoryEntry } from "../lib/history";
@@ -81,6 +81,14 @@ function ScratchEditor({
   ...rest
 }: Props & { request: ScratchRequest }) {
   const [tab, setTab] = useState<"body" | "headers">("body");
+  // A new (empty) request is for typing a URL into, so the field gets focus.
+  const urlInput = useRef<HTMLInputElement>(null);
+  const recordId = record?.id ?? null;
+  useEffect(() => {
+    if (!recordId && pad.url.trim() === "") urlInput.current?.focus();
+    // Only when another request is shown, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pad.id, recordId]);
   const resolved = interpolate(pad.url, vars);
   const missing = unresolved(pad.url, vars);
   const malformed = pad.url.trim() !== "" && missing.length === 0 && !/^https?:\/\//i.test(resolved);
@@ -129,6 +137,7 @@ function ScratchEditor({
             </select>
             <div className="url-field scratch-url">
               <input
+                ref={urlInput}
                 value={pad.url}
                 placeholder="https://api.example.com/things  ·  or {{baseUrl}}/things"
                 spellCheck={false}
