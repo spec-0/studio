@@ -28,7 +28,7 @@
 </p>
 
 <p align="center">
-  <img alt="Starting a local mock of the Payments API, pointing a request at it, and sending it: the response comes back 200 and matches the declared schema" src=".github/assets/readme/hero-local-mock.gif" width="960"><br>
+  <img alt="Starting a local mock of the sample Orders API, choosing it as the target, and sending GET /orders: the response comes back 200 OK and matches the spec" src=".github/assets/readme/hero-local-mock.gif" width="960"><br>
   <sub>Starting a local mock from a spec and sending a request to it. The response is checked against the spec.</sub>
 </p>
 
@@ -57,7 +57,7 @@ Every JSON response is checked against the schema for its status code,
 including fields the spec doesn't mention.
 
 <p align="center">
-  <img alt="A 200 response to GET /orders with the note: Response matches the declared schema, above the JSON body" src=".github/assets/readme/request-check.png" width="480"><br>
+  <img alt="A 200 OK response to GET /orders from a local mock, marked Matches the spec, above the JSON body" src=".github/assets/readme/request-check.png" width="442"><br>
   <sub>A response that matches the schema the spec declares.</sub>
 </p>
 
@@ -69,8 +69,8 @@ The Graph tab shows which schemas refer to which, and which operations use
 them. Click a schema to see its fields and an example.
 
 <p align="center">
-  <img alt="The Graph tab of the Catalog API: clicking a schema opens its fields in the side panel, then the operations are shown and the Product schema's example is opened" src=".github/assets/readme/schema-graph.gif" width="720"><br>
-  <sub>The Graph tab of a Catalog API.</sub>
+  <img alt="The Graph tab of the sample Orders API: clicking the Order schema opens its fields in the side panel, then the operations that use it are shown and its example is opened" src=".github/assets/readme/schema-graph.gif" width="720"><br>
+  <sub>The Graph tab of the sample Orders API.</sub>
 </p>
 
 See [Schemas](https://studio-docs.spec0.io/schemas/) and [Schema graph](https://studio-docs.spec0.io/schema-graph/).
@@ -96,7 +96,7 @@ each run gets a log that says why a step failed. Postman collections can be
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/run-log-dark.png">
-    <img alt="A collection's run log: two steps passed, the third failed with a schema difference, each step showing its target, the values it used, the request and the response" src=".github/assets/readme/run-log-light.png" width="720">
+    <img alt="A collection's run log: two steps passed and the third failed with a schema difference. The second and third steps are open, showing the target, the values used, the request, the response and the schema result" src=".github/assets/readme/run-log-light.png" width="720">
   </picture><br>
   <sub>A run log where the third step failed with a schema difference.</sub>
 </p>
@@ -110,7 +110,7 @@ A local mock answers every operation in the spec, from its examples. It needs
 no account and no network, and it stops when Studio quits.
 
 <p align="center">
-  <img alt="A request sent to a local mock at 127.0.0.1:4010, marked LOCAL MOCK, with a response that matches the schema" src=".github/assets/readme/local-mock.png" width="720">
+  <img alt="A request sent to the local mock of the sample Orders API on port 4011, with a 200 OK response marked local mock that matches the spec" src=".github/assets/readme/local-mock.png" width="720">
 </p>
 
 See [Local mocks](https://studio-docs.spec0.io/local-mocks/) and [Hosted mocks](https://studio-docs.spec0.io/hosted-mocks/).
@@ -137,7 +137,7 @@ See [Local MCP server](https://studio-docs.spec0.io/mcp/) and [Agent chat](https
 A hosted mock to share with your team (needs the optional [Spec0 connection](https://studio-docs.spec0.io/connect/)):
 
 <p align="center">
-  <img alt="Your mock is ready: the hosted mock's address, its key (hidden), and buttons to send a test request, rebuild the mock or regenerate the key" src=".github/assets/readme/hosted-mock.png" width="720">
+  <img alt="The last step of Create a mock server: Your mock is ready, with the hosted mock's address, its key (hidden), and buttons to send a test request, rebuild the mock or regenerate the key" src=".github/assets/readme/hosted-mock.png" width="720">
 </p>
 
 The console, with requests, a collection run, a local mock request and MCP tool calls:
