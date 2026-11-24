@@ -401,6 +401,31 @@ export function relinkStep(
   return { ...collection, apis, steps };
 }
 
+/**
+ * Link a collection's unlinked steps to the operations a described spec wrote
+ * for them (`byKey`: step key → the operation, from `describeSpec`). Steps
+ * already linked are left alone, as is any step whose operation the spec
+ * doesn't have. Returns how many were linked.
+ */
+export function linkStepsTo(
+  collection: Collection,
+  entry: LibraryEntry,
+  spec: ParsedSpec,
+  byKey: Readonly<Record<string, { operationId?: string; method: string; path: string }>>,
+): { collection: Collection; linked: number } {
+  let next = collection;
+  let linked = 0;
+  collection.steps.forEach((step, index) => {
+    const ref = byKey[step.key];
+    if (step.api || !ref) return;
+    const found = findOperation(spec, ref);
+    if (!found) return;
+    next = relinkStep(next, index, entry, found.op);
+    linked += 1;
+  });
+  return { collection: next, linked };
+}
+
 /** Remove a step, and its API if no other step uses it. */
 export function removeStep(collection: Collection, index: number): Collection {
   const steps = collection.steps.filter((_, i) => i !== index);

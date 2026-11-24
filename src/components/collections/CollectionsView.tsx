@@ -40,6 +40,7 @@ import {
 import type { Collection } from "../../lib/collection";
 import { findLibraryEntry, type StepLink } from "../../lib/collectionLink";
 import { describeRun, summariseRun } from "../../lib/collectionRun";
+import { unlinkedSteps } from "../../lib/describeSpec";
 import { plural } from "../../lib/plural";
 import { exampleFor, mediaExample } from "../../lib/example";
 import type { LibraryEntry } from "../../lib/library";
@@ -64,6 +65,8 @@ interface Props {
   entries: LibraryEntry[];
   /** Go to the library, to add or open an API. */
   onGoLibrary: () => void;
+  /** Open Describe as a spec for a collection's steps that aren't in a spec. */
+  onDescribe: (collection: Collection) => void;
 }
 
 /** An "are you sure?" waiting for an answer. */
@@ -80,7 +83,7 @@ type Menu = { x: number; y: number; items: MenuItem[]; label: string };
 /**
  * The Collections tab: the list on the left, one collection on the right.
  */
-export function CollectionsView({ api, entries, onGoLibrary }: Props) {
+export function CollectionsView({ api, entries, onGoLibrary, onDescribe }: Props) {
   const { collections, selected } = api;
   const importInput = useRef<HTMLInputElement>(null);
   const [dropping, setDropping] = useState(false);
@@ -288,6 +291,7 @@ export function CollectionsView({ api, entries, onGoLibrary }: Props) {
             collection={selected}
             entries={entries}
             onGoLibrary={onGoLibrary}
+            onDescribe={() => onDescribe(selected)}
             onDelete={() => confirmDelete(selected)}
           />
         ) : (
@@ -344,12 +348,14 @@ function CollectionDetail({
   collection,
   entries,
   onGoLibrary,
+  onDescribe,
   onDelete,
 }: {
   api: CollectionsApi;
   collection: Collection;
   entries: LibraryEntry[];
   onGoLibrary: () => void;
+  onDescribe: () => void;
   onDelete: () => void;
 }) {
   const run = api.runs[collection.id];
@@ -649,8 +655,12 @@ function CollectionDetail({
     window.setTimeout(() => setCopied((current) => (current === reference ? null : current)), 3500);
   };
 
+  const unlinked = unlinkedSteps(collection);
   const moreItems: MenuItem[] = [
     { label: "Rename…", onSelect: () => api.requestRename(collection.id) },
+    ...(unlinked
+      ? [{ label: "Describe as a spec…", hint: plural(unlinked, "step"), onSelect: onDescribe }]
+      : []),
     ...(inTauri
       ? [
           {
@@ -1025,6 +1035,7 @@ function CollectionDetail({
               onRenameKey={(to) => api.renameStepKey(collection.id, step.key, to)}
               onMenu={(rect) => setMenu({ x: rect.right - 220, y: rect.bottom + 4, items: stepMenu(index), label: `Actions for step ${index + 1}` })}
               onLink={() => setLinking(index)}
+              onDescribe={onDescribe}
               revision={api.revision}
               onPickFromResponse={(reference, rect) => {
                 const later = collection.steps.map((_, i) => i).filter((i) => i > index);

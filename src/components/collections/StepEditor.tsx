@@ -60,6 +60,8 @@ interface Props {
   onMenu: (anchor: DOMRect) => void;
   /** Point a step whose operation is missing at another one. */
   onLink: () => void;
+  /** Write a spec from this collection's steps that aren't in one (Describe as a spec). */
+  onDescribe?: () => void;
   /** A value clicked in this step's response, to use in a later step. */
   onPickFromResponse: (reference: string, anchor: DOMRect) => void;
   /** Changes whenever the step is replaced from outside the editor, e.g. reloaded from its file. */
@@ -89,6 +91,7 @@ export function StepEditor({
   onRenameKey,
   onMenu,
   onLink,
+  onDescribe,
   onPickFromResponse,
   revision,
 }: Props) {
@@ -401,10 +404,19 @@ export function StepEditor({
       {link.kind === "unlinked" && (
         <div className="verdict none step-banner" role="note">
           <span className="glyph">i</span>
-          <span>
-            This request isn't linked to an operation, so its response isn't checked. Link it to one to check it
-            against the spec.
-          </span>
+          <div>
+            <span>
+              This request isn't linked to an operation, so its response isn't checked. Link it to one to check it
+              against the spec. With no spec yet, Studio can write one from this collection's requests.
+            </span>
+            {onDescribe && (
+              <div>
+                <button type="button" className="btn" onClick={onDescribe}>
+                  Describe as a spec…
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

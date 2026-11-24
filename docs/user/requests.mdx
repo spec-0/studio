@@ -138,6 +138,31 @@ collection or **New collection…**. Each request becomes a step
 [that isn't in a spec](/collections#steps-that-arent-in-a-spec): it runs, and later steps can use
 values from its response, but nothing checks it until you link it to an operation.
 
+### Describe them as a spec
+
+Once you've sent a few scratch requests to an API, **Describe as a spec** at the bottom of the
+scratch list writes a draft OpenAPI 3.1 document from them. Studio builds it from the requests and
+responses already in History. Nothing is sent.
+
+- Each method and path becomes an operation. A path segment that is an id, such as a number, a UUID
+  or a long hex string, becomes a path parameter named after the segment before it, so `/users/1`
+  and `/users/2` become one operation on `/users/{userId}`. A word stays as it is unless two
+  requests differ only in that word.
+- Query names become query parameters, with a type worked out from the values sent.
+- JSON request bodies and the responses that came back become schemas, with the real values as
+  examples. A field is required when every response had it. Each status code seen becomes a
+  response. Other bodies get just their content type.
+- The server is the host the requests went to. If they went to more than one, pick which one.
+
+Studio leaves credentials out. Auth headers, cookies, API-key headers and token-like query values
+aren't written into the document or its examples. A bearer or basic `Authorization` header, or an
+API key in a header or the query, is described as a security scheme without its value.
+
+The dialog lists the operations it will write and shows the YAML. **Save…** asks where to put the
+`.yaml` file, then adds it to your library as a file and opens it. From then on it's a spec like any
+other: edit the file, refresh it, and Studio checks responses against it. It's a starting point,
+so read it through. A field seen in only one response, for example, is left optional.
+
 ## History
 
 History is a read-only log of every request you've sent. It stays on your computer for 30 days and

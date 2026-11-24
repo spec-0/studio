@@ -23,7 +23,7 @@ an event, and sends back what the web view answers.
 | `http.rs` | Outbound HTTP with reqwest, so requests carry no `Origin` and can use per-host certificate settings, a proxy and file bodies read from disk. |
 | `cookies.rs` | One cookie jar per API for reqwest, in memory only. |
 | `oauth.rs` | The loopback listener that receives an OAuth redirect, because a web view can't open a socket. |
-| `storage.rs` | Reading and writing Studio's JSON files, and the narrow file commands (`write_collection`, `write_run_log`). |
+| `storage.rs` | Reading and writing Studio's JSON files, and the narrow file commands (`write_collection`, `write_run_log`, `write_spec`). |
 | `secrets.rs` | The OS credential store, under one fixed service name, with an index of names it wrote. |
 | `updates.rs` | Checking for, downloading and installing updates, through the proxy from Network settings. |
 | `menu.rs` | The app menu, including ⌘W for closing a request tab on macOS. |
@@ -81,6 +81,7 @@ an event, and sends back what the web view answers.
 | `drafts.ts` | Unsent changes, kept per API and operation. |
 | `tabs.ts` | The request tabs open across APIs. |
 | `scratch.ts` | Scratch requests: requests to any URL, without a spec. |
+| `describeSpec.ts` | Describe as a spec: a draft OpenAPI 3.1 document written from recorded requests to one host, with no secrets in it. |
 | `history.ts` | The local log of requests sent and what came back. |
 | `redact.ts` | Keeps secret values out of history, errors, logs and reports. |
 | `shortcuts.ts` | Which request ⌘/Ctrl+Enter sends. |

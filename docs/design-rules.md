@@ -35,8 +35,9 @@ rules then reject it. A desktop app isn't a browser and has no origin. Don't bri
 There is no `fs` plugin. "Read the file the user just picked" and "read `~/.spec0/config.json`" are
 different kinds of access and shouldn't share one permission; for the first, the file picker is the
 user's consent. Writing works the same way: `write_collection` only writes files ending in
-`.spec0-collection.yaml`, and `write_run_log` only `.spec0-run.json` or `.spec0-run.txt`, where the
-user chose to save them. Enforced in `src-tauri/src/storage.rs`.
+`.spec0-collection.yaml`, `write_run_log` only `.spec0-run.json` or `.spec0-run.txt`, and
+`write_spec` (Describe as a spec) only a `.yaml` or `.yml` file whose text is an OpenAPI document,
+where the user chose to save them. Enforced in `src-tauri/src/storage.rs`.
 
 ## 5. No secrets stored per API
 
@@ -112,7 +113,10 @@ many scratch requests as you like, each with its own tab and last response. They
 names, no folders, no Save. Each is kept like a text buffer until it's removed. They have no schema,
 so none of Studio's checks apply to them. Keeping one with others means adding it to a collection
 (rule [9](#9-collections-point-at-specs-and-never-replace-them)), and a request worth checking is
-worth describing in a spec. Don't grow scratch requests into a second kind of collection.
+worth describing in a spec. **Describe as a spec** writes a draft of one from what History recorded,
+sending nothing and leaving credentials out (`src/lib/describeSpec.ts`). The result is an ordinary
+file in the library, edited like any spec. Don't grow scratch requests into a second kind of
+collection.
 
 ## 13. OAuth settings live with the API; the client secret doesn't
 
