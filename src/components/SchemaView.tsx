@@ -8,6 +8,24 @@ import { TabList } from "./TabList";
 import { EmptyState } from "./EmptyState";
 import { CodeBlock } from "./CodeBlock";
 
+/**
+ * A field name that may wrap between its words (`shipping` / `Address`,
+ * `line_items`) rather than at whatever letter reaches the edge of a narrow column.
+ */
+function BreakableName({ name }: { name: string }) {
+  const parts = name.split(/(?<=[a-z0-9])(?=[A-Z])|(?<=[_-])/);
+  return (
+    <>
+      {parts.map((part, i) => (
+        <span key={i}>
+          {i > 0 && <wbr />}
+          {part}
+        </span>
+      ))}
+    </>
+  );
+}
+
 interface Props {
   spec: ParsedSpec;
   name: string;
@@ -127,13 +145,17 @@ export function SchemaView({ spec, name, onSelectSchema, onSelectOperation }: Pr
                       : null;
                 return (
                   <tr key={field}>
-                    <td className="mono top">
-                      {field}
+                    <td className="mono top field-cell">
+                      <BreakableName name={field} />
                       {required.includes(field) && <span className="required-word">required</span>}
                     </td>
                     <td className="mono top type-cell">
                       {target ? (
-                        <button className="chip link" onClick={() => onSelectSchema(target)}>
+                        <button
+                          className="chip link"
+                          title={typeLabel(spec.doc, propSchema)}
+                          onClick={() => onSelectSchema(target)}
+                        >
                           {typeLabel(spec.doc, propSchema)}
                         </button>
                       ) : Array.isArray(resolved.enum) ? (
