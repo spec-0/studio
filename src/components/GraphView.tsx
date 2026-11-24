@@ -20,6 +20,9 @@ interface Props {
 export function GraphView({ spec, focus, onFocus, panelWidth, onPanelWidth, onSelectOperation }: Props) {
   const [operations, setOperations] = useState(false);
   const [simple, setSimple] = useState(false);
+  // Tidy up puts back the boxes the user dragged; the graph says when there are any.
+  const [tidy, setTidy] = useState(0);
+  const [moved, setMoved] = useState(false);
   const graph = useMemo(() => buildSchemaGraph(spec.doc), [spec.doc]);
   const names = useMemo(() => graph.schemas.map((s) => s.name).sort((a, b) => a.localeCompare(b)), [graph]);
   const simpleCount = graph.schemas.filter((s) => s.simple).length;
@@ -40,6 +43,8 @@ export function GraphView({ spec, focus, onFocus, panelWidth, onPanelWidth, onSe
           operations={operations}
           simple={simple}
           onSelectSchema={onFocus}
+          tidyUp={tidy}
+          onMovedChange={setMoved}
         />
         <div className="graph-toolbar">
           <div className="segmented" role="radiogroup" aria-label="What the graph shows">
@@ -73,6 +78,15 @@ export function GraphView({ spec, focus, onFocus, panelWidth, onPanelWidth, onSe
               Simple types <span className="mono meta">{simpleCount}</span>
             </label>
           )}
+          <button
+            type="button"
+            className="btn tight graph-tidy"
+            disabled={!moved}
+            onClick={() => setTidy((n) => n + 1)}
+            title={moved ? "Put the boxes you moved back and lay the graph out again" : "Drag a box to arrange the graph"}
+          >
+            Tidy up
+          </button>
           <span className="spacer" />
           <div className="graph-legend meta" aria-label="Legend">
             <span>
