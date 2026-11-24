@@ -31,6 +31,8 @@ large spec can have hundreds.
   example. It is the same view as the **Schemas** tab. You can drag its edge to make it wider, or
   close it to give the canvas the whole window.
 - **Zoom and pan** with the controls in the bottom-right corner, your trackpad, or the mouse wheel.
+- **Drag a box** to move it. The lines follow it. A line to a box that sits behind the one it
+  starts from runs under the row instead of back across it.
 
 <Clip
   src="/media/studio-graph.mp4"
@@ -54,6 +56,8 @@ The toolbar sits along the top of the canvas.
 - **Schemas | With operations**. **With operations** adds a box for each operation, such as `GET /orders/{orderId}`, with a line to
   each schema it uses. It is off when the graph opens.
 - **Focus** picks the schema the graph centres on.
+- **Tidy up** puts back the boxes you moved and lays the graph out again. It's greyed out until
+  you've moved something.
 - **Simple types** shows schemas that have no structure of their own: named strings, enums, and
   empty marker objects. They are hidden by default because they add a lot of boxes and not much
   meaning. This switch only appears when the spec has some. A simple type you click on is always
