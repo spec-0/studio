@@ -4409,6 +4409,15 @@ tr:hover .row-actions .icon-btn, .row-actions .icon-btn:focus-visible { opacity:
 
 .schema-fields td.type-cell { white-space: normal; overflow-wrap: anywhere; }
 .detail .tbl.schema-fields { table-layout: fixed; width: 100%; }
+/* The table's columns are fixed, so nothing in a cell may be wider than its
+   column or it runs into the next one: a long field name wraps, "required"
+   goes on its own line under it, and a schema badge is cut short with its
+   full type on hover. */
+.schema-fields td.field-cell { white-space: normal; overflow-wrap: break-word; }
+.schema-fields td.field-cell .required-word { display: block; margin-left: 0; line-height: 1.5; }
+.schema-fields td.type-cell .chip { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: top; margin-right: 0; }
+.detail .tbl.schema-fields th:nth-child(1) { width: 36%; }
+.detail .tbl.schema-fields th:nth-child(2) { width: 36%; }
 
 /* The graph's toolbar, over the canvas: what it shows, where it's centred, a legend */
 .graph-wrap { --sg-label-bg: hsl(var(--bg)); }
