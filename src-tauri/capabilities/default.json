@@ -1,12 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Open local specs and sign in through the browser. Outbound HTTP is our own reqwest command, not the http plugin \u2014 see src/http.rs.",
+  "description": "Open local specs and sign in through the browser. While an agent request waits, the window asks for attention and says so in its title (src/hooks/useNotifications.ts). Outbound HTTP is our own reqwest command, not the http plugin \u2014 see src/http.rs.",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
+    "core:window:allow-request-user-attention",
+    "core:window:allow-set-title",
     "dialog:allow-open",
     "dialog:allow-save",
     {

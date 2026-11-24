@@ -264,6 +264,11 @@ relaxed:
   result is redacted on its way out (`answerCall` in `src/lib/mcpServer.ts`).
 - Everything an agent does is visible: the console names the agent, its runs are marked, and the
   MCP tab keeps an activity log. Stop agents refuses whatever is waiting and stops the server.
+- A waiting request is never only in a dialog the developer might not see: it is also in the bell
+  (`src/lib/notifications.ts`), and Studio asks for attention (the Dock bounces, the taskbar
+  flashes, the window title counts what's waiting) until it is answered. One that times out or is
+  refused by Stop agents stays in the bell as missed. The bell only shows what Studio already
+  knows; it makes no request of its own.
 - Collections an agent creates are drafts, and agents change only their own drafts.
 - Don't add a tool that repeats what the remote Spec0 MCP server already offers for the whole
   organisation; this server is for what only Studio knows.

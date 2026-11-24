@@ -1857,6 +1857,91 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
   box-shadow: 0 0 0 2px hsl(var(--surface));
 }
 
+/* The bell: what's waiting for you, and what happened while you looked away.
+   The count is neutral, and amber while an agent request waits. The panel is a
+   popover under the bell, the same surface as a context menu. */
+.bell { position: relative; flex: none; }
+.bell-btn { position: relative; }
+.bell-badge {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  line-height: 15px;
+  text-align: center;
+  color: hsl(var(--bg));
+  background: hsl(var(--ink-2));
+  box-shadow: 0 0 0 2px hsl(var(--surface));
+}
+.bell-badge.waiting { background: hsl(var(--warning)); animation: agent-btn-pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .bell-badge.waiting { animation: none; } }
+.bell-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -6px;
+  z-index: 60;
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  max-height: min(560px, calc(100vh - 80px));
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--bg));
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+  animation: modal-in 120ms var(--ease);
+  user-select: text;
+  outline: none;
+}
+.bell-panel:focus-visible { box-shadow: var(--shadow-2), 0 0 0 2px hsl(var(--primary) / 0.5); }
+.bell-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 38px;
+  padding: 0 var(--s2) 0 var(--s3);
+  border-bottom: 1px solid hsl(var(--border));
+}
+.bell-head h2 { font-size: var(--t-body); font-weight: 600; }
+.bell-empty { padding: var(--s4) var(--s3); font-size: var(--t-small); color: hsl(var(--ink-3)); }
+.bell-body { overflow-y: auto; padding-bottom: var(--s1); }
+.bell-section h3 {
+  padding: var(--s3) var(--s3) var(--s1);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--ink-3));
+}
+.bell-section ul { list-style: none; }
+.bell-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s2);
+  padding: var(--s2) var(--s2) var(--s2) var(--s3);
+  border-top: 1px solid hsl(var(--border));
+}
+.bell-section h3 + ul > .bell-item:first-child { border-top: none; }
+.bell-item.request { background: hsl(var(--warning) / 0.08); }
+.bell-icon { flex: none; margin-top: 2px; color: hsl(var(--ink-3)); }
+.bell-icon.waiting, .bell-icon.missed { color: hsl(var(--warning)); }
+.bell-icon.passed { color: hsl(var(--success)); }
+.bell-icon.failed { color: hsl(var(--danger)); }
+.bell-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bell-item-title { font-size: var(--t-body); font-weight: 500; color: hsl(var(--ink)); overflow-wrap: anywhere; }
+.bell-item-line { font-size: var(--t-small); color: hsl(var(--ink-2)); overflow-wrap: anywhere; }
+.bell-item-line.mono { font-size: var(--t-micro); }
+.bell-item-meta { font-size: var(--t-micro); color: hsl(var(--ink-3)); }
+.bell-item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.bell-item-actions .spacer { flex: 1; min-width: 0; }
+.bell-dismiss { margin-top: -1px; }
+
 /* The open API: which one, its four views, its actions. */
 .apibar {
   height: 44px;

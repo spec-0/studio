@@ -88,13 +88,26 @@ export function askDeveloper(request: Omit<Approval, "id" | "at">, timeoutMs = A
   });
 }
 
+const endedListeners = new Set<(approval: Approval, outcome: Outcome) => void>();
+
+/**
+ * Hear how each approval ended: answered, timed out or refused by Stop agents.
+ * The bell uses it so a request nobody answered is never silent.
+ */
+export function onApprovalEnded(listener: (approval: Approval, outcome: Outcome) => void): () => void {
+  endedListeners.add(listener);
+  return () => endedListeners.delete(listener);
+}
+
 function finish(id: number, outcome: Outcome) {
   const found = waiting.find((entry) => entry.id === id);
   if (!found) return;
   clearTimeout(found.timer);
   waiting = waiting.filter((entry) => entry.id !== id);
   approvalsChanged();
-  found.resolve(outcome);
+  const { resolve, timer: _timer, ...approval } = found;
+  for (const listener of endedListeners) listener(approval, outcome);
+  resolve(outcome);
 }
 
 /** The developer's answer, from the dialog. */

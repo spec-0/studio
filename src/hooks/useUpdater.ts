@@ -104,12 +104,15 @@ export function useUpdater() {
     }
   }, []);
 
+  /** Open the dialog on what the last check found, without checking again. */
+  const show = useCallback(() => setOpen(true), []);
+
   const installing = phase.kind === "installing";
   const close = useCallback(() => {
     if (!installing) setOpen(false);
   }, [installing]);
 
-  return { open, phase, prefs, version, progress, check, install, setCheckOnStart, close };
+  return { open, phase, prefs, version, progress, check, install, setCheckOnStart, close, show };
 }
 
 export type Updater = ReturnType<typeof useUpdater>;

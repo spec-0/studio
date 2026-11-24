@@ -3,6 +3,7 @@ import { ArrowUp, AtSign, Bot, History, MessageSquarePlus, RefreshCw, Settings, 
 import { AGENT_NAMES, useAgentChat } from "../../hooks/useAgentChat";
 import { useAgentChatSettings } from "../../hooks/useAgentChatSettings";
 import { useAgentChatPanelOpen } from "../../hooks/useAgentChatPanelOpen";
+import { useChatRequests } from "../../hooks/useNotifications";
 import {
   agentChatShortcutLabel,
   chatActivityOf,
@@ -128,6 +129,9 @@ export function AgentChatPanel({ mentionChoices, studioContext, onOpenInStudio, 
     setAgentChatActivity(chatActivityOf(chat.running, chat.items));
   }, [chat.running, chat.items]);
   useEffect(() => () => setAgentChatActivity("idle"), []);
+
+  // Its permission questions wait in the bell too, answerable from there.
+  useChatRequests(chat.items, chat.agentName ?? (prefs.agent ? AGENT_NAMES[prefs.agent] : "The agent"), chat.answer);
 
   // Follow the conversation while it's scrolled to the bottom.
   useEffect(() => {

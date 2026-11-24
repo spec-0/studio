@@ -190,6 +190,12 @@ or quit Studio). Saving a file and adding a spec can only be allowed once.
 **Don't allow** is selected by default, and `Esc` does the same, so a stray key press lets nothing
 through. An unanswered approval is refused after five minutes.
 
+Every waiting approval is also in the [bell](/notifications) in the top bar, where you can answer
+it too. While one waits, Studio's Dock icon bounces (its taskbar button flashes on Windows) and the
+window title says a request is waiting, so you see it even with Studio behind other windows. One
+that's refused because nobody answered, or because you stopped agents, stays in the bell under
+**Missed**, with when and why.
+
 ### Blocked hosts and the request limit
 
 Under **Agents** in the MCP tab:
