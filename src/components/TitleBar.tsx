@@ -1,5 +1,6 @@
 import { BotMessageSquare, Layers, Plus, Settings } from "lucide-react";
 import { Brand } from "./Logo";
+import { NotificationBell, type BellActions } from "./NotificationBell";
 import { ConnectionChip } from "./ConnectionChip";
 import { TabList } from "./TabList";
 import type { EnvironmentFile } from "../lib/env";
@@ -27,6 +28,8 @@ interface Props {
   onOpenSettings: () => void;
   /** How many local mocks are running, for a dot on the Mocks tab. */
   localMocks?: number;
+  /** Where the bell's links go. */
+  bell: BellActions;
 }
 
 const TAB_TITLES: Record<TopTab, string> = {
@@ -39,8 +42,8 @@ const TAB_TITLES: Record<TopTab, string> = {
 
 /**
  * The window's top bar: the app's sections as text tabs on the left; the
- * environment, whether you're signed in, the agent chat and Settings on the
- * right. What's specific to the open API is in the bar below it (`ApiBar`).
+ * environment, the agent chat, the bell, whether you're signed in and
+ * Settings on the right. What's specific to the open API is in the bar below it (`ApiBar`).
  */
 export function TitleBar({
   topTab,
@@ -55,6 +58,7 @@ export function TitleBar({
   settingsOpen,
   onOpenSettings,
   localMocks = 0,
+  bell,
 }: Props) {
   return (
     <div className="titlebar" data-tauri-drag-region>
@@ -110,6 +114,8 @@ export function TitleBar({
       </div>
 
       <AgentButton />
+
+      <NotificationBell actions={bell} />
 
       <ConnectionChip session={session} onOpenAccount={onOpenAccount} onSignIn={onSignIn} />
 

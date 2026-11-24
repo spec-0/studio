@@ -157,6 +157,7 @@ an event, and sends back what the web view answers.
 | `appConsole.ts` | The console's entries for this session, in memory only. |
 | `appMenu.ts` | Tells the macOS menu whether a request tab is on screen, for ⌘W. |
 | `appUpdates.ts` | Updates to Studio itself. |
+| `notifications.ts` | What the bell shows: agent requests waiting, ones nobody answered, updates a check found, runs agents finished. |
 | `deepLink.ts` | Reads `spec0://` links and decides what Studio may do with them. |
 | `platform.ts` | The few differences between macOS, Windows and Linux in the web view. |
 | `plural.ts` | "1 operation", "2 operations". |
@@ -265,6 +266,22 @@ A message saying "tool" shows a tool call and asks permission, "mcp" calls Studi
 "slow" waits to be stopped, and "attach" lists what it received. In the app, choose
 **Another agent** in Settings → Agent chat, with the full path to `node` as the program and the
 script's full path as the argument.
+
+## The bell
+
+The bell is `NotificationBell.tsx`, in `TitleBar.tsx`. Its state is `notifications.ts`, in memory
+for the session, like the console. It only collects what Studio already knows and makes no
+request. `useNotificationSources` in `src/hooks/useNotifications.ts` feeds it from
+`agentControl.ts` (approvals waiting, and `onApprovalEnded` for the ones that timed out or were
+refused by Stop agents), `runActivity.ts` (runs an agent started), `useUpdater` (a Studio update
+a check found) and the library's update marks. The chat panel feeds its own permission questions
+with `useChatRequests`. Each source registers how to answer its requests, so **Allow** in the bell
+does exactly what the dialog or the chat card does.
+
+While a request waits, the same hook sets the window title ("spec0 Studio — 1 request waiting")
+and calls `requestUserAttention`, which bounces the Dock icon on macOS and flashes the taskbar
+button on Windows; both clear when nothing waits. The capability grants
+`core:window:allow-request-user-attention` and `core:window:allow-set-title` for this.
 
 ## Tests
 

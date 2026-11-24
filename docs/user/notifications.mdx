@@ -1,0 +1,46 @@
+---
+title: Notifications
+description: The bell in the top bar lists agent requests waiting for you, requests nobody answered, updates, and runs agents finished.
+docType: reference
+---
+
+The bell is in the top bar, next to **Agent**. Its count shows how many notifications it holds.
+While an agent is waiting for an answer from you, the count turns amber.
+
+Press the bell to open the list. `Esc` or a click outside closes it.
+
+## What's in the list
+
+Each section lists the newest first.
+
+| Section | What it shows |
+|---|---|
+| **Waiting for you** | Every request an agent is waiting on: the [approvals Studio asks for](/mcp#approving-what-agents-do), and the [agent chat's own permission questions](/agent-chat/working-with-the-agent#approving-what-the-agent-does). Each one shows what the agent wants, which agent is asking, and the same answers as the dialog or the chat. |
+| **Missed** | Requests that were refused without an answer from you: nobody answered within five minutes, you pressed **Stop agents**, or the chat stopped first. Each says when and why. **View activity** opens the MCP tab's activity log, and **Open chat** opens the agent chat. |
+| **Updates** | A newer version of Studio that an update check found, with **Install…**. APIs in your library that have a newer version in Spec0, with **Update**. |
+| **Finished** | Collection runs that an agent started, with their result and **View run**. Runs you start yourself aren't listed here. |
+
+## Dismissing
+
+Press **×** on an item to dismiss it, or **Dismiss all**. A request that is still waiting can't be
+dismissed, only answered, here or where it was asked.
+
+The list is kept until you quit Studio. Updates are the exception: the next update check finds them
+again.
+
+## When an agent is waiting
+
+Studio still shows the approval dialog, or the question in the chat. If Studio's window is behind
+other windows, Studio also asks for your attention:
+
+- on macOS, Studio's icon in the Dock bounces
+- on Windows, Studio's taskbar button flashes
+- the window title says how many requests are waiting, for example "spec0 Studio — 1 request
+  waiting"
+
+Both stop when nothing is waiting. Studio shows nothing outside its window beyond that.
+
+## What the bell doesn't do
+
+The bell makes no network requests. It only lists what Studio already knows. Update checks still
+run only when you ask, or when Studio starts if you turned that on in Settings.

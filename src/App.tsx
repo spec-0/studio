@@ -74,6 +74,7 @@ import { useSettings } from "./hooks/useSettings";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { useTargeting } from "./hooks/useTargeting";
 import { useUpdater } from "./hooks/useUpdater";
+import { useNotificationSources } from "./hooks/useNotifications";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { hostOf } from "./lib/connection";
 import { authFits } from "./lib/drafts";
@@ -321,6 +322,7 @@ export default function App() {
 
   const nav = useNavigation({ route, setRoute, hasOpenApi: Boolean(spec) });
   const updater = useUpdater();
+  useNotificationSources({ phase: updater.phase, entries });
   const mocks = useMocks(session, route === "mocks", {
     storedKey: useCallback(
       (mockServerId: string) => entries.find((entry) => entry.mockServerId === mockServerId)?.mockApiKey ?? null,
@@ -676,6 +678,14 @@ export default function App() {
         settingsOpen={route === "settings"}
         onOpenSettings={() => nav.openSettings()}
         localMocks={localMocks.count}
+        bell={{
+          onStudioUpdate: updater.show,
+          onApiUpdate: (entryId) => {
+            const entry = entries.find((row) => row.id === entryId);
+            if (entry) void applyUpdate(entry);
+          },
+          onOpenMcp: () => onTopTab("mcp"),
+        }}
       />
 
       {/* The page on the left, the agent chat docked on the right. The page
