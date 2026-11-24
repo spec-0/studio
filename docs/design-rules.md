@@ -76,8 +76,9 @@ drifting source of truth Studio exists to avoid. So:
 
 - A step that can't find its operation is shown as missing, with a way to link it to another. It
   isn't quietly turned into a free-standing request.
-- Unlinked requests (brought in from other tools) run like scratch requests and say nothing checks
-  them until they're linked.
+- A collection can hold requests that aren't linked to a spec yet: scratch requests added with
+  **Add to collection**, and requests brought in from other tools. They run like scratch requests,
+  keep only their own method and URL, and say nothing checks them until they're linked.
 - The file (`*.spec0-collection.yaml`, versioned, see `src/lib/collection.ts`) refers to specs by
   their source, relative to the collection file when both are in one folder. It never holds secret
   values: known secrets are written as `{{references}}` and a literal auth value is left out, with
@@ -104,12 +105,14 @@ imported text, which the Raw tab shows. The converter is Studio's own (`src/lib/
 because `swagger2openapi` is written for Node and would need shimming to run in the web view.
 Publishing sends the converted OpenAPI 3.0 text, because Spec0 takes 3.0 and 3.1.
 
-## 12. The scratch pad stays small
+## 12. Scratch requests stay plain
 
-There is one scratch request. It has no name and isn't saved as an item; only its contents are
-kept, like a text buffer. No second pad, no names, no folders. It has no schema, so none of
-Studio's checks apply to it. Requests worth keeping are worth describing in a spec, and a flow
-worth keeping goes in a collection.
+Trying a few endpoints of an API before there's a spec is a real way to start, so there can be as
+many scratch requests as you like, each with its own tab and last response. They stay plain: no
+names, no folders, no Save. Each is kept like a text buffer until it's removed. They have no schema,
+so none of Studio's checks apply to them. Keeping one with others means adding it to a collection
+(rule [9](#9-collections-point-at-specs-and-never-replace-them)), and a request worth checking is
+worth describing in a spec. Don't grow scratch requests into a second kind of collection.
 
 ## 13. OAuth settings live with the API; the client secret doesn't
 

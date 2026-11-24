@@ -61,7 +61,7 @@ export function settingsDestination(
   return { route: "settings", ...(section ? { section } : {}) };
 }
 
-/** The screens that belong to the APIs tab: the library, an open API, and the scratch pad. */
+/** The screens that belong to the APIs tab: the library, an open API, and the scratch requests. */
 export function isApisRoute(route: Route): boolean {
   return route === "library" || route === "api" || route === "scratch";
 }
@@ -77,7 +77,7 @@ export function topTabOf(route: Route): TopTab | null {
  * Where a top-bar tab goes.
  *
  * Coming back to APIs from another tab returns to what you were doing there,
- * the open API or the scratch pad, so a trip to History doesn't lose your
+ * the open API or the scratch requests, so a trip to History doesn't lose your
  * place. Choosing APIs while already on it goes to the list of all APIs.
  */
 export function routeForTopTab(

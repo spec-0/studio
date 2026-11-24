@@ -28,7 +28,7 @@ interface Props {
 }
 
 /**
- * Every recorded request, across all APIs and the scratch pad, in one list.
+ * Every recorded request, across all APIs and the scratch requests, in one list.
  *
  * The list is the log; the right-hand side reads one entry. Filters are the few
  * questions people actually ask of a log (which API, did it fail, did it

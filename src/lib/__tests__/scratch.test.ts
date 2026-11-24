@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { buildScratchPlan, padFromHistory, scratchPath, sendsBody } from "../scratch";
+import {
+  addScratch,
+  buildScratchPlan,
+  duplicateScratch,
+  EMPTY_SCRATCH,
+  padFromHistory,
+  parseScratch,
+  removeScratch,
+  scratchLabel,
+  scratchPath,
+  selectScratch,
+  sendsBody,
+  updateScratch,
+} from "../scratch";
 import type { ScratchPad } from "../scratch";
 
 const pad = (over: Partial<ScratchPad> = {}): ScratchPad => ({
@@ -105,5 +118,66 @@ describe("padFromHistory", () => {
     expect(restored.method).toBe("POST");
     expect(restored.body).toBe('{"a":1}');
     expect(restored.headers).toEqual([{ key: "X-Trace", value: "abc" }]);
+  });
+});
+
+describe("scratch requests", () => {
+  it("start empty, and each new one is shown", () => {
+    let state = addScratch(EMPTY_SCRATCH, pad({ url: "https://api.example.com/users" }), "a");
+    state = addScratch(state, pad({ url: "https://api.example.com/posts" }), "b");
+    expect(state.requests.map((r) => r.id)).toEqual(["a", "b"]);
+    expect(state.activeId).toBe("b");
+  });
+
+  it("reuse a blank request rather than adding a second one", () => {
+    let state = addScratch(EMPTY_SCRATCH, undefined, "a");
+    state = addScratch(state, undefined, "b");
+    expect(state.requests.map((r) => r.id)).toEqual(["a"]);
+    state = addScratch(state, pad({ url: "https://api.example.com/x" }), "c");
+    expect(state.requests).toHaveLength(1);
+    expect(state.requests[0]).toMatchObject({ id: "a", url: "https://api.example.com/x" });
+  });
+
+  it("change, select, duplicate and remove one at a time", () => {
+    let state = addScratch(EMPTY_SCRATCH, pad({ url: "https://a.test/1" }), "a");
+    state = addScratch(state, pad({ url: "https://a.test/2" }), "b");
+    state = updateScratch(state, "a", pad({ method: "POST", url: "https://a.test/1", body: "{}" }));
+    expect(state.requests[0]).toMatchObject({ id: "a", method: "POST", body: "{}" });
+    state = selectScratch(state, "a");
+    expect(state.activeId).toBe("a");
+    state = duplicateScratch(state, "a", "a2");
+    expect(state.requests.map((r) => r.id)).toEqual(["a", "a2", "b"]);
+    expect(state.activeId).toBe("a2");
+    state = removeScratch(state, "a2");
+    expect(state.requests.map((r) => r.id)).toEqual(["a", "b"]);
+    expect(state.activeId).toBe("b");
+    state = removeScratch(removeScratch(state, "b"), "a");
+    expect(state).toEqual({ ...EMPTY_SCRATCH });
+  });
+
+  it("turn the single pad older versions kept into the first request", () => {
+    const state = parseScratch({ method: "POST", url: "https://a.test/orders", headers: [], body: "{}" });
+    expect(state.requests).toHaveLength(1);
+    expect(state.requests[0]).toMatchObject({ method: "POST", url: "https://a.test/orders", body: "{}" });
+    expect(state.activeId).toBe(state.requests[0].id);
+    expect(parseScratch({ method: "GET", url: "", headers: [], body: "" })).toEqual(EMPTY_SCRATCH);
+  });
+
+  it("read back what was stored, dropping what doesn't look like a request", () => {
+    const state = parseScratch({
+      version: 2,
+      activeId: "gone",
+      requests: [{ id: "a", method: "GET", url: "https://a.test", headers: [{ key: "X", value: "1" }, null], body: "" }, { url: "no id" }, null],
+    });
+    expect(state.requests).toEqual([{ id: "a", method: "GET", url: "https://a.test", headers: [{ key: "X", value: "1" }], body: "" }]);
+    expect(state.activeId).toBe("a");
+    expect(parseScratch("nonsense")).toEqual(EMPTY_SCRATCH);
+  });
+
+  it("are labelled by path, host, or as new", () => {
+    expect(scratchLabel(pad({ url: "https://api.example.com/users?page=2" }))).toBe("/users?page=2");
+    expect(scratchLabel(pad({ url: "https://api.example.com/" }))).toBe("api.example.com");
+    expect(scratchLabel(pad({ url: "{{base}}/users" }))).toBe("{{base}}/users");
+    expect(scratchLabel(pad({ url: " " }))).toBe("New request");
   });
 });

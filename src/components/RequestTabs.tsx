@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Plus, X } from "lucide-react";
 import type { LibraryEntry } from "../lib/library";
 import { isMac, shortcut } from "../lib/platform";
+import { scratchLabel, type ScratchRequest } from "../lib/scratch";
 import type { RequestTab } from "../lib/tabs";
 
 interface Props {
@@ -9,10 +10,12 @@ interface Props {
   activeKey: string | null;
   /** For each tab's current API title; a tab keeps the one it was opened with if its API is gone. */
   entries: LibraryEntry[];
+  /** The scratch requests, so a scratch tab shows what its request holds now. */
+  scratch: ScratchRequest[];
   hasUnsent: (key: string) => boolean;
   onActivate: (tab: RequestTab) => void;
   onClose: (key: string) => void;
-  /** "+": a new request, in the scratch pad. */
+  /** "+": a new scratch request. */
   onNew: () => void;
 }
 
@@ -31,7 +34,7 @@ const firstWord = (title: string) => title.split(/\s+/)[0] ?? title;
  * or a middle-click to close. Closing never loses unsent changes; they stay
  * with the operation, marked in the sidebar.
  */
-export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, onClose, onNew }: Props) {
+export function RequestTabs({ tabs, activeKey, entries, scratch, hasUnsent, onActivate, onClose, onNew }: Props) {
   const strip = useRef<HTMLDivElement>(null);
 
   // Keep the active tab in view when it's chosen from somewhere else.
@@ -42,6 +45,7 @@ export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, o
 
   if (!tabs.length) return null;
   const titles = new Map(entries.map((entry) => [entry.id, entry.title]));
+  const pads = new Map(scratch.map((request) => [request.id, request]));
   // The API's name only earns its space once the tabs span more than one API.
   const manyApis = new Set(tabs.map((tab) => tab.apiId)).size > 1;
 
@@ -49,14 +53,16 @@ export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, o
     <nav className="request-tabs" aria-label="Open requests">
       <div className="request-tabs-strip" ref={strip}>
         {tabs.map((tab) => {
-          const apiTitle = titles.get(tab.apiId) ?? tab.apiTitle;
-          const unsent = hasUnsent(tab.key);
+          const pad = tab.scratch ? pads.get(tab.operationId) : undefined;
+          const apiTitle = tab.scratch ? "Scratch" : (titles.get(tab.apiId) ?? tab.apiTitle);
+          const unsent = !tab.scratch && hasUnsent(tab.key);
           const active = tab.key === activeKey;
-          const method = tab.method.toUpperCase();
+          const method = (pad?.method ?? tab.method).toUpperCase();
+          const path = pad ? scratchLabel(pad) : tab.path;
           return (
             <div
               key={tab.key}
-              className={`request-tab${active ? " active" : ""}`}
+              className={`request-tab${active ? " active" : ""}${tab.scratch ? " scratch" : ""}`}
               onMouseDown={(event) => {
                 // Middle-click closes; stop the browser's autoscroll from starting.
                 if (event.button === 1) event.preventDefault();
@@ -72,11 +78,11 @@ export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, o
                 type="button"
                 className="request-tab-open"
                 aria-current={active ? "page" : undefined}
-                title={`${method} ${tab.path} · ${apiTitle}${unsent ? " · unsent changes" : ""}\n${NEXT} for the next tab`}
+                title={`${method} ${pad?.url.trim() || path} · ${apiTitle}${unsent ? " · unsent changes" : ""}\n${NEXT} for the next tab`}
                 onClick={() => onActivate(tab)}
               >
                 <span className={`method ${method.toLowerCase()}`}>{short(method)}</span>
-                <span className="request-tab-path">{tab.path}</span>
+                <span className="request-tab-path">{path}</span>
                 {manyApis && <span className="request-tab-api">{firstWord(apiTitle)}</span>}
                 {unsent && (
                   <span className="dirty-dot" role="img" aria-label="Unsent changes" />
@@ -85,7 +91,7 @@ export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, o
               <button
                 type="button"
                 className="request-tab-close"
-                aria-label={`Close ${method} ${tab.path}`}
+                aria-label={`Close ${method} ${path}`}
                 title={active ? `Close tab (${CLOSE})` : "Close tab"}
                 onClick={() => onClose(tab.key)}
               >
@@ -95,7 +101,7 @@ export function RequestTabs({ tabs, activeKey, entries, hasUnsent, onActivate, o
           );
         })}
       </div>
-      <button type="button" className="request-tabs-new" onClick={onNew} title="New request, without a spec (Scratch)" aria-label="New request">
+      <button type="button" className="request-tabs-new" onClick={onNew} title={`New request to any URL, without a spec (${shortcut("N")})`} aria-label="New request">
         <Plus size={14} aria-hidden />
       </button>
     </nav>

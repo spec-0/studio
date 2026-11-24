@@ -13,7 +13,7 @@ import type { MainView, PrefillValues, Route } from "./useWorkspace";
  *
  * A record is only ever shown read-only. "Copy to a new request" is the one
  * way back to an editor: it opens the operation (switching API if the record
- * belongs to another one) or the scratch pad, filled from the record, with a
+ * belongs to another one) or a new scratch request, filled from the record, with a
  * note saying it's new.
  */
 export function useHistoryRecords({
@@ -29,7 +29,7 @@ export function useHistoryRecords({
   setView,
   setRecord,
   setCopiedFrom,
-  updatePad,
+  addScratch,
   clearResponse,
 }: {
   entries: LibraryEntry[];
@@ -44,7 +44,8 @@ export function useHistoryRecords({
   setView: (view: MainView) => void;
   setRecord: (entry: HistoryEntry | null) => void;
   setCopiedFrom: (at: string | null) => void;
-  updatePad: (pad: ScratchPad) => void;
+  /** Start a scratch request filled from `pad` and show it. */
+  addScratch: (pad: ScratchPad) => void;
   clearResponse: (options?: { curl?: boolean; owner?: string | null }) => void;
 }) {
   /** A copy waiting for its API to finish opening. */
@@ -106,9 +107,8 @@ export function useHistoryRecords({
   const copyRecord = useCallback(
     (entry: HistoryEntry, destination: "operation" | "scratch") => {
       if (destination === "scratch") {
-        updatePad(padFromHistory(entry));
+        addScratch(padFromHistory(entry));
         setRecord(null);
-        clearResponse({ curl: true, owner: "scratch" });
         setCopiedFrom(entry.at);
         setRoute("scratch");
         return;
@@ -122,7 +122,7 @@ export function useHistoryRecords({
       setPendingCopy(entry);
       void openEntry(api);
     },
-    [libraryEntryFor, current?.id, spec, fillOperation, openEntry, updatePad, setRecord, clearResponse, setCopiedFrom, setRoute],
+    [libraryEntryFor, current?.id, spec, fillOperation, openEntry, addScratch, setRecord, setCopiedFrom, setRoute],
   );
 
   return { specFor, copyRecord };

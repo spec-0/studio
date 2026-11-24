@@ -23,7 +23,7 @@ import {
   SCRATCH_TITLE,
   buildScratchPlan,
   scratchPath,
-  type ScratchPad,
+  type ScratchRequest,
 } from "../lib/scratch";
 import type { SendSnapshot } from "../lib/drafts";
 import type { Route } from "../lib/navigation";
@@ -35,7 +35,7 @@ import { validateResponse } from "../lib/validate";
 import type { Settings } from "./useSettings";
 
 interface Options {
-  /** The screen on show; the pane belongs to the scratch pad or to one operation. */
+  /** The screen on show; the pane belongs to one scratch request or to one operation. */
   route: Route;
   spec: ParsedSpec | null;
   operation: OperationSpec | null;
@@ -55,7 +55,8 @@ interface Options {
   specFingerprint: string | undefined;
   /** The OAuth token to send, renewed first if it's close to expiring. */
   usableToken: () => Promise<string>;
-  pad: ScratchPad;
+  /** The scratch request on the scratch screen, if any. */
+  scratch: ScratchRequest | null;
   patchSettings: (patch: Partial<Settings>) => void;
   setRequests: Dispatch<SetStateAction<HistoryEntry[]>>;
   /** Sending makes a copied request no longer "not sent yet". */
@@ -74,7 +75,7 @@ interface Options {
  * never do; they are read in their own view.
  *
  * The pane belongs to one request. Picking another operation, another API or
- * the scratch pad takes its answer off screen (it comes back, labelled, when
+ * a scratch request takes its answer off screen (it comes back, labelled, when
  * that request is shown again this session), and a send still in flight when
  * that happens lands in History only (see `src/lib/responsePane.ts`).
  */
@@ -93,7 +94,7 @@ export function useRequestSender({
   environmentName,
   specFingerprint,
   usableToken,
-  pad,
+  scratch,
   patchSettings,
   setRequests,
   setCopiedFrom,
@@ -101,7 +102,7 @@ export function useRequestSender({
   onSent,
 }: Options) {
   const [pane, dispatch] = useReducer(paneReducer, EMPTY_PANE);
-  const owner = paneOwner(route, currentId, operation?.id);
+  const owner = paneOwner(route, currentId, operation?.id, scratch?.id);
   useEffect(() => dispatch({ type: "show", owner }), [owner]);
   const shown = visiblePane(pane, owner);
   const { sending, result, validation, error: requestError, curl, sentTo } = shown;
@@ -223,7 +224,7 @@ export function useRequestSender({
   }, [result]);
 
   /**
-   * Send the scratch request.
+   * Send the scratch request on screen.
    *
    * Deliberately a sibling of `doSend` rather than a branch inside it: there is
    * no operation, no declared response and nothing to validate, so every step
@@ -231,13 +232,14 @@ export function useRequestSender({
    * mean threading "…unless there's no spec" through all of it.
    */
   const doScratchSend = useCallback(async () => {
+    if (!scratch) return;
     const sendId = ++nextSendId.current;
     dispatch({ type: "start", sendId, sentAt: new Date().toISOString() });
     setCopiedFrom(null);
     try {
-      const plan = buildScratchPlan(pad, vars);
+      const plan = buildScratchPlan(scratch, vars);
       dispatch({ type: "curl", sendId, curl: toCurl(plan) });
-      // The scratch pad gets its own jar: it isn't an API and shouldn't borrow
+      // Scratch requests share their own jar: it isn't an API and shouldn't borrow
       // one's session, nor leak a login it performed into a real API's.
       const response = await send(plan, { ...transportFor(connection, plan.url), jar: "__scratch__" });
       dispatch({ type: "response", sendId, result: response, validation: null });
@@ -269,7 +271,7 @@ export function useRequestSender({
       dispatch({ type: "done", sendId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pad, vars, connection, environmentName]);
+  }, [scratch, vars, connection, environmentName]);
 
   /** What the operation editor holds right now. */
   const currentValues = useCallback(() => values.current, []);

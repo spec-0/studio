@@ -3,6 +3,7 @@ import { setMenuClosesTab } from "../lib/appMenu";
 import type { LibraryEntry } from "../lib/library";
 import type { Route } from "../lib/navigation";
 import { paneOwner } from "../lib/responsePane";
+import { SCRATCH_API_ID, scratchLabel, type ScratchRequest } from "../lib/scratch";
 import type { OperationSpec, ParsedSpec } from "../lib/spec";
 import { readStore, writeStore, STORE } from "../lib/store";
 import {
@@ -23,7 +24,8 @@ import type { OpenFocus } from "./useLibrary";
  *
  * Whatever operation the editor shows gets a tab, however it got there, so the
  * sidebar, History's "Copy to a new request", `spec0://` links and the schema
- * view's links all open tabs without knowing about them.
+ * view's links all open tabs without knowing about them. The scratch request on
+ * screen gets one the same way.
  */
 export function useRequestTabs({
   route,
@@ -36,6 +38,8 @@ export function useRequestTabs({
   selectOperation,
   goLibrary,
   clearResponse,
+  scratch,
+  showScratch,
 }: {
   route: Route;
   current: LibraryEntry | null;
@@ -49,6 +53,10 @@ export function useRequestTabs({
   /** Where closing the last tab goes. */
   goLibrary: () => void;
   clearResponse: (options: { owner: string | null }) => void;
+  /** The scratch requests, once they have loaded, and the one on screen. */
+  scratch: { requests: ScratchRequest[]; loaded: boolean; onScreen: ScratchRequest | null };
+  /** Show a scratch request. */
+  showScratch: (id: string) => void;
 }) {
   const [state, setState] = useState<TabsState>(EMPTY_TABS);
   const loaded = useRef(false);
@@ -102,6 +110,35 @@ export function useRequestTabs({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onScreen, current?.id, current?.title]);
 
+  // The scratch request on screen has a tab too.
+  const scratchOnScreen = route === "scratch" ? scratch.onScreen : null;
+  useEffect(() => {
+    if (!scratchOnScreen) return;
+    setState((now) =>
+      openTab(
+        now,
+        {
+          scratch: true,
+          apiId: SCRATCH_API_ID,
+          operationId: scratchOnScreen.id,
+          method: scratchOnScreen.method,
+          path: scratchLabel(scratchOnScreen),
+          apiTitle: "Scratch",
+        },
+        hasUnsent,
+      ),
+    );
+    // Only which request is on screen opens a tab; its contents are shown live.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scratchOnScreen?.id]);
+
+  // A scratch request that was removed loses its tab.
+  useEffect(() => {
+    if (!scratch.loaded) return;
+    const ids = new Set(scratch.requests.map((request) => request.id));
+    setState((now) => dropTabs(now, (tab) => Boolean(tab.scratch) && !ids.has(tab.operationId)));
+  }, [scratch.loaded, scratch.requests]);
+
   // An operation that has left the spec loses its tab when the API opens.
   useEffect(() => {
     if (!spec || !current) return;
@@ -112,6 +149,11 @@ export function useRequestTabs({
   /** Show a tab's operation, opening its API first if another one is open. */
   const activate = useCallback(
     (tab: RequestTab) => {
+      if (tab.scratch) {
+        if (scratch.requests.some((request) => request.id === tab.operationId)) showScratch(tab.operationId);
+        else setState((now) => dropTabs(now, (t) => t.key === tab.key));
+        return;
+      }
       if (current?.id === tab.apiId && spec) {
         const op = spec.operations.find((o) => o.id === tab.operationId);
         if (op) {
@@ -128,7 +170,7 @@ export function useRequestTabs({
       }
       void openEntry(entry, { operationId: tab.operationId });
     },
-    [current?.id, spec, entries, selectOperation, openEntry],
+    [current?.id, spec, entries, selectOperation, openEntry, scratch.requests, showScratch],
   );
 
   const close = useCallback(
@@ -137,9 +179,10 @@ export function useRequestTabs({
       const closed = latest.current.tabs.find((tab) => tab.key === key);
       const wasActive = latest.current.activeKey === key;
       setState(next);
-      if (closed) clearResponse({ owner: paneOwner("api", closed.apiId, closed.operationId) });
+      // A scratch request keeps its answer: it is still in the scratch list.
+      if (closed && !closed.scratch) clearResponse({ owner: paneOwner("api", closed.apiId, closed.operationId) });
       // Closing the tab on screen shows its neighbour, or the library after the last one.
-      if (wasActive && route === "api") {
+      if (wasActive && (route === "api" || route === "scratch")) {
         if (following) activate(following);
         else goLibrary();
       }
@@ -156,7 +199,11 @@ export function useRequestTabs({
   );
 
   /** The tab the editor is showing, when the tab strip is on screen. */
-  const activeKey = route === "api" ? state.activeKey : null;
+  const activeTab = state.tabs.find((tab) => tab.key === state.activeKey);
+  const activeKey =
+    activeTab && ((route === "api" && !activeTab.scratch) || (route === "scratch" && activeTab.scratch))
+      ? activeTab.key
+      : null;
 
   // On macOS, ⌘W closes this tab while there is one, and the window otherwise.
   const tabOnScreen = activeKey !== null;

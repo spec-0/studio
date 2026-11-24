@@ -65,7 +65,8 @@ import { usePublish } from "./hooks/usePublish";
 import { useRequestHistory } from "./hooks/useRequestHistory";
 import { useRequestSender } from "./hooks/useRequestSender";
 import { useRequestTabs } from "./hooks/useRequestTabs";
-import { useScratchPad } from "./hooks/useScratchPad";
+import { useScratch } from "./hooks/useScratch";
+import { SCRATCH_API_ID, scratchOwner } from "./lib/scratch";
 import { useSession } from "./hooks/useSession";
 import { useSettings } from "./hooks/useSettings";
 import { useShortcuts } from "./hooks/useShortcuts";
@@ -162,7 +163,7 @@ export default function App() {
     closeOnEscape,
   } = useDialogs();
   const { connection, setConnection, saveConnectionSettings } = useConnectionSettings();
-  const { pad, setPad, updatePad } = useScratchPad();
+  const scratch = useScratch();
 
   const { oauthToken, oauthBusy, oauthError, setOauthError, acquireToken, usableToken, clearToken } =
     useOAuth(current, envFile.activeId, vars, connection);
@@ -218,7 +219,7 @@ export default function App() {
     environmentName: activeEnv?.name,
     specFingerprint,
     usableToken,
-    pad,
+    scratch: scratch.active,
     patchSettings,
     setRequests,
     setCopiedFrom,
@@ -310,7 +311,7 @@ export default function App() {
     requests: setRequests,
     session: setSession,
     entries: setEntries,
-    pad: setPad,
+    scratch: scratch.restore,
     connection: setConnection,
   });
 
@@ -363,7 +364,7 @@ export default function App() {
     setView,
     setRecord,
     setCopiedFrom,
-    updatePad,
+    addScratch: scratch.add,
     clearResponse,
   });
 
@@ -382,12 +383,25 @@ export default function App() {
     [ingest],
   );
 
-  const openScratch = useCallback(() => {
+  /** Show a scratch request (or the one last shown), starting one if there are none. */
+  const showScratch = useCallback(
+    (id?: string) => {
+      if (id) scratch.select(id);
+      else if (!scratch.state.requests.length) scratch.add();
+      setRoute("scratch");
+      setRecord(null);
+      setCopiedFrom(null);
+    },
+    [scratch, setRoute, setRecord, setCopiedFrom],
+  );
+
+  /** Start a new scratch request and show it. */
+  const newScratch = useCallback(() => {
+    scratch.add();
     setRoute("scratch");
     setRecord(null);
     setCopiedFrom(null);
-    clearResponse({ curl: true, owner: "scratch" });
-  }, [setRoute, setRecord, setCopiedFrom, clearResponse]);
+  }, [scratch, setRoute, setRecord, setCopiedFrom]);
 
   /** Show an operation of the open API in the editor, as a tab does. */
   const selectOperation = useCallback(
@@ -414,7 +428,19 @@ export default function App() {
     selectOperation,
     goLibrary,
     clearResponse,
+    scratch: { requests: scratch.state.requests, loaded: scratch.loaded, onScreen: scratch.active },
+    showScratch,
   });
+
+  /** Remove a scratch request, with its tab and its last answer. */
+  const removeScratch = useCallback(
+    (id: string) => {
+      const next = scratch.remove(id);
+      clearResponse({ owner: scratchOwner(id) });
+      if (!next.requests.length) setRecord(null);
+    },
+    [scratch, clearResponse, setRecord],
+  );
 
   /** The open API's four views, as the tabs under the top bar show them. */
   const section: ApiSection =
@@ -458,6 +484,7 @@ export default function App() {
       else if (target === "operation") void doSend();
     },
     openAdd: () => setShowOpen(true),
+    newRequest: newScratch,
     openSwitcher: () => {
       if (entries.length) setShowSwitcher(true);
     },
@@ -475,7 +502,7 @@ export default function App() {
     },
     requestTab: (action) => {
       // Only where the tabs are on screen, and never from behind a dialog.
-      if (route !== "api" || showOpen || showEnvs || showRun || showOAuth || showSwitcher || showPublish) return;
+      if ((route !== "api" && route !== "scratch") || showOpen || showEnvs || showRun || showOAuth || showSwitcher || showPublish) return;
       if (action === "next") requestTabs.next();
       else if (action === "previous") requestTabs.previous();
       else if (requestTabs.activeKey) requestTabs.close(requestTabs.activeKey);
@@ -652,15 +679,16 @@ export default function App() {
       <div className="app-body">
         <div className="app-main">
           <RunNotices />
-          {onApi && (
+          {(onApi || onScratch) && (
             <RequestTabs
               tabs={requestTabs.tabs}
               activeKey={requestTabs.activeKey}
               entries={entries}
+              scratch={scratch.state.requests}
               hasUnsent={drafts.hasUnsent}
               onActivate={requestTabs.activate}
               onClose={requestTabs.close}
-              onNew={openScratch}
+              onNew={newScratch}
             />
           )}
           {onApi && (
@@ -729,7 +757,7 @@ export default function App() {
                       onSave={saveConnectionSettings}
                       jar={
                         nav.lastApisRoute === "scratch"
-                          ? { id: "__scratch__", title: "Scratch" }
+                          ? { id: SCRATCH_API_ID, title: "Scratch" }
                           : current
                             ? { id: current.id, title: current.title }
                             : null
@@ -799,8 +827,14 @@ export default function App() {
           ) : onScratch ? (
             <>
               <ScratchView
-                pad={pad}
-                onChange={updatePad}
+                requests={scratch.state.requests}
+                request={scratch.active}
+                onChange={scratch.update}
+                onSelect={showScratch}
+                onNew={newScratch}
+                onDuplicate={(id) => void scratch.duplicate(id)}
+                onRemove={removeScratch}
+                onAddToCollection={(request, position) => collections.openScratchMenu(position, request)}
                 vars={vars}
                 sending={sending}
                 onSend={() => void doScratchSend()}
@@ -876,7 +910,9 @@ export default function App() {
               syncReport={syncReport}
               onDismissReport={() => setSyncReport(null)}
               onTrySample={() => void ingest(SAMPLE_SPEC, SAMPLE_NAME, { kind: "sample", ref: "sample" })}
-              onOpenScratch={openScratch}
+              onOpenScratch={() => showScratch()}
+              onNewRequest={newScratch}
+              scratchCount={scratch.state.requests.length}
               dragging={dragging}
               busy={loading}
               error={loadError}

@@ -5,7 +5,7 @@ import * as history from "../lib/history";
 import type { HistoryEntry } from "../lib/history";
 import * as library from "../lib/library";
 import type { LibraryEntry } from "../lib/library";
-import { loadScratch, type ScratchPad } from "../lib/scratch";
+import { loadScratch, type ScratchState } from "../lib/scratch";
 import { loadSession, type Session } from "../lib/spec0";
 import { readStore, STORE } from "../lib/store";
 import { DEFAULT_SETTINGS, type Settings } from "./useSettings";
@@ -22,7 +22,7 @@ export function useBoot(set: {
   requests: (value: HistoryEntry[]) => void;
   session: (value: Session | null) => void;
   entries: (value: LibraryEntry[]) => void;
-  pad: (value: ScratchPad) => void;
+  scratch: (value: ScratchState) => void;
   connection: (value: ConnectionSettings) => void;
 }) {
   useEffect(() => {
@@ -34,7 +34,7 @@ export function useBoot(set: {
       set.requests(await history.loadHistory());
       set.session(await loadSession());
       set.entries(await library.loadLibrary());
-      set.pad(await loadScratch());
+      set.scratch(await loadScratch());
       set.connection(await loadConnection());
     })();
     // Runs once. The setters passed in are React state setters, which never change.

@@ -32,6 +32,7 @@ import type { AddedNote, AddMenuState } from "../components/collections/AddToCol
 import type { RequestValues } from "../components/OperationView";
 import {
   addOperationStep,
+  addScratchStep,
   describeTarget,
   findLibraryEntry,
   inputsFromEditor,
@@ -68,7 +69,7 @@ import { isExpired, loadToken, refreshAccessToken, saveToken } from "../lib/oaut
 import { fileName } from "../lib/platform";
 import { appFetch, describeBody, inTauri, send, type AuthState } from "../lib/request";
 import { declaredResponse, describeSendError, storedResponseBody } from "../lib/response";
-import { SCRATCH_OPERATION_ID, SCRATCH_TITLE, scratchPath } from "../lib/scratch";
+import { SCRATCH_OPERATION_ID, SCRATCH_TITLE, scratchLabel, scratchPath, type ScratchPad } from "../lib/scratch";
 import { parseSpec, type OperationSpec, type ParsedSpec } from "../lib/spec";
 import { DEFAULT_API_URL, absoluteMockUrl, type Session } from "../lib/spec0";
 import { mockCredentials, sentFields, sentTargetOf } from "../lib/targets";
@@ -853,6 +854,21 @@ export function useCollections({
     [entries, addOperation, create, freshName, update],
   );
 
+  /**
+   * Add a scratch request as an unlinked step, with what's in its editor. It
+   * runs like any request; nothing checks its response until it's linked to an
+   * operation.
+   */
+  const addScratch = useCallback(
+    (collectionId: string | null, pad: ScratchPad): Collection | null => {
+      const add = (c: Collection) => addScratchStep(c, pad);
+      if (!collectionId) return create(freshName(), add);
+      update(collectionId, add);
+      return latest.current.find((c) => c.id === collectionId) ?? null;
+    },
+    [create, freshName, update],
+  );
+
   /** Add an empty request step at the end, to fill in by hand, and select it. */
   const addBlankStep = useCallback(
     (collectionId: string) => {
@@ -1229,6 +1245,25 @@ export function useCollections({
     [addRecorded, afterAdd, requestNew],
   );
 
+  /** "Add to collection" on a scratch request, with what's in its editor now. */
+  const openScratchMenu = useCallback(
+    (position: { x: number; y: number }, pad: ScratchPad) => {
+      const what = `${pad.method.toUpperCase()} ${scratchLabel(pad)}`;
+      setAddMenu({
+        ...position,
+        what,
+        onAdd: (collectionId) => {
+          if (!collectionId) {
+            requestNew(undefined, (created) => afterAdd(addScratch(created.id, pad), true, what));
+            return;
+          }
+          afterAdd(addScratch(collectionId, pad), false, what);
+        },
+      });
+    },
+    [addScratch, afterAdd, requestNew],
+  );
+
   /**
    * Add an API a collection refers to, by its file or URL, without leaving the
    * collection. The button that calls this names the file or URL, so reading
@@ -1331,6 +1366,7 @@ export function useCollections({
     closeAddMenu: useCallback(() => setAddMenu(null), []),
     openOperationMenu,
     openRecordMenu,
+    openScratchMenu,
     added,
     dismissAdded: useCallback(() => setAdded(null), []),
     addApiToLibrary,

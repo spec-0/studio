@@ -472,7 +472,7 @@ export function filterHistory(entries: HistoryEntry[], filter: HistoryFilter): H
  * Where "Copy to a new request" can put an entry.
  *
  * An operation still in the spec gets the normal editor, pre-filled. A scratch
- * request, or one whose operation is gone, can only go to the scratch pad,
+ * request, or one whose operation is gone, can only go to a scratch request,
  * which takes any URL; the reason is returned so the view can say it.
  */
 export function copyDestination(
@@ -483,13 +483,13 @@ export function copyDestination(
   if (!spec) {
     return {
       kind: "scratch",
-      reason: "This API isn't in your library any more, so it can only be copied to the scratch pad.",
+      reason: "This API isn't in your library any more, so it can only be copied to a scratch request.",
     };
   }
   if (!spec.operations.some((op) => op.id === entry.operationId)) {
     return {
       kind: "scratch",
-      reason: `${entry.operationId} is no longer in this spec, so it can't open as that operation. It can be copied to the scratch pad instead.`,
+      reason: `${entry.operationId} is no longer in this spec, so it can't open as that operation. It can be copied to a scratch request instead.`,
     };
   }
   return { kind: "operation" };

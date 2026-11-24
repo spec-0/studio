@@ -22,7 +22,7 @@ export const STORE = {
   history: "history.json",
   session: "session.json",
   library: "library.json",
-  /** The scratch pad's contents: a text buffer, not a saved request. */
+  /** The scratch requests' contents, kept like a text buffer. */
   scratch: "scratch.json",
   /** How we reach hosts: certificate trust, proxy, timeout, redirects. */
   connection: "connection.json",

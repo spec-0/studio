@@ -156,3 +156,20 @@ describe("parseTabs", () => {
     expect(read.activeKey).toBeNull();
   });
 });
+
+describe("scratch tabs", () => {
+  const scratchTab: TabTarget = { scratch: true, apiId: "__scratch__", operationId: "s_1", method: "GET", path: "/users", apiTitle: "Scratch" };
+
+  it("sit in the same strip as operations, keyed by the request's id", () => {
+    const state = open(EMPTY_TABS, orders, scratchTab);
+    expect(state.tabs.map((tab) => tab.key)).toEqual(["file_orders GET /orders", "__scratch__ s_1"]);
+    expect(state.tabs[1].scratch).toBe(true);
+    expect(state.activeKey).toBe("__scratch__ s_1");
+  });
+
+  it("survive a restart", () => {
+    const state = parseTabs(JSON.parse(JSON.stringify(open(EMPTY_TABS, orders, scratchTab))));
+    expect(state.tabs[1]).toMatchObject({ scratch: true, operationId: "s_1" });
+    expect(state.tabs[0].scratch).toBeUndefined();
+  });
+});
