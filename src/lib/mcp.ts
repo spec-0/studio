@@ -147,7 +147,9 @@ export function findApi(entries: LibraryEntry[], ref: string | undefined): Libra
       `More than one API matches "${ref}": ${partial.map((entry) => `${entry.title} (id ${entry.id})`).join(", ")}. Pass the id.`,
     );
   }
-  throw new ToolFailure(`No API called "${ref}" in Studio. Call list_local_apis to see what's there.`);
+  throw new ToolFailure(
+    `No API called "${ref}" in Studio. Call list_local_apis to see what's there, or open_spec to add a spec from a file or URL.`,
+  );
 }
 
 const parsedCache = new Map<string, { text: string; spec: ParsedSpec }>();

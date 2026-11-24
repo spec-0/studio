@@ -5,6 +5,7 @@ import {
   currentStopGeneration,
   gateMockStart,
   gateRequest,
+  gateOpenSpec,
   gateSave,
   noteAgent,
   recordActivity,
@@ -221,18 +222,22 @@ const agentDeps: AgentToolDeps = {
   gateRequest,
   gateMockStart,
   gateSave,
+  gateOpenSpec,
   stopGeneration: currentStopGeneration,
   recordActivity,
   recordHistory: history.record,
   readFile: readCollectionFile,
   rereadFile: library.rereadFile,
   fetchText: async (url) => {
-    const response = await appFetch(url);
+    // The same request a URL import makes: a GET that asks for YAML or JSON.
+    const response = await appFetch(url, { headers: { Accept: "application/yaml, application/json, */*" } });
     if (!response.ok) throw new Error(`${url} answered ${response.status}.`);
     return response.text();
   },
   applyUpdate: library.applyUpdate,
   specChanged: (id) => window.dispatchEvent(new CustomEvent(LIBRARY_CHANGED_EVENT, { detail: { specChanged: id } })),
+  addSpec: (text, name, source) => library.addSpecText(text, name, source),
+  libraryChanged: () => window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT)),
 };
 
 interface AgentInfo {

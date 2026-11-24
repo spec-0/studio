@@ -21,8 +21,9 @@ import { transportFor } from "./connection";
 import { unresolved } from "./env";
 import type { HistoryEntry } from "./history";
 import { checkFields, fingerprint } from "./history";
-import { documentUrlOf, type LibraryEntry } from "./library";
+import { documentUrlOf, idForSource, type ApiSource, type LibraryEntry } from "./library";
 import { localMockUrl } from "./localMockServer";
+import { fileName } from "./platform";
 import { findApi, findOperation, specFor, type ToolResult, operationSelector } from "./mcp";
 import { buildPlan, describeBody, type AuthState, type RequestPlan, type ResponseResult, type Transport } from "./request";
 import { declaredResponse, storedResponseBody } from "./response";
@@ -37,7 +38,7 @@ import { validateResponse, type ValidationResult } from "./validate";
 /**
  * The local MCP server's tools that act: sending requests, checking a running
  * server against its spec, local mocks, building and running collections, and
- * reloading specs. `mcp.ts` has the tools that only read.
+ * adding and reloading specs. `mcp.ts` has the tools that only read.
  *
  * Every request goes through the developer's approval first (`agentControl.ts`
  * decides when to ask), through the same send path as the rest of Studio, and
@@ -67,6 +68,7 @@ export interface AgentToolDeps {
   gateRequest: (agent: string, request: { method: string; url: string }) => Promise<string | null>;
   gateMockStart: (agent: string, api: string) => Promise<string | null>;
   gateSave: (agent: string, collection: string, path: string, replaces: boolean) => Promise<string | null>;
+  gateOpenSpec: (agent: string, source: { kind: "file" | "url"; ref: string }) => Promise<string | null>;
   /** Bumped when the developer stops agents. */
   stopGeneration: () => number;
   recordActivity: (entry: Omit<ActivityEntry, "id" | "at">) => void;
@@ -82,6 +84,10 @@ export interface AgentToolDeps {
   ) => Promise<unknown>;
   /** The library file changed for this entry's spec; tell the interface. */
   specChanged: (id: string) => void;
+  /** Parse a document and add it to the library, the way Open does. Throws when it doesn't load. */
+  addSpec: (text: string, name: string, source: ApiSource) => Promise<{ entry: LibraryEntry; parsed: ParsedSpec }>;
+  /** An entry was added to the library; tell the interface. */
+  libraryChanged: () => void;
 }
 
 type Tool = (args: Json, deps: AgentToolDeps, context: ToolContext) => Promise<ToolResult>;
@@ -988,6 +994,76 @@ const reloadSpec: Tool = async (args, deps, context) => {
   });
 };
 
+/** The file types Open offers for a spec. */
+const SPEC_FILE = /\.(ya?ml|json)$/i;
+
+/** `open_spec`'s source: an absolute path to a spec file, or an http(s) URL. */
+export function specSource(value: string | undefined): { kind: "file" | "url"; ref: string } {
+  const example = "such as /Users/me/project/openapi.yaml or https://example.com/openapi.json";
+  if (!value) throw new Error(`Pass source: an absolute path to a spec file or an http(s) URL, ${example}.`);
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) {
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      throw new Error(`${value} isn't a URL Studio can read.`);
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error(`Studio opens specs from files and http(s) URLs, not ${url.protocol} URLs.`);
+    return { kind: "url", ref: value };
+  }
+  if (!isAbsolutePath(value)) throw new Error(`Pass source as an absolute path or an http(s) URL, ${example}.`);
+  if (!SPEC_FILE.test(value)) throw new Error("Studio opens spec files ending in .yaml, .yml or .json.");
+  return { kind: "file", ref: value };
+}
+
+/** What `open_spec` says about an entry: what the other tools need to carry on. */
+function openedEntry(entry: LibraryEntry) {
+  return { id: entry.id, title: entry.title, version: entry.version, operations: entry.operations, schemas: entry.schemas, source: entry.source.ref };
+}
+
+const openSpec: Tool = async (args, deps, context) => {
+  const source = specSource(str(args, "source"));
+  const id = idForSource(source as ApiSource);
+  const existing = (await deps.loadLibrary()).find((entry) => entry.id === id);
+  if (existing) {
+    return text({
+      ...openedEntry(existing),
+      added: false,
+      note: "This spec is already in Studio's library, so it wasn't added again. To read it again from its file or URL, call reload_spec with this id.",
+    });
+  }
+  const refused = await deps.gateOpenSpec(context.agent, source);
+  if (refused) return fail(refused);
+  let document: string | null;
+  if (source.kind === "file") {
+    document = await deps.readFile(source.ref);
+    if (document === null) return fail(`Couldn't read ${source.ref}. Check that the file is there, then try again.`);
+  } else {
+    try {
+      document = await deps.fetchText(source.ref);
+    } catch (error) {
+      return fail(`Couldn't fetch ${source.ref}, so nothing was added: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  const name = source.kind === "file" ? fileName(source.ref) : source.ref.split("/").pop() || source.ref;
+  let added: { entry: LibraryEntry; parsed: ParsedSpec };
+  try {
+    added = await deps.addSpec(document, name, source);
+  } catch (error) {
+    return fail(`Studio couldn't load ${source.ref}, so nothing was added: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  deps.libraryChanged();
+  deps.recordActivity({ agent: context.agent, tool: "open_spec", ok: true, summary: `Added ${added.entry.title} to the library` });
+  return text({
+    ...openedEntry(added.entry),
+    added: true,
+    ...(added.parsed.converted
+      ? { converted: { from: added.parsed.converted.from, to: "OpenAPI 3.0", ...(added.parsed.converted.notes.length ? { notes: added.parsed.converted.notes } : {}) } }
+      : {}),
+    note: "The spec is in Studio's library. Pass this id as `api` to the other tools, such as search_operations or validate_spec.",
+  });
+};
+
 const validateSpec: Tool = async (args, deps) => {
   const entry = findApi(await deps.loadLibrary(), str(args, "api"));
   const document = await deps.readSpecText(entry.id);
@@ -1022,6 +1098,7 @@ export const AGENT_TOOLS: Record<string, Tool> = {
   run_collection: runCollection,
   get_run_log: getRunLog,
   save_collection_to_folder: saveCollectionToFolder,
+  open_spec: openSpec,
   reload_spec: reloadSpec,
   validate_spec: validateSpec,
 };

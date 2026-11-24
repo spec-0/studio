@@ -6,6 +6,7 @@ import {
   normaliseRules,
   overCapMessage,
   RateLimit,
+  requestHost,
   withAnswer,
   type AgentRules,
   type Answer,
@@ -31,7 +32,7 @@ const MAX_ACTIVITY_BODY = 4000;
 
 // Approvals
 
-export type ApprovalKind = "request" | "changing" | "mock" | "save";
+export type ApprovalKind = "request" | "changing" | "mock" | "save" | "open";
 
 export interface Approval {
   id: number;
@@ -42,7 +43,7 @@ export interface Approval {
   title: string;
   /** Details to read before answering: the method and URL, a path, a host. */
   lines: string[];
-  /** The answers offered. "session" isn't offered for saving a file. */
+  /** The answers offered. "session" isn't offered for saving a file or adding a spec. */
   answers: Answer[];
   /** What "Allow for this session" covers, said plainly. */
   sessionNote?: string;
@@ -194,6 +195,46 @@ export async function gateSave(agent: string, collection: string, path: string, 
   });
   if (generation !== stopGeneration) return refusedMessage("stopped", "saving the file");
   return outcome === "once" ? null : refusedMessage(outcome, `saving the collection to ${path}`);
+}
+
+/**
+ * Whether an agent may add a spec to the library from a file or a URL. Asked
+ * every time, with the path or URL shown. A URL is fetched with a GET, so it
+ * follows the same host rules as `send_request`: a blocked host is refused
+ * without asking, and the fetch counts towards the cap. One answer covers
+ * adding the spec and that one request; it doesn't allow the host for later
+ * requests.
+ */
+export async function gateOpenSpec(agent: string, source: { kind: "file" | "url"; ref: string }): Promise<string | null> {
+  const generation = stopGeneration;
+  let lines: string[];
+  if (source.kind === "url") {
+    const decision = decide({ method: "GET", url: source.ref }, grants, rules);
+    if (decision.kind === "refuse") return decision.reason;
+    const host = requestHost(source.ref)!;
+    lines = [
+      redact(source.ref),
+      decision.kind === "ask"
+        ? `Studio fetches it with one GET request to ${host.key}. Agents haven't been allowed to send requests there this session, and this answer doesn't allow more.`
+        : `Studio fetches it with one GET request to ${host.key}, and keeps a copy in the library.`,
+    ];
+  } else {
+    lines = [source.ref, "Studio reads the file and keeps a copy of the spec in the library."];
+  }
+  const outcome = await askDeveloper({
+    agent,
+    kind: "open",
+    title: `${agent} wants to add a spec to the library`,
+    lines,
+    answers: ["deny", "once"],
+  });
+  if (generation !== stopGeneration) return refusedMessage("stopped", "adding the spec");
+  if (outcome !== "once") return refusedMessage(outcome, `adding ${source.kind === "url" ? redact(source.ref) : source.ref} to the library`);
+  if (source.kind === "url") {
+    const wait = limit.take();
+    if (wait > 0) return overCapMessage(rules.maxRequestsPerMinute, wait);
+  }
+  return null;
 }
 
 // Stopping

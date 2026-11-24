@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { fileName } from "./platform";
 import { inTauri } from "./request";
+import { parseSpec, type ParsedSpec } from "./spec";
 import type { OAuthConfig } from "./oauth";
 import { readStore, writeStore, STORE } from "./store";
 
@@ -198,6 +199,37 @@ export async function addToLibrary(input: AddInput): Promise<LibraryEntry> {
   await writeSpecText(id, input.text);
   await writeIndex([entry, ...entries.filter((row) => row.id !== id)]);
   return entry;
+}
+
+/** A mock to keep with a spec as it is added, when the source has one. */
+export type AddMock = Pick<AddInput, "mockUrl" | "mockApiKey" | "mockServerId" | "mockSpecVersion">;
+
+/**
+ * Parse a document and add it to the library: what Open, a URL import and an
+ * agent's `open_spec` all do. Swagger 2.0 is converted by `parseSpec`; the
+ * library keeps the text as it was given. Throws with the reason when the
+ * document doesn't parse or isn't OpenAPI or Swagger, and then nothing is added.
+ */
+export async function addSpecText(
+  text: string,
+  name: string,
+  source: ApiSource,
+  mock?: AddMock | null,
+): Promise<{ entry: LibraryEntry; parsed: ParsedSpec }> {
+  const parsed = parseSpec(text, name, documentUrlOf(source));
+  const entry = await addToLibrary({
+    title: parsed.title || name,
+    version: parsed.version,
+    source,
+    text,
+    operations: parsed.operations.length,
+    schemas: parsed.schemas.length,
+    mockUrl: mock?.mockUrl,
+    mockApiKey: mock?.mockApiKey,
+    mockServerId: mock?.mockServerId,
+    mockSpecVersion: mock?.mockSpecVersion,
+  });
+  return { entry, parsed };
 }
 
 export async function touchOpened(id: string): Promise<LibraryEntry[]> {

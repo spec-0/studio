@@ -152,6 +152,7 @@ describe("tool definitions", () => {
       "run_collection",
       "get_run_log",
       "save_collection_to_folder",
+      "open_spec",
       "reload_spec",
       "validate_spec",
     ]);
@@ -164,7 +165,7 @@ describe("tool definitions", () => {
 
   it("marks every tool that sends a request or writes a file as waiting for the developer", () => {
     const waits = MCP_TOOLS.filter((tool) => tool.waitsForUser).map((tool) => tool.name);
-    expect(waits).toEqual(["send_request", "check_contract", "run_collection", "save_collection_to_folder"]);
+    expect(waits).toEqual(["send_request", "check_contract", "run_collection", "save_collection_to_folder", "open_spec"]);
     for (const name of waits) {
       expect(MCP_TOOLS.find((tool) => tool.name === name)!.description).toMatch(/approve/);
     }
@@ -180,6 +181,7 @@ describe("helpers", () => {
     expect(findApi(entries, "admin").id).toBe("b");
     expect(() => findApi(entries, "ord")).toThrow(/More than one/);
     expect(() => findApi(entries, "nope")).toThrow(/list_local_apis/);
+    expect(() => findApi(entries, "nope")).toThrow(/open_spec/);
   });
 
   it("fills server variables and resolves relative servers", () => {
@@ -532,6 +534,7 @@ describe("toolsByArea", () => {
     expect(toolArea("run_collection")).toBe("Collections");
     expect(toolArea("check_contract")).toBe("Requests");
     expect(toolArea("reload_spec")).toBe("Specs");
+    expect(toolArea("open_spec")).toBe("Specs");
     expect(toolArea("list_environments")).toBe("Studio");
   });
 });

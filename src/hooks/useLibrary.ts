@@ -142,19 +142,7 @@ export function useLibrary({
       } | null,
     ) => {
       try {
-        const parsed = parseSpec(text, name, documentUrlOf(source));
-        const entry = await library.addToLibrary({
-          title: parsed.title || name,
-          version: parsed.version,
-          source,
-          text,
-          operations: parsed.operations.length,
-          schemas: parsed.schemas.length,
-          mockUrl: mock?.mockUrl,
-          mockApiKey: mock?.mockApiKey,
-          mockServerId: mock?.mockServerId,
-          mockSpecVersion: mock?.mockSpecVersion,
-        });
+        const { entry, parsed } = await library.addSpecText(text, name, source, mock);
         setEntries(await library.loadLibrary());
         openSpec(parsed, entry, text);
       } catch (error) {

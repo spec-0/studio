@@ -1073,6 +1073,9 @@ mod tests {
             "send_request",
             "run_collection",
             "save_collection_to_folder",
+            "open_spec",
+            "reload_spec",
+            "validate_spec",
         ] {
             assert!(names.contains(&expected), "missing {expected}");
         }
@@ -1091,6 +1094,7 @@ mod tests {
         assert_eq!(call_timeout("run_collection"), LONG_CALL_TIMEOUT);
         assert_eq!(call_timeout("check_contract"), LONG_CALL_TIMEOUT);
         assert_eq!(call_timeout("save_collection_to_folder"), LONG_CALL_TIMEOUT);
+        assert_eq!(call_timeout("open_spec"), LONG_CALL_TIMEOUT);
         assert_eq!(call_timeout("list_local_apis"), CALL_TIMEOUT);
         assert_eq!(call_timeout("no_such_tool"), CALL_TIMEOUT);
     }
