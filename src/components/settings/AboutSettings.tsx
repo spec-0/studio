@@ -4,6 +4,7 @@ import { RELEASES_PAGE } from "../../lib/appUpdates";
 import { filterPackages, licenceCounts, loadLicences, type LicencedPackage } from "../../lib/licences";
 import { inTauri } from "../../lib/request";
 import { openInBrowser } from "../../lib/store";
+import { LogoMark } from "../Logo";
 
 const SOURCE = "https://github.com/spec-0/studio";
 
@@ -25,11 +26,16 @@ export function AboutSettings({ version }: { version?: string | null }) {
     <>
       <div className="rows">
         <div className="row-s">
-          <div className="l">
-            <b>
-              spec0 Studio <span className="mono">{version ?? (inTauri ? "" : "browser preview")}</span>
-            </b>
-            <span className="meta">Open source under the MIT licence.</span>
+          <div className="l about-id">
+            <span className="about-icon" aria-hidden>
+              <LogoMark size={24} />
+            </span>
+            <span className="about-text">
+              <b>
+                Spec0 Studio <span className="mono">{version ?? (inTauri ? "" : "browser preview")}</span>
+              </b>
+              <span className="meta">Spec0 is said &ldquo;spec zero&rdquo;. Open source under the MIT licence.</span>
+            </span>
           </div>
           <div className="c">
             <button className="btn ghost" onClick={() => void openInBrowser(RELEASES_PAGE)}>

@@ -80,7 +80,7 @@ export function sortPackages(packages: BundledPackage[]): BundledPackage[] {
 export function renderNotices(packages: BundledPackage[]): string {
   const sorted = sortPackages(packages);
   const lines = [
-    "spec0 Studio includes the following open-source software.",
+    "Spec0 Studio includes the following open-source software.",
     "Each is listed with its licence, followed by the licence and notice texts it ships with.",
     "",
     ...sorted.map((p) => `${p.name} ${p.version}  (${p.license})`),

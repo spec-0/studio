@@ -2089,6 +2089,28 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .settings-note { margin-top: 10px; }
 .licences-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .licences-bar > .input { width: 260px; flex: none; }
+.about-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.about-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: color-mix(in srgb, #5b4cf5 12%, transparent);
+}
+.about-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.about-text > b {
+  font-weight: 500;
+}
 .settings-section > .section-head.licences-head { margin-top: 28px; }
 .licence { border-bottom: 1px solid hsl(var(--border)); }
 .licence:last-child { border-bottom: 0; }
