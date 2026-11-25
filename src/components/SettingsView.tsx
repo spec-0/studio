@@ -16,7 +16,7 @@ interface Props {
 const DESCRIPTIONS: Record<SettingsSectionId, string> = {
   account: "Signing in, signing out, and what connecting to Spec0 adds.",
   network: "How requests reach your servers: certificates, proxy, timeout, redirects and cookies.",
-  updates: "Updates to Studio itself. Nothing is checked unless you ask.",
+  updates: "Studio's version, updates to it, and the open-source software it's built with. Nothing is checked unless you ask.",
   appearance: "How Studio looks.",
   agent: "Chat with a coding agent you already use, inside Studio.",
   data: "What Studio keeps, where it keeps it, and how to clear it.",

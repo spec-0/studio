@@ -2087,6 +2087,7 @@ pre.code, .editor { box-shadow: var(--shadow-1) inset; }
 .settings-tab svg { color: hsl(var(--ink-3)); flex: none; }
 .settings-tab[aria-selected="true"] svg { color: hsl(var(--ink-2)); }
 .settings-note { margin-top: 10px; }
+.notices-text { max-height: 60vh; margin: 0; }
 .trust-add { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .trust-add .input { width: 240px; height: 26px; }
 .trust-ca { display: inline-flex; align-items: center; gap: 6px; }

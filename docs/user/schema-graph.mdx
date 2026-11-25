@@ -9,7 +9,14 @@ live under `components/schemas`, and they point at each other with `$ref` links.
 have a `customer` field that is a `$ref` to `Customer`.
 
 The schema graph draws those links. Each schema is a box listing its first few fields and their
-types, and each `$ref` is a line between two boxes, labelled with the field that refers. You can also show the operations, with a line to each schema they use.
+types, and each `$ref` is a line between two boxes, labelled with the field that refers. The line
+starts at that field's row, so you can see which field it belongs to. When the field is one of the
+ones not listed, the line starts at the **+N more** row. You can also show the operations, with a
+line to each schema they use.
+
+The graph lays itself out. Boxes are placed in columns, from the schemas that refer to the ones
+they refer to, and the lines run straight with rounded corners, around the boxes rather than
+through them. Lines are kept apart, so two lines never run on top of each other.
 
 ## Opening the graph
 
@@ -31,17 +38,16 @@ large spec can have hundreds.
   example. It is the same view as the **Schemas** tab. You can drag its edge to make it wider, or
   close it to give the canvas the whole window.
 - **Zoom and pan** with the controls in the bottom-right corner, your trackpad, or the mouse wheel.
-- **Drag a box** to move it. The lines follow it. A line to a box that sits behind the one it
-  starts from goes round the row, over or under it, instead of back across it. **Tidy up** in the
-  toolbar puts the boxes back.
+- **Drag a box** to move it. The lines follow it, running straight to wherever you put it.
+  **Tidy up** in the toolbar puts the boxes back and lays the graph out again.
 
 <Clip
   src="/media/studio-graph.mp4"
   poster="/media/studio-graph-poster.webp"
-  label="Screen recording: in the Graph view of the Orders API, the Money, Customer and Address boxes are dragged to new places and their lines follow them, then Tidy up puts the graph back in order."
+  label="Screen recording: the Graph view of the Orders API, laid out in columns with each line starting at its field. The Money, Customer and Address boxes are dragged to new places and their lines follow them, then Tidy up lays the graph out again."
   caption="Dragging boxes, then Tidy up. 13 seconds, no sound."
   width={1400}
-  height={836}
+  height={734}
 />
 
 When a schema has a lot of neighbours, the graph shows some of them and says how many there are
@@ -66,8 +72,8 @@ The toolbar sits along the top of the canvas.
 
 <Screenshot
   src="/images/product/studio-schema-graph.webp"
-  alt="The Graph view of the Orders API with Order selected. Each box lists its first fields and their types, straight lines with rounded corners join them, each labelled with the field that refers (customer, billingAddress, shippingAddress, lineItems, unitPrice), and the side panel shows Order's fields."
-  caption="Order selected. Each box lists its first fields, and each line names the field that refers."
+  alt="The Graph view of the Orders API with Order selected. Order is on the left and the schemas it refers to are in columns to its right. Each line starts at the row of the field that refers, or at the +3 more row, runs around the boxes with rounded corners, and is labelled with the field (customer, lineItems, total, shippingAddress, billingAddress, unitPrice). The side panel shows Order's fields."
+  caption="Order selected. Each line starts at the field that refers and is labelled with its name."
   width={1600}
   height={838}
   minWidth={640}
@@ -93,7 +99,8 @@ The toolbar sits along the top of the canvas.
 The graph is built on [`@spec0/schema-graph`](https://github.com/spec-0/schema-graph), a small
 MIT-licensed library. It reads an OpenAPI document and returns a plain data model of schemas,
 operations and the links between them, with an optional React component that draws it. You can use
-it in your own tools. It makes no network calls.
+it in your own tools. It makes no network calls. Its layout uses
+[ELK](https://eclipse.dev/elk/), the Eclipse Layout Kernel.
 
 ```bash
 npm install @spec0/schema-graph

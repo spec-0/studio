@@ -7,6 +7,7 @@
 import { applyUpdate, openChat, type ChatItem } from "../src/lib/acpClient";
 import { validateResponse } from "../src/lib/validate";
 import { openapiText, parseSpec, type Json } from "../src/lib/spec";
+import { SAMPLE_SPEC } from "../src/lib/sample";
 
 const doc = {
   openapi: "3.0.3",
@@ -118,6 +119,24 @@ async function acp() {
     return { error: String(error) };
   }
 }
+
+// The schema graph lays itself out with ELK, a large compiled library loaded when
+// the graph opens. It has to run under the policy too.
+async function elkLayout() {
+  try {
+    const { buildSchemaGraph } = await import("@spec0/schema-graph");
+    const { computeRoutedView } = await import("@spec0/schema-graph/elk");
+    const graph = buildSchemaGraph(SAMPLE_SPEC);
+    const view = await computeRoutedView(graph, { expanded: new Set(graph.schemas.map((s) => s.id)), maxNeighbours: Infinity });
+    return { nodes: view.nodes.length, routes: view.routes.filter((r) => r.points.length >= 2).length };
+  } catch (error) {
+    return { error: String(error) };
+  }
+}
+
+void elkLayout().then((result) => {
+  (globalThis as Record<string, unknown>).__CSP_ELK__ = result;
+});
 
 void acp().then((result) => {
   (globalThis as Record<string, unknown>).__CSP_ACP__ = result;
