@@ -21,6 +21,19 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
 
   const MDX = page.data.body;
   const markdownUrl = withBase(getPageMarkdownUrl(page).url);
+  const components = getMDXComponents({ a: createRelativeLink(source, page) });
+
+  // The home page opens with its own hero, which carries the title, so it has no
+  // title row or table of contents of its own.
+  if (page.slugs.length === 0) {
+    return (
+      <DocsPage toc={[]} full>
+        <DocsBody>
+          <MDX components={components} />
+        </DocsBody>
+      </DocsPage>
+    );
+  }
 
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
@@ -31,11 +44,7 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
         <ViewOptionsPopover markdownUrl={markdownUrl} githubUrl={editUrl(page.path)} />
       </div>
       <DocsBody>
-        <MDX
-          components={getMDXComponents({
-            a: createRelativeLink(source, page),
-          })}
-        />
+        <MDX components={components} />
       </DocsBody>
       <EditOnGitHub href={editUrl(page.path)} />
     </DocsPage>

@@ -17,7 +17,7 @@ Each `.mdx` file is a page, at the same path on the site:
 
 | File | Page |
 |---|---|
-| `index.mdx` | `/` |
+| `index.mdx` | `/` (the home page, which starts with a `<Hero>` instead of a title) |
 | `local-mocks.mdx` | `/local-mocks/` |
 | `collections/chaining.mdx` | `/collections/chaining/` |
 
@@ -65,6 +65,13 @@ statements, won't work on the site.
   being stretched, and `minWidth` keeps a wide one readable on a phone.
 - `<Clip>` for a short screen recording. It needs `src` (an `.mp4`), `poster`
   (a still shown before it plays), `label`, `caption`, `width` and `height`.
+- `<Cards>` with a `<Card>` for each link, as on the home page. A card needs a
+  `title`, takes an `href` and an `icon` (one of the names in
+  `site/components/home.tsx`, such as `send`, `check`, `mock` or `mcp`), and its
+  text is its description. `<Cards columns={3}>` puts three across on a wide
+  screen. Keep links out of a card's text: the whole card is already a link.
+- `<Hero>` is the top of the home page only. It takes a `title` and a `lead`,
+  and adds the version, the download button and the platform line itself.
 
 A caption says what the reader should notice, not what the heading above it
 already said. Screenshots are WebP at twice the size they're shown; clips are

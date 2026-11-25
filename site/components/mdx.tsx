@@ -4,6 +4,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 import type { MDXComponents } from 'mdx/types';
 import { withBase } from '@/lib/shared';
+import { Card, Cards, Hero } from './home';
 
 interface ScreenshotProps {
   src: string;
@@ -74,6 +75,9 @@ export function getMDXComponents(components?: MDXComponents) {
     Tabs,
     Screenshot,
     Clip,
+    Card,
+    Cards,
+    Hero,
     ...components,
   } satisfies MDXComponents;
 }
