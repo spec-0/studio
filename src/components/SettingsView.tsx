@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowUpRight, BotMessageSquare, Database, Globe, Palette, RefreshCw, UserRound, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, BotMessageSquare, Database, Globe, Info, Palette, RefreshCw, UserRound, type LucideIcon } from "lucide-react";
 import { TabList } from "./TabList";
 import { SettingsSection } from "./settings/SettingsSection";
 import { SETTINGS_SECTIONS, type SettingsSectionId } from "../lib/navigation";
@@ -16,7 +16,8 @@ interface Props {
 const DESCRIPTIONS: Record<SettingsSectionId, string> = {
   account: "Signing in, signing out, and what connecting to Spec0 adds.",
   network: "How requests reach your servers: certificates, proxy, timeout, redirects and cookies.",
-  updates: "Studio's version, updates to it, and the open-source software it's built with. Nothing is checked unless you ask.",
+  updates: "Updates to Studio itself. Nothing is checked unless you ask.",
+  about: "Which Studio this is, and the open-source software it's built with.",
   appearance: "How Studio looks.",
   agent: "Chat with a coding agent you already use, inside Studio.",
   data: "What Studio keeps, where it keeps it, and how to clear it.",
@@ -29,6 +30,7 @@ const ICONS: Record<SettingsSectionId, LucideIcon> = {
   agent: BotMessageSquare,
   data: Database,
   updates: RefreshCw,
+  about: Info,
 };
 
 /** The Settings page: a list of sections on the left, the chosen one on the right. */

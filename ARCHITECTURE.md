@@ -157,6 +157,7 @@ an event, and sends back what the web view answers.
 | `appConsole.ts` | The console's entries for this session, in memory only. |
 | `appMenu.ts` | Tells the macOS menu whether a request tab is on screen, for ⌘W. |
 | `appUpdates.ts` | Updates to Studio itself. |
+| `licences.ts` | The open-source packages Settings → About lists, from a file the build writes (`scripts/third-party-notices.ts`). |
 | `notifications.ts` | What the bell shows: agent requests waiting, ones nobody answered, updates a check found, runs agents finished. |
 | `deepLink.ts` | Reads `spec0://` links and decides what Studio may do with them. |
 | `platform.ts` | The few differences between macOS, Windows and Linux in the web view. |

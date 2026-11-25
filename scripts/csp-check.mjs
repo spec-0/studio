@@ -218,12 +218,13 @@ const openPage = async () => {
     for (const v of elkViolations) console.error(`    ${v.slice(0, 200)}`);
   }
 
-  // Settings shows the open-source licences, read from a file the build writes.
+  // Settings → About lists the open-source licences, read from a file the build writes.
   const notices = await page
     .evaluate(async () => {
-      const response = await fetch("/third-party-notices.txt");
-      const text = response.ok ? await response.text() : "";
-      return { ok: response.ok, elk: text.includes("elkjs") && text.includes("Eclipse Public License") };
+      const response = await fetch("/third-party-notices.json");
+      const list = response.ok ? await response.json() : [];
+      const elk = list.find((p) => p.name === "elkjs");
+      return { ok: response.ok, elk: Boolean(elk && elk.texts.join("").includes("Eclipse Public License")) };
     })
     .catch((error) => ({ ok: false, error: String(error) }));
   const noticesViolations = await collect();

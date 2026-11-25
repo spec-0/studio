@@ -6,14 +6,16 @@
  * the software. This collects them at build time from the modules that actually
  * ended up in the bundle, not from package.json, so a dependency that's installed
  * but tree-shaken away isn't listed and one that's bundled can't be missed. The
- * result is written next to the app as `third-party-notices.txt`, and Settings
- * shows it.
+ * result is written next to the app twice: `third-party-notices.txt` to read on
+ * its own, and `third-party-notices.json`, which Settings → About lists.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "vite";
 
 export const NOTICES_FILE = "third-party-notices.txt";
+/** The same, as data, for Settings → About to list. */
+export const NOTICES_DATA = "third-party-notices.json";
 
 export interface BundledPackage {
   name: string;
@@ -69,9 +71,14 @@ export function readPackage(dir: string): BundledPackage | undefined {
 
 const RULE = "-".repeat(78);
 
+/** Packages in name order, then version. */
+export function sortPackages(packages: BundledPackage[]): BundledPackage[] {
+  return [...packages].sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
+}
+
 /** The notices file: a short list of every package first, then each one's licence text. */
 export function renderNotices(packages: BundledPackage[]): string {
-  const sorted = [...packages].sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
+  const sorted = sortPackages(packages);
   const lines = [
     "spec0 Studio includes the following open-source software.",
     "Each is listed with its licence, followed by the licence and notice texts it ships with.",
@@ -110,7 +117,9 @@ export function thirdPartyNotices(): Plugin {
         // A package nested under another counts once per version.
         if (pkg) packages.set(`${pkg.name}@${pkg.version}`, pkg);
       }
-      this.emitFile({ type: "asset", fileName: NOTICES_FILE, source: renderNotices([...packages.values()]) });
+      const list = sortPackages([...packages.values()]);
+      this.emitFile({ type: "asset", fileName: NOTICES_FILE, source: renderNotices(list) });
+      this.emitFile({ type: "asset", fileName: NOTICES_DATA, source: JSON.stringify(list) });
     },
   };
 }

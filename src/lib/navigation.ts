@@ -39,7 +39,7 @@ export const API_SECTIONS: ReadonlyArray<{ id: ApiSection; label: string; key: s
 ];
 
 /** The sections of the Settings page, in the order they're listed. */
-export type SettingsSectionId = "account" | "network" | "updates" | "appearance" | "agent" | "data";
+export type SettingsSectionId = "account" | "network" | "updates" | "appearance" | "agent" | "data" | "about";
 
 export const SETTINGS_SECTIONS: ReadonlyArray<{ id: SettingsSectionId; label: string }> = [
   { id: "account", label: "Account & Spec0" },
@@ -48,6 +48,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<{ id: SettingsSectionId; label: st
   { id: "agent", label: "Agent chat" },
   { id: "data", label: "Data & privacy" },
   { id: "updates", label: "Updates" },
+  { id: "about", label: "About" },
 ];
 
 /**
