@@ -39,7 +39,7 @@ describe("canPublish", () => {
   });
 
   it("explains the refusal instead of going quiet", () => {
-    expect(whyNotPublishable({ kind: "spec0", ref: "spec0:abc" })).toContain("already lives in spec0");
+    expect(whyNotPublishable({ kind: "spec0", ref: "spec0:abc" })).toContain("already lives in Spec0");
     expect(whyNotPublishable({ kind: "sample", ref: "sample" })).toContain("isn't a real API");
     expect(whyNotPublishable({ kind: "file", ref: "/x.yaml" })).toBeNull();
   });

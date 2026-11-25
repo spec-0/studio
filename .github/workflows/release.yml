@@ -1,4 +1,4 @@
-# Build, sign, notarize and publish a spec0 Studio release.
+# Build, sign, notarize and publish a Spec0 Studio release.
 #
 # Trigger: push a tag `vX.Y.Z` matching the version in src-tauri/tauri.conf.json,
 # or dispatch manually to build every platform without publishing anything.
@@ -251,7 +251,7 @@ jobs:
           echo "The app inside it:"
           MNT=$(mktemp -d)
           hdiutil attach "$DMG" -nobrowse -quiet -mountpoint "$MNT"
-          APP="$MNT/spec0 Studio.app"
+          APP="$MNT/Spec0 Studio.app"
           codesign --verify --deep --strict --verbose=2 "$APP"
           .github/scripts/stapler.sh validate "$APP"
           spctl --assess --type execute --verbose=4 "$APP"
@@ -268,12 +268,12 @@ jobs:
           test -s "$ARCHIVE.sig"
           OUT=$(mktemp -d)
           tar -xzf "$ARCHIVE" -C "$OUT"
-          APP="$OUT/spec0 Studio.app"
+          APP="$OUT/Spec0 Studio.app"
           codesign --verify --deep --strict --verbose=2 "$APP"
           .github/scripts/stapler.sh validate "$APP"
           spctl --assess --type execute --verbose=4 "$APP"
 
-      # Tauri names the image `spec0 Studio_<version>_universal.dmg`. That is the
+      # Tauri names the image `Spec0 Studio_<version>_universal.dmg`. That is the
       # right name to archive, but it is the wrong name to link to: GitHub's
       # permanent URL is /releases/latest/download/<exact-asset-name>, so a
       # version in the filename means every download link on the website breaks

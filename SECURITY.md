@@ -43,7 +43,7 @@ Anything in this repository, and especially:
 
 Out of scope: the unsigned Windows installer (a known limitation, described in
 the [README](README.md#download)), and problems in the APIs you call with Studio.
-Problems in the spec0 service itself should go to spec0, not this repository.
+Problems in the Spec0 service itself should go to Spec0, not this repository.
 
 ## Supported versions
 

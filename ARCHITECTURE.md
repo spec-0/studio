@@ -70,7 +70,7 @@ an event, and sends back what the web view answers.
 | `editor.ts` | What the operation editor holds and starts from, as plain data. |
 | `example.ts` | Builds example values from a schema, for request bodies and local mocks alike. |
 | `request.ts` | Builds a request from the editor and sends it through Rust (`http_send`). |
-| `targets.ts` | Where a request can go (servers, mocks, spec0 environments, a typed URL), and what each sends. |
+| `targets.ts` | Where a request can go (servers, mocks, Spec0 environments, a typed URL), and what each sends. |
 | `env.ts` | Environments, variables, and filling `{{name}}` into a request. |
 | `secrets.ts` | Where secret values live, moving them into the credential store, and the fallback file. |
 | `oauth.ts` | Getting and caching OAuth 2.0 tokens. |
@@ -145,8 +145,8 @@ an event, and sends back what the web view answers.
 
 | File | What it does |
 |---|---|
-| `spec0.ts` | The client for spec0's public API: the organisation's catalog, environments and hosted mocks. |
-| `publish.ts` | Publishing a local spec to spec0. |
+| `spec0.ts` | The client for Spec0's public API: the organisation's catalog, environments and hosted mocks. |
+| `publish.ts` | Publishing a local spec to Spec0. |
 
 **The app**
 
@@ -278,7 +278,7 @@ a check found) and the library's update marks. The chat panel feeds its own perm
 with `useChatRequests`. Each source registers how to answer its requests, so **Allow** in the bell
 does exactly what the dialog or the chat card does.
 
-While a request waits, the same hook sets the window title ("spec0 Studio — 1 request waiting")
+While a request waits, the same hook sets the window title ("Spec0 Studio — 1 request waiting")
 and calls `requestUserAttention`, which bounces the Dock icon on macOS and flashes the taskbar
 button on Windows; both clear when nothing waits. The capability grants
 `core:window:allow-request-user-attention` and `core:window:allow-set-title` for this.

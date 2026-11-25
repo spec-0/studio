@@ -166,7 +166,7 @@ export function Inspector({
 
         {validation?.status === "mismatch" && showHook && !mockStale && (
           <div className="hook">
-            This response doesn&apos;t match your spec. spec0 catches this across your whole org,
+            This response doesn&apos;t match your spec. Spec0 catches this across your whole org,
             automatically.{" "}
             <button className="btn sm" style={{ marginLeft: 4 }} onClick={onDismissHook}>
               Dismiss

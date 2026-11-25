@@ -302,7 +302,7 @@ function SignInStep({ state, cliAvailable, onConnect, onOpenSpec0 }: Props) {
             disabled={Boolean(state.busy)}
             onClick={() => onConnect("cli")}
           >
-            Use your spec0 CLI sign-in
+            Use your Spec0 CLI sign-in
           </button>
         )}
         <button

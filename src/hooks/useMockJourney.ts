@@ -216,11 +216,11 @@ export function useMockJourney({
     async (how: "cli" | "browser") => {
       dispatch({
         type: "busy",
-        label: how === "cli" ? "Using your spec0 CLI sign-in…" : "Waiting for the browser…",
+        label: how === "cli" ? "Using your Spec0 CLI sign-in…" : "Waiting for the browser…",
       });
       try {
         const next = how === "cli" ? await adoptCliSession() : await signInViaBrowser();
-        if (!next) throw new Error("No spec0 CLI sign-in was found on this machine.");
+        if (!next) throw new Error("No Spec0 CLI sign-in was found on this machine.");
         await verify(next);
         updateSession(next);
         dispatch({ type: "signedIn" });

@@ -12,7 +12,7 @@
  * the dashboard and the registry beats a locally-nicer synonym.
  *
  * Both tabs are free-tier: they render the text the library already holds, with
- * no account and no request to spec0. Only the consumer count needs a session,
+ * no account and no request to Spec0. Only the consumer count needs a session,
  * and its absence changes nothing else on the screen.
  */
 
@@ -81,7 +81,7 @@ export function DocumentView({
               emphasis, this supplies the action. */}
           {publishBlockedReason === null ? (
             <button className="btn" onClick={onPublish}>
-              <Upload size={13} /> Publish to spec0
+              <Upload size={13} /> Publish to Spec0
             </button>
           ) : (
             <span className="meta publish-why" title={publishBlockedReason}>
@@ -154,10 +154,10 @@ function ConsumersChip({
   const label = total === 1 ? "1 consumer" : `${total} consumers`;
   const detail =
     total === 0
-      ? "Nothing depends on this API yet, according to spec0."
+      ? "Nothing depends on this API yet, according to Spec0."
       : approved === total
-        ? `${label}, all approved. Open the consumers view on spec0.`
-        : `${label}, ${approved} approved. Open the consumers view on spec0.`;
+        ? `${label}, all approved. Open the consumers view on Spec0.`
+        : `${label}, ${approved} approved. Open the consumers view on Spec0.`;
 
   return (
     <button className="chip link" onClick={onOpen} title={detail}>

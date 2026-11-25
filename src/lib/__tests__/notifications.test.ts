@@ -314,9 +314,9 @@ describe("the list", () => {
 
 describe("asking for attention", () => {
   it("puts the waiting count in the window title, and nothing when none wait", () => {
-    expect(attentionTitle("spec0 Studio", 0)).toBe("spec0 Studio");
-    expect(attentionTitle("spec0 Studio", 1)).toBe("spec0 Studio — 1 request waiting");
-    expect(attentionTitle("spec0 Studio", 3)).toBe("spec0 Studio — 3 requests waiting");
+    expect(attentionTitle("Spec0 Studio", 0)).toBe("Spec0 Studio");
+    expect(attentionTitle("Spec0 Studio", 1)).toBe("Spec0 Studio — 1 request waiting");
+    expect(attentionTitle("Spec0 Studio", 3)).toBe("Spec0 Studio — 3 requests waiting");
   });
 
   it("labels the bell with what it holds", () => {

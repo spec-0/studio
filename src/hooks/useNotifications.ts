@@ -32,7 +32,7 @@ import { runNotices, subscribeRunActivity } from "../lib/runActivity";
 import type { UpdatePhase } from "./useUpdater";
 
 /** The window's own title, from tauri.conf.json. */
-export const WINDOW_TITLE = "spec0 Studio";
+export const WINDOW_TITLE = "Spec0 Studio";
 
 /** What the bell shows, for the bell. */
 export function useNotifications(): NotificationState {

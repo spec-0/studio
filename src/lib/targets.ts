@@ -30,7 +30,7 @@ const trimSlash = (url: string) => url.replace(/\/$/, "");
  *
  * *Client* environments are deliberately absent: they supply values, not
  * destinations. A platform environment is the opposite thing with an
- * unfortunately similar name: an actual place the API runs, reported by spec0,
+ * unfortunately similar name: an actual place the API runs, reported by Spec0,
  * so it belongs here and its variables do not.
  *
  * None of these is ever auto-selected. The initial value stays the spec's own

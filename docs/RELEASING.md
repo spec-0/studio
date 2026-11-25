@@ -199,7 +199,7 @@ so this only matters if something changes `xcode-select`.
 
 **Never `pkill -f` anything during a release.** A `notarytool` command line
 includes the path of the file being notarized, so a pattern like
-`pkill -f "spec0 Studio"` matches the notarization process and kills the build.
+`pkill -f "Spec0 Studio"` matches the notarization process and kills the build.
 
 **The disk image has to be notarized separately.** Tauri notarizes and staples
 the `.app`, then builds a `.dmg` from it and only *signs* the image. A signed but
@@ -225,9 +225,9 @@ the AppImage and pass it to `dpkg`.
 On a Mac, with the app copied out of the downloaded `.dmg`:
 
 ```bash
-codesign --verify --deep --strict --verbose=2 "spec0 Studio.app"
-xcrun stapler validate "spec0 Studio.app"
-spctl --assess --type execute --verbose=4 "spec0 Studio.app"
+codesign --verify --deep --strict --verbose=2 "Spec0 Studio.app"
+xcrun stapler validate "Spec0 Studio.app"
+spctl --assess --type execute --verbose=4 "Spec0 Studio.app"
 ```
 
 The last command is the one that reflects what a user's Mac will decide. It must
