@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff, Lock, Plus, X } from "lucide-react";
 import {
   newEnvironment,
+  sharedEnvironment,
+  SHARED_ID,
   type Environment,
   type EnvironmentFile,
   type Variable,
@@ -18,9 +20,8 @@ interface Props {
 
 export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
   const [draft, setDraft] = useState<EnvironmentFile>(file);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    file.activeId ?? file.environments[0]?.id ?? null,
-  );
+  /** The environment being edited, or {@link SHARED_ID} for the shared variables. */
+  const [selectedId, setSelectedId] = useState<string>(file.activeId ?? SHARED_ID);
   const [location, setLocation] = useState("");
   /** Secret values shown in the clear, by row, while the dialog is open. */
   const [revealed, setRevealed] = useState<Set<number>>(new Set());
@@ -33,21 +34,38 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
     void storeLocation().then(setLocation);
   }, []);
 
-  const selected = draft.environments.find((env) => env.id === selectedId) ?? null;
+  const shared = sharedEnvironment(draft);
+  const isShared = selectedId === SHARED_ID;
+  const selected = isShared ? shared : (draft.environments.find((env) => env.id === selectedId) ?? null);
+  /** Shared variables this environment doesn't set itself, so it uses them as they are. */
+  const inherited =
+    selected && !isShared
+      ? shared.variables.filter((v) => v.name && !selected.variables.some((own) => own.name === v.name))
+      : [];
+  const overridden =
+    selected && !isShared ? selected.variables.filter((own) => own.name && shared.variables.some((v) => v.name === own.name)) : [];
 
   const update = (next: Environment) =>
-    setDraft((prev) => ({
-      ...prev,
-      environments: prev.environments.map((env) => (env.id === next.id ? next : env)),
-    }));
+    setDraft((prev) =>
+      next.id === SHARED_ID
+        ? { ...prev, shared: next.variables }
+        : { ...prev, environments: prev.environments.map((env) => (env.id === next.id ? next : env)) },
+    );
 
   const addEnvironment = () => {
     const created = newEnvironment(`Environment ${draft.environments.length + 1}`);
     setDraft((prev) => ({
+      ...prev,
       environments: [...prev.environments, created],
       activeId: prev.activeId ?? created.id,
     }));
     setSelectedId(created.id);
+    setRevealed(new Set());
+  };
+
+  const select = (id: string) => {
+    setSelectedId(id);
+    setRevealed(new Set());
   };
 
   const setVariable = (index: number, patch: Partial<Variable>) => {
@@ -107,15 +125,20 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
       <div className="env-split">
         <div className="env-list">
           <div className="env-list-items">
+            <button className="row env-row" aria-selected={isShared} onClick={() => select(SHARED_ID)}>
+              <span className="env-row-name">
+                Shared
+                <span className="env-row-sub">Every environment</span>
+              </span>
+              <span className="count">{shared.variables.length}</span>
+            </button>
+            {draft.environments.length > 0 && <div className="env-list-label">Environments</div>}
             {draft.environments.map((env) => (
               <button
                 key={env.id}
                 className="row env-row"
                 aria-selected={env.id === selectedId}
-                onClick={() => {
-                  setSelectedId(env.id);
-                  setRevealed(new Set());
-                }}
+                onClick={() => select(env.id)}
               >
                 <span className="env-row-name">{env.name || "Untitled"}</span>
                 {env.id === draft.activeId ? (
@@ -148,17 +171,19 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
               )}
             </div>
           )}
-          {!selected ? (
-            <p className="meta">
-              No environments yet. Create one to hold <span className="mono">{"{{baseUrl}}"}</span>, tokens and values
-              for each stage.
-            </p>
-          ) : (
+          {!selected ? null : (
             <>
-              <label className="field env-name">
-                <span className="field-label-text">Name</span>
-                <input className="input" value={selected.name} onChange={(event) => update({ ...selected, name: event.target.value })} />
-              </label>
+              {isShared ? (
+                <p className="env-intro meta">
+                  Shared variables apply in every environment, and when none is chosen. Put values that are the same
+                  everywhere here. An environment only needs the ones that differ, and its value wins.
+                </p>
+              ) : (
+                <label className="field env-name">
+                  <span className="field-label-text">Name</span>
+                  <input className="input" value={selected.name} onChange={(event) => update({ ...selected, name: event.target.value })} />
+                </label>
+              )}
               <table className="tbl env-vars">
                 <colgroup>
                   <col style={{ width: "34%" }} />
@@ -255,7 +280,7 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
                       <input
                         className="cell-input mono"
                         value={newName}
-                        placeholder="Add variable"
+                        placeholder={isShared ? "Add a shared variable" : "Add variable"}
                         aria-label="New variable name"
                         onChange={(event) => setNewName(event.target.value)}
                         onKeyDown={onNewKey}
@@ -275,6 +300,35 @@ export function EnvironmentsDialog({ file, onSave, onClose }: Props) {
                   </tr>
                 </tfoot>
               </table>
+              {!isShared && (inherited.length > 0 || overridden.length > 0) && (
+                <div className="env-inherited">
+                  <div className="env-inherited-head meta">
+                    From shared variables
+                    {overridden.length > 0 && (
+                      <>
+                        {" "}
+                        · this environment overrides <span className="mono">{overridden.map((v) => v.name).join(", ")}</span>
+                      </>
+                    )}
+                  </div>
+                  {inherited.map((variable) => (
+                    <div key={variable.name} className="env-inherited-row">
+                      <span className="mono env-inherited-name">{variable.name}</span>
+                      <span className="mono env-inherited-value">
+                        {variable.secret ? "••••••" : variable.value || <span className="meta">empty</span>}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn ghost tight"
+                        title={`Give ${variable.name} its own value in ${selected.name || "this environment"}`}
+                        onClick={() => update({ ...selected, variables: [...selected.variables, { ...variable }] })}
+                      >
+                        Override
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <p className="env-note meta" title={location ? `Stored in ${location}` : undefined}>
                 <Lock size={12} aria-hidden /> {storage.where} <span className="mono">environments.json</span> only records
                 that a secret exists.

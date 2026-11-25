@@ -73,7 +73,7 @@
   {
     "name": "list_environments",
     "title": "List environments and variables",
-    "description": "Lists the user's Studio environments (named sets of variables used as {{name}} in requests), which one is active, and each variable's name. Values are included for ordinary variables only. Secret variables are listed by name and marked secret; their values are never shared. If you need one, ask the user.",
+    "description": "Lists the user's shared variables (used in every environment) and Studio environments (named sets of variables used as {{name}} in requests, whose values win over shared ones), which one is active, and each variable's name. Values are included for ordinary variables only. Secret variables are listed by name and marked secret; their values are never shared. If you need one, ask the user.",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
     "annotations": { "readOnlyHint": true, "openWorldHint": false },
     "requiresSignIn": false,

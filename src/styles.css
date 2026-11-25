@@ -194,6 +194,9 @@ input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); }
 
 .brand { display: flex; align-items: baseline; gap: 7px; color: hsl(var(--ink)); }
 .brand svg { display: block; align-self: center; }
+.brand-home { padding: 3px 6px; margin: -3px -6px; border: 0; border-radius: 6px; background: none; cursor: pointer; font: inherit; }
+.brand-home:hover { background: hsl(var(--surface-hover)); }
+.brand-home:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 1px; }
 .brand-product {
   font-size: 12.5px;
   font-weight: 500;
@@ -4338,6 +4341,16 @@ select.fchip { padding-right: 24px; background-position: right 7px center; }
 .env-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; font-size: var(--t-body); }
 .env-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
 .env-row .chip { font-size: 10.5px; }
+.env-row-sub { display: block; font-size: 11px; color: hsl(var(--ink-3)); }
+.env-list-label { padding: 12px 10px 4px; font-size: 11px; color: hsl(var(--ink-3)); }
+.env-intro { margin: 0; line-height: 1.6; max-width: 560px; }
+.env-inherited { display: grid; gap: 2px; }
+.env-inherited-head { padding: 0 20px 4px; }
+.env-inherited-row { display: grid; grid-template-columns: 34% minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 3px 12px 3px 20px; border-radius: 5px; font-size: 12px; color: hsl(var(--ink-2)); }
+.env-inherited-row:hover { background: hsl(var(--surface-hover)); }
+.env-inherited-name, .env-inherited-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.env-inherited-row .btn { opacity: 0; }
+.env-inherited-row:hover .btn, .env-inherited-row .btn:focus-visible { opacity: 1; }
 .env-new { justify-content: flex-start; margin-top: 8px; }
 .env-detail { padding: 18px 20px; display: grid; gap: 14px; align-content: start; }
 .env-name { display: grid; gap: 6px; max-width: 280px; }

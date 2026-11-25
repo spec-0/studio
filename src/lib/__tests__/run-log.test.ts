@@ -215,7 +215,7 @@ describe("the events a run emits", () => {
   it("names a missing environment value as an unresolved value too", async () => {
     const { events } = await run({ create: created, get: created, pay: created }, { vars: {}, stopOnFailure: true });
     expect(events.find((e) => e.type === "references_resolved")).toMatchObject({
-      links: [{ source: "env.token", error: "no value in the active environment" }],
+      links: [{ source: "env.token", error: "no value in the shared variables or the active environment" }],
     });
     expect(events.find((e) => e.type === "step_result")).toMatchObject({ verdict: "fail", cause: "reference" });
   });

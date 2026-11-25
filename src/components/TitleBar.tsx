@@ -26,6 +26,8 @@ interface Props {
   onSignIn: () => void;
   settingsOpen: boolean;
   onOpenSettings: () => void;
+  /** The logo: back to the library, the list of your APIs. */
+  onHome: () => void;
   /** How many local mocks are running, for a dot on the Mocks tab. */
   localMocks?: number;
   /** Where the bell's links go. */
@@ -59,10 +61,11 @@ export function TitleBar({
   onOpenSettings,
   localMocks = 0,
   bell,
+  onHome,
 }: Props) {
   return (
     <div className="titlebar" data-tauri-drag-region>
-      <Brand compact />
+      <Brand compact onHome={onHome} />
 
       <TabList
         className="nav-tabs"

@@ -116,7 +116,7 @@ export function describeSkip(skip: SkipReason): string {
   }
   if (skip.kind === "deprecated") return "deprecated";
   const names = skip.names.map((name) => `{{${name}}}`).join(", ");
-  return `no value for ${names}; set ${skip.names.length > 1 ? "them" : "it"} in the active environment`;
+  return `no value for ${names}; set ${skip.names.length > 1 ? "them" : "it"} in the shared variables or an environment`;
 }
 
 export interface RunSummary {

@@ -16,6 +16,12 @@ An **environment** in Studio is a named set of variables, such as `baseUrl`, `to
 - Pick the active environment in the top bar. Manage them with `⌘E` (`Ctrl+E`).
 - Switching environment switches every value at once, so staging and production are two
   environments, not two setups.
+- **Shared variables** apply in every environment, and when no environment is chosen. They're at
+  the top of the Environments dialog. Most values are the same everywhere, so set them once there
+  and give an environment only the values that differ. An environment's own value wins over a
+  shared one with the same name.
+- An environment lists the shared variables it uses as they are. **Override** gives one of them
+  its own value in that environment.
 - A variable can be marked **secret**. The environment file then records that the variable exists
   and is secret, but not its value, so the file is safe to commit.
 
