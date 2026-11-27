@@ -41,6 +41,7 @@ const TYPES = {
   ".svg": "image/svg+xml",
   ".woff2": "font/woff2",
   ".png": "image/png",
+  ".txt": "text/plain; charset=utf-8",
 };
 
 const fail = (message) => {
@@ -201,6 +202,38 @@ const openPage = async () => {
       failures += 1;
       console.error(`✗ opening a Swagger 2.0 spec failed under the policy: ${JSON.stringify(swagger).slice(0, 300)}`);
     }
+  }
+
+  // The schema graph's layout engine.
+  const elk = await page
+    .waitForFunction(() => globalThis.__CSP_ELK__, { timeout: 10_000 })
+    .then((handle) => handle.jsonValue())
+    .catch(() => null);
+  const elkViolations = await collect();
+  if (elk && !elk.error && elk.nodes > 0 && elk.routes > 0 && !elkViolations.length) {
+    console.log(`✓ the schema graph lays out under the policy (${elk.nodes} boxes, ${elk.routes} routed lines)`);
+  } else {
+    failures += 1;
+    console.error(`✗ laying out the schema graph failed under the policy: ${JSON.stringify(elk).slice(0, 300)}`);
+    for (const v of elkViolations) console.error(`    ${v.slice(0, 200)}`);
+  }
+
+  // Settings → About lists the open-source licences, read from a file the build writes.
+  const notices = await page
+    .evaluate(async () => {
+      const response = await fetch("/third-party-notices.json");
+      const list = response.ok ? await response.json() : [];
+      const elk = list.find((p) => p.name === "elkjs");
+      return { ok: response.ok, elk: Boolean(elk && elk.texts.join("").includes("Eclipse Public License")) };
+    })
+    .catch((error) => ({ ok: false, error: String(error) }));
+  const noticesViolations = await collect();
+  if (notices.ok && notices.elk && !noticesViolations.length) {
+    console.log("✓ the open-source licences load under the policy, with ELK's among them");
+  } else {
+    failures += 1;
+    console.error(`✗ the open-source licences didn't load under the policy: ${JSON.stringify(notices)}`);
+    for (const v of noticesViolations) console.error(`    ${v.slice(0, 200)}`);
   }
 
   // The chat panel reads every agent message through the ACP library's checks.

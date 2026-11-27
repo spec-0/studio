@@ -1,10 +1,11 @@
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { thirdPartyNotices } from "./scripts/third-party-notices.ts";
 
 // Tauri drives this dev server; fixed port + no auto-open so `tauri dev` can attach.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), thirdPartyNotices()],
   clearScreen: false,
   // Scalar's Ask-AI agent calls api.scalar.com from module scope, so no
   // configuration flag can stop it (see src/scalar-agent-chat-stub.ts). A spec

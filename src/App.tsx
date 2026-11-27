@@ -29,6 +29,7 @@ import { AccountSettings } from "./components/settings/AccountSettings";
 import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { DataSettings } from "./components/settings/DataSettings";
 import { NetworkSettings } from "./components/settings/NetworkSettings";
+import { AboutSettings } from "./components/settings/AboutSettings";
 import { UpdateSettings } from "./components/settings/UpdateSettings";
 import { SettingsView } from "./components/SettingsView";
 import { Sidebar } from "./components/Sidebar";
@@ -781,6 +782,7 @@ export default function App() {
                     />
                   ),
                   updates: <UpdateSettings updater={updater} />,
+                  about: <AboutSettings version={updater.version} />,
                   appearance: (
                     <AppearanceSettings
                       dark={settings.dark}
