@@ -24,6 +24,9 @@ const COMPONENTS = {
   Accordion: [],
   Screenshot: ["src", "alt", "caption", "width", "height"],
   Clip: ["src", "poster", "label", "caption", "width", "height"],
+  Cards: [],
+  Card: ["title"],
+  Hero: ["title", "lead"],
 };
 const FRONTMATTER_KEYS = new Set(["title", "description", "docType", "icon", "full"]);
 const DOC_TYPES = new Set(["how-to", "concept", "reference", "recipe"]);

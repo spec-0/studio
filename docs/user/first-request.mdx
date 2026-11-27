@@ -47,17 +47,19 @@ path, so Studio resolves it against the address you added the spec from:
 ### Send it
 
 Press **Send**, or `⌘↵` (`Ctrl+Enter`). The response appears on the right: the status, the time and
-size, and the body, headers, and the same request as a curl command.
+size, then the body and headers. **Copy as cURL**, in the menu next to **Send** (`⇧⌘C`), copies the
+request as a command.
 
 </Step>
 <Step>
 
 ### Read the check
 
-Above the body, Studio shows the result of checking the response against the spec:
+At the top of the response, next to the status, Studio shows the result of checking it against the
+spec:
 
-- **Response matches the declared schema** means the body fits what the spec promises for that
-  status code.
+- **Matches** and the schema's name, such as **Matches Order**, means the body fits what the spec
+  promises for that status code.
 - A warning lists each difference by its JSON path: a field the spec doesn't mention, a required
   field that's missing, or a value of the wrong type.
 

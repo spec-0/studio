@@ -1,50 +1,133 @@
 ---
-title: Studio
-description: A free, open source desktop app for calling and testing APIs, built around your OpenAPI spec. Works with no account.
+title: Spec0 Studio
+description: A free, open source desktop app for calling and testing APIs from their OpenAPI spec. Every response is checked against the spec, and your coding agent can use the same APIs. No account, no telemetry.
 docType: reference
 ---
 
-**Spec0 Studio** is a desktop app for calling and testing APIs, built around your OpenAPI spec. You
-open a spec, Studio builds the requests from it, and every JSON response is checked against what the
-spec says. It runs on macOS, Windows and Linux, it's free and open source (MIT), and it works with no
-account and no telemetry. See [Privacy and security](/privacy).
+<Hero
+  title="Call and test your APIs, straight from their OpenAPI spec"
+  lead="Open a spec and Studio builds every request from it. Each response is checked against the schema as it arrives, and your coding agent can call the same APIs through Studio. It's a desktop app, free and open source, and it works without an account."
+/>
 
 <Screenshot
   src="/images/product/studio-request-check.webp"
   alt="Studio with a POST /orders request from the Orders API: the request editor on the left, and a 201 Created response on the right with 'Matches Order' at the top."
-  caption="A request built from the spec, sent, and checked against it. The response and its schema check ('Matches Order') are on the right."
+  caption="A request built from the spec, sent, and checked against it. 'Matches Order' at the top of the response is the schema check."
   width={1600}
   height={847}
   priority
   minWidth={640}
 />
 
+## Start here
+
+<Cards columns={3}>
+  <Card icon="download" title="Install Studio" href="/install">
+    macOS, Windows and Linux. Signed downloads with checksums, and updates only when you ask.
+  </Card>
+  <Card icon="rocket" title="Quick start" href="/quick-start">
+    Ten minutes from download to a checked request, a mock, a test flow and an agent using your APIs.
+  </Card>
+  <Card icon="send" title="Your first request" href="/first-request">
+    Open the sample API, send a request and read what the check says about the response.
+  </Card>
+</Cards>
+
 ## What you can do
 
-| Task | How Studio helps |
-|---|---|
-| **Send requests** | Forms come from the spec, with real field names, allowed values and example bodies. See [Sending requests](/requests). |
-| **Check responses** | Each JSON response is checked against its schema, including fields the spec never mentions. See [Checking responses](/checking-responses). |
-| **Read the data model** | Browse [schemas](/schemas) and how they link in the [graph](/schema-graph). |
-| **Run flows across APIs** | A [collection](/collections) runs steps in order and passes values between them. |
-| **Mock an API** | A [local mock](/local-mocks) in one click, or a [hosted mock](/hosted-mocks) to share. |
-| **Work with your coding agent** | Agents use your APIs through the [local MCP server](/mcp), or chat in the [agent panel](/agent-chat). |
+<Cards>
+  <Card icon="send" title="Send requests" href="/requests">
+    Forms come from the spec, with real field names, allowed values and example bodies.
+  </Card>
+  <Card icon="check" title="Check every response" href="/checking-responses">
+    Each JSON response is checked against its schema, including fields the spec never mentions.
+  </Card>
+  <Card icon="graph" title="Explore the data model" href="/schema-graph">
+    Read each schema's fields and see how they link in a graph that lays itself out.
+  </Card>
+  <Card icon="collection" title="Run flows across APIs" href="/collections">
+    A collection runs steps in order and passes values from one response to the next request.
+  </Card>
+  <Card icon="mock" title="Mock any API" href="/mocks">
+    A local mock in one click, or a hosted mock to share with your team.
+  </Card>
+  <Card icon="key" title="Auth and environments" href="/auth-environments">
+    Switch servers and credentials per environment, with secrets in your system's credential store.
+  </Card>
+  <Card icon="mcp" title="Connect your coding agent" href="/mcp">
+    Claude Code, Cursor and others read your specs and test your APIs through Studio.
+  </Card>
+  <Card icon="chat" title="Chat with an agent" href="/agent-chat">
+    Use Codex, Claude Agent or Gemini CLI in a panel inside Studio, with your APIs already connected.
+  </Card>
+</Cards>
 
-New to Studio? The [quick start](/quick-start) takes about ten minutes, from download to a coding
-agent using your APIs.
+## Give your coding agent your APIs
 
-## Finding your way around
+Studio runs an [MCP](https://modelcontextprotocol.io) server on your computer. Once it's on, a
+coding agent can read the specs in your library, send requests, start mocks and run collections.
+Its requests go through Studio, so they use your environments and are checked against the spec,
+and you approve which hosts it may call.
 
-The top bar has five tabs: **APIs**, **Collections**, **History**, **Mocks** (with a green dot while
-a local mock runs) and **MCP**. On its right are the environment picker, **Agent** (`⇧⌘J`),
-**Sign in** or your organisation's badge, and **Settings** (`⌘,`).
+Turn it on in the **MCP** tab, copy the setup text, and add it to your agent:
 
-With an API open, [request tabs](/requests#request-tabs) sit under the top bar, then the API's bar:
-its name and version, four views (**Operations**, **Schemas**, **Graph**, **Document**, on `⌘1` to
-`⌘4`), **Local mock**, the hosted mock and **Run**. `⌘O` adds an API and `⌘P` switches between them.
+<Tabs items={['Claude Code', 'Cursor']}>
+  <Tab value="Claude Code">
 
-The status bar shows running local mocks and the active environment on the left, and on the right a
-running [collection](/collections/running), the last request's status and check, and the
-[Console](/console).
+```bash
+claude mcp add --transport http spec0-studio http://127.0.0.1:47321/mcp --header "Authorization: Bearer <your token>"
+```
 
-The code is at [github.com/spec-0/studio](https://github.com/spec-0/studio).
+  </Tab>
+  <Tab value="Cursor">
+
+```json title=".cursor/mcp.json"
+{
+  "mcpServers": {
+    "spec0-studio": {
+      "url": "http://127.0.0.1:47321/mcp",
+      "headers": { "Authorization": "Bearer <your token>" }
+    }
+  }
+}
+```
+
+  </Tab>
+</Tabs>
+
+The copied text has your real token in place of `<your token>`. [Local MCP server](/mcp) covers
+other clients, the tools an agent gets, and approvals.
+
+## Why developers use it
+
+<Cards>
+  <Card icon="book" title="The spec is the source of truth" href="/source-of-truth">
+    Requests, checks, mocks and collection steps all come from the spec, so they change when it does.
+  </Card>
+  <Card icon="shield" title="Local, private, no account" href="/privacy">
+    Specs, history and secrets stay on your computer. No telemetry, analytics or crash reports.
+  </Card>
+  <Card icon="github" title="Open source" href="https://github.com/spec-0/studio">
+    MIT licensed. These docs live in the same repository, so a fix is a pull request away.
+  </Card>
+  <Card icon="network" title="Works on your network" href="/network">
+    Proxies, private certificate authorities, timeouts and redirects, set per host.
+  </Card>
+</Cards>
+
+## Help and reference
+
+<Cards>
+  <Card icon="book" title="Finding your way around" href="/around-the-app">
+    The top bar, an API's views, request tabs and the status bar.
+  </Card>
+  <Card icon="keyboard" title="Keyboard shortcuts" href="/shortcuts">
+    Every shortcut, on macOS, Windows and Linux.
+  </Card>
+  <Card icon="help" title="Troubleshooting" href="/troubleshooting">
+    Installing, specs that look wrong, proxies and certificates, secrets and ports.
+  </Card>
+  <Card icon="code" title="Release notes" href="https://github.com/spec-0/studio/releases">
+    What changed in each version.
+  </Card>
+</Cards>
