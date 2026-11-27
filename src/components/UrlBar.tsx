@@ -226,7 +226,7 @@ export function UrlBar({
           {!knownTarget && !malformed && value.trim() !== "" && (
             <button
               className="icon-btn tight save-target"
-              title="Save as an environment variable"
+              title="Save as {{baseUrl}}, in the active environment or the shared variables"
               aria-label="Save this base URL"
               onClick={() => onSaveTarget(resolved)}
             >

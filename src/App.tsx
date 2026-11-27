@@ -666,6 +666,7 @@ export default function App() {
       />
 
       <TitleBar
+        onHome={goLibrary}
         topTab={nav.topTab}
         onTopTab={onTopTab}
         session={session}

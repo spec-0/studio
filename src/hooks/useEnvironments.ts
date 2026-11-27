@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import {
+  activeEnvironment,
+  effectiveVariables,
   saveEnvironments,
-  variableMap,
   withBaseUrl,
   type EnvironmentFile,
 } from "../lib/env";
@@ -13,10 +14,11 @@ import {
  * request goes.
  */
 export function useEnvironments() {
-  const [envFile, setEnvFile] = useState<EnvironmentFile>({ environments: [], activeId: null });
+  const [envFile, setEnvFile] = useState<EnvironmentFile>({ environments: [], activeId: null, shared: [] });
 
-  const activeEnv = envFile.environments.find((env) => env.id === envFile.activeId) ?? null;
-  const vars = useMemo(() => variableMap(activeEnv), [activeEnv]);
+  const activeEnv = activeEnvironment(envFile);
+  /** Shared variables, with the active environment's on top. */
+  const vars = useMemo(() => effectiveVariables(envFile), [envFile]);
 
   /** Replace the whole file and write it. */
   const saveEnvFile = useCallback((next: EnvironmentFile) => {
@@ -24,7 +26,7 @@ export function useEnvironments() {
     void saveEnvironments(next);
   }, []);
 
-  /** Keep an ad-hoc base URL as `baseUrl` in the active environment. See `withBaseUrl`. */
+  /** Keep an ad-hoc base URL as `baseUrl`. See `withBaseUrl`. */
   const saveTarget = useCallback((url: string) => {
     setEnvFile((prev) => {
       const next = withBaseUrl(prev, url);

@@ -609,27 +609,10 @@ pub fn summarize_environments(raw: Option<&str>) -> Value {
             list.iter()
                 .map(|env| {
                     let id = env.get("id").and_then(Value::as_str);
-                    let variables: Vec<Value> = env
-                        .get("variables")
-                        .and_then(Value::as_array)
-                        .map(|vars| {
-                            vars.iter()
-                                .map(|variable| {
-                                    let name = variable.get("name").and_then(Value::as_str).unwrap_or("");
-                                    if variable.get("secret").and_then(Value::as_bool).unwrap_or(false) {
-                                        json!({ "name": name, "secret": true, "value": "(secret, not shared)" })
-                                    } else {
-                                        let value = variable.get("value").and_then(Value::as_str).unwrap_or("");
-                                        json!({ "name": name, "secret": false, "value": value })
-                                    }
-                                })
-                                .collect()
-                        })
-                        .unwrap_or_default();
                     json!({
                         "name": env.get("name").and_then(Value::as_str).unwrap_or(""),
                         "active": id.is_some() && id == active_id,
-                        "variables": variables,
+                        "variables": summarize_variables(env.get("variables")),
                     })
                 })
                 .collect()
@@ -644,9 +627,29 @@ pub fn summarize_environments(raw: Option<&str>) -> Value {
 
     json!({
         "activeEnvironment": active,
+        "sharedVariables": summarize_variables(file.get("shared")),
         "environments": environments,
-        "note": "Studio fills in {{name}} from the active environment when it sends a request. Secret values are never shared over MCP; ask the user if you need one.",
+        "note": "Studio fills in {{name}} from the shared variables, with the active environment's own values on top. Shared variables apply even when no environment is active. Secret values are never shared over MCP; ask the user if you need one.",
     })
+}
+
+/// Each variable's name, and its value unless it's secret.
+fn summarize_variables(list: Option<&Value>) -> Vec<Value> {
+    list.and_then(Value::as_array)
+        .map(|vars| {
+            vars.iter()
+                .map(|variable| {
+                    let name = variable.get("name").and_then(Value::as_str).unwrap_or("");
+                    if variable.get("secret").and_then(Value::as_bool).unwrap_or(false) {
+                        json!({ "name": name, "secret": true, "value": "(secret, not shared)" })
+                    } else {
+                        let value = variable.get("value").and_then(Value::as_str).unwrap_or("");
+                        json!({ "name": name, "secret": false, "value": value })
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn list_environments(config_dir: &Path) -> Value {
@@ -1289,6 +1292,24 @@ mod tests {
         assert!(!response.body.contains("sk_live_should_not_leak"));
         assert!(!response.body.contains("hunter2"));
         assert!(response.body.contains("orderId"));
+    }
+
+    #[test]
+    fn list_environments_includes_shared_variables_without_secret_values() {
+        let raw = json!({
+            "activeId": null,
+            "shared": [
+                { "name": "userId", "value": "u_1", "secret": false },
+                { "name": "apiKey", "value": "leaked", "secret": true }
+            ],
+            "environments": []
+        })
+        .to_string();
+        let summary = summarize_environments(Some(&raw));
+        assert_eq!(summary["sharedVariables"][0]["value"], "u_1");
+        assert_eq!(summary["sharedVariables"][1]["secret"], true);
+        assert!(!summary.to_string().contains("leaked"));
+        assert_eq!(summary["activeEnvironment"], Value::Null);
     }
 
     #[test]

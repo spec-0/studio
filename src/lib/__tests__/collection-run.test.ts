@@ -52,8 +52,8 @@ describe("building a step's request", () => {
 
   it("fails before sending when an environment variable has no value", () => {
     const result = planStep(step("getOrder", { pathParams: { orderId: "{{orderId}}" } }), { ...base, op: op("getOrder") });
-    expect(result).toMatchObject({ error: "No value for {{orderId}}. Set it in the active environment." });
-    expect(result.links).toEqual([{ target: "", source: "env.orderId", error: "no value in the active environment" }]);
+    expect(result).toMatchObject({ error: "No value for {{orderId}}. Set it in the shared variables or an environment." });
+    expect(result.links).toEqual([{ target: "", source: "env.orderId", error: "no value in the shared variables or the active environment" }]);
     const noToken = planStep(step("listOrders"), { ...base, vars: { baseUrl: base.vars.baseUrl }, op: op("listOrders") });
     expect(noToken).toMatchObject({ error: expect.stringMatching(/\{\{token\}\}/) });
   });

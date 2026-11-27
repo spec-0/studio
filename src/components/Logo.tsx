@@ -77,12 +77,27 @@ export function Wordmark({ height = 15 }: { height?: number }) {
   );
 }
 
-/** Wordmark plus the product name, for the titlebar and the library header. */
-export function Brand({ compact = false }: { compact?: boolean }) {
-  return (
-    <span className="brand" title="Spec0 Studio">
+/**
+ * Wordmark plus the product name, for the titlebar and the library header. With
+ * `onHome` it's a button that goes to the library, as a logo does on a website.
+ */
+export function Brand({ compact = false, onHome }: { compact?: boolean; onHome?: () => void }) {
+  const inner = (
+    <>
       <Wordmark height={compact ? 13 : 16} />
       <span className="brand-product">Studio</span>
-    </span>
+    </>
+  );
+  if (!onHome) {
+    return (
+      <span className="brand" title="Spec0 Studio">
+        {inner}
+      </span>
+    );
+  }
+  return (
+    <button type="button" className="brand brand-home" title="Your APIs" aria-label="Spec0 Studio: go to your APIs" onClick={onHome}>
+      {inner}
+    </button>
   );
 }

@@ -143,11 +143,11 @@ export function planStep(
   if (missing.length) {
     const names = missing.map((name) => `{{${name}}}`).join(", ");
     return {
-      error: `No value for ${names}. Set ${missing.length > 1 ? "them" : "it"} in the active environment.`,
+      error: `No value for ${names}. Set ${missing.length > 1 ? "them" : "it"} in the shared variables or an environment.`,
       // Listed with the step references, so the log shows every value that was missing.
       links: [
         ...links,
-        ...missing.map((name) => ({ target: "", source: `env.${name}`, error: "no value in the active environment" })),
+        ...missing.map((name) => ({ target: "", source: `env.${name}`, error: "no value in the shared variables or the active environment" })),
       ],
     };
   }

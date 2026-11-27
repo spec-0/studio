@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  effectiveVariables,
   interpolate,
+  redactedFile,
+  SHARED_ID,
+  variableSets,
   migrateBaseUrl,
   newEnvironment,
   unresolved,
@@ -114,14 +118,11 @@ describe("migrating away from the baseUrl field", () => {
 });
 
 describe("withBaseUrl", () => {
-  it("creates and activates a Local environment when none is active", () => {
+  it("keeps it with the shared variables when no environment is active", () => {
     const next = withBaseUrl({ environments: [], activeId: null }, "https://api.example.com");
-    expect(next.environments).toHaveLength(1);
-    expect(next.environments[0].name).toBe("Local");
-    expect(next.activeId).toBe(next.environments[0].id);
-    expect(next.environments[0].variables).toEqual([
-      { name: "baseUrl", value: "https://api.example.com", secret: false },
-    ]);
+    expect(next.environments).toHaveLength(0);
+    expect(next.activeId).toBeNull();
+    expect(next.shared).toEqual([{ name: "baseUrl", value: "https://api.example.com", secret: false }]);
   });
 
   it("writes into the active environment, replacing an old baseUrl", () => {
@@ -149,5 +150,46 @@ describe("withNewEnvironment", () => {
     expect(second.environments.map((e) => e.name)).toEqual(["Checkout flow", "Checkout flow 2"]);
     expect(second.activeId).toBe(second.environments[1].id);
     expect(second.environments[0].id).not.toBe(second.environments[1].id);
+  });
+});
+
+describe("shared variables", () => {
+  const staging: Environment = {
+    id: "env_s",
+    name: "Staging",
+    variables: [{ name: "baseUrl", value: "https://staging", secret: false }],
+  };
+  const file: EnvironmentFile = {
+    activeId: "env_s",
+    environments: [staging],
+    shared: [
+      { name: "baseUrl", value: "https://prod", secret: false },
+      { name: "userId", value: "u_1", secret: false },
+      { name: "apiKey", value: "k", secret: true },
+    ],
+  };
+
+  it("apply in every environment, and the environment's own value wins", () => {
+    expect(effectiveVariables(file)).toEqual({ baseUrl: "https://staging", userId: "u_1", apiKey: "k" });
+  });
+
+  it("apply with no environment chosen", () => {
+    expect(effectiveVariables({ ...file, activeId: null })).toEqual({ baseUrl: "https://prod", userId: "u_1", apiKey: "k" });
+  });
+
+  it("are optional in files written before they existed", () => {
+    expect(effectiveVariables({ environments: [staging], activeId: "env_s" })).toEqual({ baseUrl: "https://staging" });
+  });
+
+  it("keep secret values out of the committable file", () => {
+    expect(redactedFile(file).shared).toEqual([
+      { name: "baseUrl", value: "https://prod", secret: false },
+      { name: "userId", value: "u_1", secret: false },
+      { name: "apiKey", value: "", secret: true },
+    ]);
+  });
+
+  it("are stored under their own id, so a shared secret has its own key", () => {
+    expect(variableSets(file).map((set) => set.id)).toEqual([SHARED_ID, "env_s"]);
   });
 });

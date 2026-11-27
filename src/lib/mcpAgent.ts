@@ -399,7 +399,7 @@ const sendRequest: Tool = async (args, deps, context) => {
   if (missing.length) {
     const env = app.environment();
     return fail(
-      `No value for ${missing.map((name) => `{{${name}}}`).join(", ")} in ${env ? `the active environment, ${env.name}` : "an environment: none is active"}. list_environments shows the names there; ask the user to add what's missing.`,
+      `No value for ${missing.map((name) => `{{${name}}}`).join(", ")} in the shared variables${env ? ` or the active environment, ${env.name}` : " (no environment is active)"}. list_environments shows the names there; ask the user to add what's missing.`,
     );
   }
   const sent = await sendForAgent(prepared, deps, app, context);

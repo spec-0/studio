@@ -28,7 +28,8 @@ port belongs to your computer and can change.
 
 A Studio environment is a named set of variables, such as `token` or `customerId`, used as
 `{{name}}` in parameters, headers, auth and the body. Switching environment switches every value at
-once, so staging credentials and production credentials are two environments. Variables marked
+once, so staging credentials and production credentials are two environments. Values that are the
+same everywhere go in the shared variables, which every environment uses. Variables marked
 secret are kept in your operating system's credential store. See
 [Auth, environments and secrets](/auth-environments).
 
