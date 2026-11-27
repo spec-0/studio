@@ -14,7 +14,7 @@ info:
   title: Orders API (sample)
   version: 1.4.0
   description: |
-    A small, made-up commerce API bundled with spec0 Studio so there's something
+    A small, made-up commerce API bundled with Spec0 Studio so there's something
     to explore on a first run. Nothing here is real. Point the base URL at your
     own service, or open one of your specs.
 servers:

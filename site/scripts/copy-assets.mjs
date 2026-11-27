@@ -15,7 +15,7 @@ const pub = `${site}public`;
 rmSync(pub, { recursive: true, force: true });
 mkdirSync(`${pub}/brand`, { recursive: true });
 cpSync(`${repo}docs/user/assets`, pub, { recursive: true });
-for (const name of ['spec0-studio-light.svg', 'spec0-studio-dark.svg']) {
+for (const name of ['spec0-studio-light.svg', 'spec0-studio-dark.svg', 'social-preview.png']) {
   cpSync(`${repo}.github/assets/${name}`, `${pub}/brand/${name}`);
 }
 cpSync(`${repo}src-tauri/icons/128x128.png`, `${pub}/brand/icon.png`);

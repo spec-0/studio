@@ -814,7 +814,7 @@ export function describeSpec(samples: readonly Sample[], origin: string, options
     info: {
       title: options.title?.trim() || host,
       version: "0.1.0",
-      description: `Drafted by spec0 Studio from ${parsed.length} request${parsed.length === 1 ? "" : "s"} to ${host}. Read it through before relying on it.`,
+      description: `Drafted by Spec0 Studio from ${parsed.length} request${parsed.length === 1 ? "" : "s"} to ${host}. Read it through before relying on it.`,
     },
     servers: [{ url: origin }],
     paths,

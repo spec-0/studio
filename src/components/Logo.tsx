@@ -43,7 +43,7 @@ export function Wordmark({ height = 15 }: { height?: number }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="spec0"
+      aria-label="Spec0"
     >
       <path
         d="M8.316 24C3.276 24 0 24 0 18.672H3.24C3.24 20.76 5.076 20.76 8.316 20.76C11.556 20.76 13.392 20.76 13.392 18.672C13.392 16.656 11.664 16.62 8.64 16.62H8.172C4.392 16.62 0 16.584 0 11.328C0 6 3.276 6 8.316 6C13.356 6 16.632 6 16.632 11.328H13.392C13.392 9.24 11.556 9.24 8.316 9.24C5.076 9.24 3.24 9.24 3.24 11.328C3.24 13.344 4.968 13.38 7.992 13.38H8.46C12.24 13.38 16.632 13.416 16.632 18.672C16.632 24 13.356 24 8.316 24Z"
@@ -80,7 +80,7 @@ export function Wordmark({ height = 15 }: { height?: number }) {
 /** Wordmark plus the product name, for the titlebar and the library header. */
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="brand" title="spec0 Studio">
+    <span className="brand" title="Spec0 Studio">
       <Wordmark height={compact ? 13 : 16} />
       <span className="brand-product">Studio</span>
     </span>

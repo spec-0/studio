@@ -87,6 +87,19 @@ export function Cards({ columns, children }: { columns?: 2 | 3; children: ReactN
   return <FumaCards className={columns === 3 ? 'xl:grid-cols-3' : undefined}>{children}</FumaCards>;
 }
 
+/** The app icon: the Spec0 mark in white on brand violet, as on the dock. */
+function AppIcon() {
+  return (
+    <span className="grid size-11 shrink-0 place-items-center rounded-[11px] bg-[#5B4CF5] shadow-sm" aria-hidden>
+      <svg viewBox="0 0 28 30" className="h-6 w-auto" fill="#fff">
+        <path d="M14 24C9.75758 24 7 24 7 15C7 6 9.75758 6 14 6C18.2424 6 21 6 21 15C21 24 18.2424 24 14 24ZM9.87879 18.024L17.2424 9.12C16.5758 8.256 15.7576 8.16 14 8.16C11.2727 8.16 9.72727 8.16 9.72727 15C9.72727 16.224 9.78788 17.208 9.87879 18.024ZM14 21.84C16.7273 21.84 18.2727 21.84 18.2727 15C18.2727 13.776 18.2121 12.816 18.1212 12L10.7576 20.88C11.4242 21.744 12.303 21.84 14 21.84Z" />
+        <path d="M3.82593 30C1.71293 30 0 28.0102 0 25.5556V4.44444C0 1.98985 1.71293 0 3.82593 0H10.4845C11.0331 0 10.9995 0.47386 10.9995 1.11111C10.9995 1.74836 11.0486 2 10.5 2H5C2.887 2 1.91296 3.10096 1.91296 5.55556V24.4444C1.91296 26.9124 2.87556 28.019 5 28H10.4883C11.0377 27.9951 10.9995 28.2506 10.9995 28.8889C10.9995 29.5237 11.0348 30 10.4883 30H3.82593Z" />
+        <path d="M24.1741 30C26.2871 30 28 28.0102 28 25.5556V4.44444C28 1.98985 26.2871 0 24.1741 0H17.5155C16.9669 0 17.0005 0.47386 17.0005 1.11111C17.0005 1.74836 16.9514 2 17.5 2H23C25.113 2 26.087 3.10096 26.087 5.55556V24.4444C26.087 26.9124 25.1244 28.019 23 28H17.5117C16.9623 27.9951 17.0005 28.2506 17.0005 28.8889C17.0005 29.5237 16.9652 30 17.5117 30H24.1741Z" />
+      </svg>
+    </span>
+  );
+}
+
 /** The top of the home page: what Studio is, and the way in. */
 export function Hero({ title, lead }: { title: string; lead: string }) {
   const version = studioVersion();
@@ -97,6 +110,15 @@ export function Hero({ title, lead }: { title: string; lead: string }) {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--color-fd-primary)_0%,transparent_55%)] opacity-15"
       />
       <div className="relative max-w-2xl">
+        <div className="mb-6 flex items-center gap-3">
+          <AppIcon />
+          <div className="leading-tight">
+            <div className="font-semibold">Spec0 Studio</div>
+            <div className="text-xs text-fd-muted-foreground">
+              Spec0 is said &ldquo;spec zero&rdquo;
+            </div>
+          </div>
+        </div>
         <a
           href={`${repoUrl}/releases/latest`}
           className="mb-5 inline-flex items-center gap-2 rounded-full border bg-fd-background px-3 py-1 text-xs text-fd-muted-foreground transition-colors hover:text-fd-foreground"

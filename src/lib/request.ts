@@ -49,7 +49,7 @@ export const BINARY = Symbol("binary");
  *
  * Threaded through `appFetch` rather than set globally because trust is
  * per-host: the same session talks to a private-CA internal service and to
- * spec0's public API, and only one of those should have relaxed rules.
+ * Spec0's public API, and only one of those should have relaxed rules.
  */
 export interface Transport {
   timeoutMs?: number;

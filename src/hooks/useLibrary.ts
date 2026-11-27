@@ -382,7 +382,7 @@ export function useLibrary({
           if (!text) throw new Error("the file is no longer readable at its original path");
           await ingest(text, entry.title, entry.source);
         } else if (entry.source.kind === "spec0") {
-          setLoadError("Re-pull this one from the spec0 tab in Open.");
+          setLoadError("Re-pull this one from the Spec0 tab in Open.");
         }
         setEntries(await library.loadLibrary());
       } catch (error) {

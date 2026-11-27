@@ -5,7 +5,7 @@ import type { PublishResult } from "../lib/publish";
 import { listTeams, publishTeamApi, type Session, type TeamSummary } from "../lib/spec0";
 
 /**
- * Publishing the open document to spec0.
+ * Publishing the open document to Spec0.
  *
  * The only write path in the app, so its failures are surfaced rather than
  * swallowed the way the read-side decorations are.

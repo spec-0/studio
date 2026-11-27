@@ -114,7 +114,7 @@ export async function pickCollectionSaveTarget(name: string): Promise<string | n
   const { save } = await import("@tauri-apps/plugin-dialog");
   const picked = await save({
     defaultPath: suggestedCollectionFileName(name),
-    filters: [{ name: "spec0 Studio collection", extensions: ["yaml", "yml"] }],
+    filters: [{ name: "Spec0 Studio collection", extensions: ["yaml", "yml"] }],
   });
   return typeof picked === "string" ? withCollectionSuffix(picked) : null;
 }
@@ -130,8 +130,8 @@ export async function pickCollectionFile(importing = false): Promise<{ path: str
   const picked = await open({
     multiple: false,
     filters: importing
-      ? [{ name: "Collection (spec0 Studio or Postman)", extensions: ["yaml", "yml", "json"] }]
-      : [{ name: "spec0 Studio collection", extensions: ["yaml", "yml"] }],
+      ? [{ name: "Collection (Spec0 Studio or Postman)", extensions: ["yaml", "yml", "json"] }]
+      : [{ name: "Spec0 Studio collection", extensions: ["yaml", "yml"] }],
   });
   if (typeof picked !== "string") return null;
   const text = await invoke<string>("read_text", { path: picked });

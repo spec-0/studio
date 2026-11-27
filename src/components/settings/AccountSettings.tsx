@@ -14,7 +14,7 @@ interface Props {
 }
 
 const SOURCE_LABEL: Record<Session["source"], string> = {
-  cli: "your spec0 CLI session",
+  cli: "your Spec0 CLI session",
   browser: "a browser sign-in",
   manual: "a pasted token",
 };

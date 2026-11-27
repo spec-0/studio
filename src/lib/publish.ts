@@ -1,5 +1,5 @@
 /**
- * Publishing a local spec to spec0.
+ * Publishing a local spec to Spec0.
  *
  * When the document view reports that the file on disk has moved on, this is
  * what Studio offers to do about it.
@@ -67,7 +67,7 @@ export function whyNotPublishable(source: ApiSource | undefined): string | null 
     case "file":
       return source.ref ? null : "This document has no file behind it.";
     case "spec0":
-      return "This API already lives in spec0. Studio doesn't edit specs, so there's nothing here to publish back. Edit the file and open that instead.";
+      return "This API already lives in Spec0. Studio doesn't edit specs, so there's nothing here to publish back. Edit the file and open that instead.";
     case "url":
       return source.ref ? null : "This document has no address behind it.";
     case "sample":

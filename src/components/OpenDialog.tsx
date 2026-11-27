@@ -257,7 +257,7 @@ export function OpenDialog({
         <div className="error-box">
           <div className="error-head">
             <TriangleAlert size={13} />
-            <span>Couldn&apos;t talk to spec0</span>
+            <span>Couldn&apos;t talk to Spec0</span>
             <span className="spacer" />
             <button
               className="btn"
@@ -352,7 +352,7 @@ export function OpenDialog({
                 className="btn primary"
                 onClick={() => void connect(adoptCliSession, "Using your CLI session…")}
               >
-                Use my spec0 CLI session
+                Use my Spec0 CLI session
               </button>
             )}
             <button

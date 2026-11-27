@@ -12,7 +12,7 @@ mod secrets;
 mod storage;
 mod updates;
 
-/// spec0 Studio: the Tauri shell.
+/// Spec0 Studio: the Tauri shell.
 ///
 /// These parts are in Rust because the web view can't do them:
 ///
@@ -98,7 +98,7 @@ pub fn run() {
             acp::acp_instructions_restore,
         ])
         .build(tauri::generate_context!())
-        .expect("error while building spec0 Studio")
+        .expect("error while building Spec0 Studio")
         .run(|_app, event| {
             // A chat agent is a separate process; it must not outlive Studio.
             if let tauri::RunEvent::Exit = event {

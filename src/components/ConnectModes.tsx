@@ -24,7 +24,7 @@ export function ConnectModes() {
           <li>Response validation and drift detection</li>
           <li>Request history</li>
         </ul>
-        <p className="meta">No account. No network call to spec0. Ever.</p>
+        <p className="meta">No account. No network call to Spec0. Ever.</p>
       </div>
       <div className="mode">
         <div className="mode-head">

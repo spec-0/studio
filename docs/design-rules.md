@@ -20,8 +20,8 @@ didn't start would each break that promise. Several later rules apply this one: 
 
 Opening a spec (local or remote), browsing operations and schemas, auth, sending requests,
 checking responses, environments, history, collections, local mocks and the MCP server all work
-with no sign-in and no network call to spec0. A change that puts any of this behind a connection to
-spec0 is the wrong change. Tests that would fail if this broke are required for anything touching
+with no sign-in and no network call to Spec0. A change that puts any of this behind a connection to
+Spec0 is the wrong change. Tests that would fail if this broke are required for anything touching
 it.
 
 ## 3. Requests go out through Rust, with no `Origin` header
@@ -55,15 +55,15 @@ file and the interface says so; it is never dropped. Enforced in `src-tauri/src/
 
 ## 7. Environments hold values, not destinations
 
-Where a request goes is its target: a server from the spec, a mock, a spec0 environment, or a typed
+Where a request goes is its target: a server from the spec, a mock, a Spec0 environment, or a typed
 URL. Don't add a URL field to `Environment`, and don't list client environments as targets. The
-word means two things here: a spec0 environment is a real place the API runs, reported by spec0; a
+word means two things here: a Spec0 environment is a real place the API runs, reported by Spec0; a
 client environment is a local set of values for testing, never synced. Both can be active at once,
 and neither should turn into the other. See `src/lib/targets.ts` and `src/lib/env.ts`.
 
 ## 8. Studio doesn't choose the destination
 
-spec0 environments appear in the target list but are never selected by default. The default stays
+Spec0 environments appear in the target list but are never selected by default. The default stays
 the spec's own first server, because that is what the document says. Studio offers options; the
 user decides.
 
@@ -207,22 +207,22 @@ checks the wording has no deployment language. Detection is best-effort and sile
 
 ## 25. Use the reported mock version when there is one
 
-When spec0 reports which spec version a hosted mock serves, compare it with the version Studio has;
+When Spec0 reports which spec version a hosted mock serves, compare it with the version Studio has;
 that is a fact. The older "synced after the mock was attached" check is only a fallback for when no
 version is reported. A wrong "out of date" message makes people distrust the drift check it
 supports.
 
 ## 26. Consumers are shown as a count
 
-Who uses an API is managed in spec0, with its own permissions and approvals. Copying part of it into
+Who uses an API is managed in Spec0, with its own permissions and approvals. Copying part of it into
 Studio would give a second place to read it that could be out of date. Studio shows the number and
-links to spec0. Pending access requests are counted, because they are real consumers.
+links to Spec0. Pending access requests are counted, because they are real consumers.
 
 ## 27. You publish specs you brought in, and Studio never chooses the version
 
 Publishing is offered for specs opened from a file or a URL, because Studio stores their full text
 and what gets published is exactly what Studio shows. It isn't offered for a spec pulled from
-spec0 (Studio has no editor, so publishing it back would change only the version) or the bundled
+Spec0 (Studio has no editor, so publishing it back would change only the version) or the bundled
 sample. The version defaults to `info.version` and is never increased automatically. A commit id is
 sent only when the file has no uncommitted changes. "No changes" and "version unchanged" are shown
 as such, not folded into "published". See `src/lib/publish.ts`.
@@ -296,10 +296,10 @@ receives and queues links; it has no command that fetches. The rules (only `spec
 `src/lib/deepLink.ts`. A spec already in the library opens from the saved copy, still after the
 same confirmation. Cancel has focus, so a reflexive Enter does nothing.
 
-## 33. Studio talks to spec0 only through its public API
+## 33. Studio talks to Spec0 only through its public API
 
-`src/lib/spec0.ts` uses spec0's public API (`/api/v1/public/**`, with a bearer token and an
-organisation header), the one the [spec0 CLI](https://github.com/spec-0/cli) uses. When checking
+`src/lib/spec0.ts` uses Spec0's public API (`/api/v1/public/**`, with a bearer token and an
+organisation header), the one the [Spec0 CLI](https://github.com/spec-0/cli) uses. When checking
 what that API offers, go by its published OpenAPI document rather than a generated client, which
 can fall behind it.
 

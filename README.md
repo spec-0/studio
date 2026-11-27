@@ -16,7 +16,8 @@
 
 <p align="center">
   A desktop app for calling, testing and mocking APIs, built around your OpenAPI spec.<br>
-  Free, open source (MIT), and it works without an account.
+  Free, open source (MIT), and it works without an account.<br>
+  <sub>Spec0 is said &ldquo;spec zero&rdquo;.</sub>
 </p>
 
 <p align="center">
@@ -237,6 +238,13 @@ What you need installed first, the checks, and how to send a change are in
 - **The user guide** at [studio-docs.spec0.io](https://studio-docs.spec0.io/) is
   written in [docs/user](docs/user/) and built by [site/](site/). A fix or a new page is a
   pull request there.
+
+## The name
+
+Spec0 is said "spec zero". **Spec0 Studio** is this app: free, open source, and
+complete without an account. **[Spec0](https://spec0.io)** is the hosted platform it can
+optionally connect to, for sharing specs and hosting mocks, and `spec0` is that platform's
+command-line tool.
 
 ## Licence
 

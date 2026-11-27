@@ -515,7 +515,7 @@ export function serializeCollection(
     steps,
   };
   const header =
-    "# A spec0 Studio collection. Each step points at an operation in one of the\n" +
+    "# A Spec0 Studio collection. Each step points at an operation in one of the\n" +
     "# specs under `apis`; the spec stays the source of truth. Values like\n" +
     "# {{token}} come from a Studio environment and are never stored here.\n";
   const text = header + dump(shape, { lineWidth: 100, noRefs: true, quoteStyle: "double" });
@@ -580,7 +580,7 @@ export function parseCollection(text: string, options: ParseOptions = {}): Colle
   }
   const file = raw as Partial<FileShape> & Record<string, unknown>;
   if (typeof file.version !== "number") {
-    throw new CollectionFormatError("No `version`. Is this a spec0 Studio collection?");
+    throw new CollectionFormatError("No `version`. Is this a Spec0 Studio collection?");
   }
   if (file.version > COLLECTION_FORMAT_VERSION) {
     throw new CollectionFormatError(

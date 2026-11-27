@@ -13,7 +13,7 @@ import {
  *
  * Everything here targets the **public V1 surface** the CLI already uses
  * (`/api/v1/public/**`, `Authorization: Bearer <token>` + `X-Org-Id`), so Studio
- * uses only spec0's public API, the same one the spec0 CLI uses.
+ * uses only Spec0's public API, the same one the Spec0 CLI uses.
  *
  * Sign-in reuses the CLI's flow verbatim: open `{appUrl}/cli-auth` with a
  * loopback `redirect_uri` and wait for `token` / `org` / `org_name` to come back.
@@ -653,7 +653,7 @@ export async function fetchRegistrySpec(
   const orgSlug = session.orgSlug?.trim();
   if (!orgSlug) {
     throw new Spec0Error(
-      "No org slug set. The registry route needs it and the public API doesn't return it. Set it in the spec0 tab.",
+      "No org slug set. The registry route needs it and the public API doesn't return it. Set it in the Spec0 tab.",
       0,
       "",
       "",
@@ -779,7 +779,7 @@ export function apiIdFromRef(ref: string): string | null {
 /**
  * The API whose platform environments should be loaded when a library entry
  * opens, or null when there is nothing to load: no session, or an API that
- * didn't come from spec0.
+ * didn't come from Spec0.
  */
 export function environmentSyncApiId(
   session: Session | null,
@@ -858,7 +858,7 @@ export async function refreshMock(session: Session, mockServerId: string): Promi
       // gone (deleted, or not visible to this org). The mock id cached on the
       // library entry is what went stale; re-pulling the API replaces it.
       throw new Spec0Error(
-        "That mock server no longer exists. It may have been deleted. Re-pull the API from spec0 to pick up its current mock.",
+        "That mock server no longer exists. It may have been deleted. Re-pull the API from Spec0 to pick up its current mock.",
         404,
         url,
         body,

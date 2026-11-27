@@ -100,7 +100,7 @@ For interface changes, also try the feature in `npm run app`. For changes to the
 
 1. **Everything works without an account.** Opening specs, sending and checking requests,
    environments, history, collections, local mocks and the MCP server need no sign-in and no
-   network call to spec0. ([Design rule 2](docs/design-rules.md#2-everything-works-without-an-account))
+   network call to Spec0. ([Design rule 2](docs/design-rules.md#2-everything-works-without-an-account))
 2. **Requests go out through Rust, with no `Origin` header.** Outbound HTTP goes through
    `src-tauri/src/http.rs`, never `tauri-plugin-http`.
    ([Design rule 3](docs/design-rules.md#3-requests-go-out-through-rust-with-no-origin-header))

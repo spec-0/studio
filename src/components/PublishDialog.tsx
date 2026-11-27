@@ -1,5 +1,5 @@
 /**
- * Publish this document to spec0.
+ * Publish this document to Spec0.
  *
  * Three fields and no cleverness. The name and version are pre-filled from the
  * document because the document already answered both questions, and both stay
@@ -81,7 +81,7 @@ export function PublishDialog({
 
   return (
     <Dialog
-      title="Publish to spec0"
+      title="Publish to Spec0"
       onClose={onClose}
       footerContext={
         <>
@@ -119,12 +119,12 @@ export function PublishDialog({
            sign-in dialog with no context. */
         <>
           <p>
-            Publishing sends this document to your organisation on spec0, so it needs an
+            Publishing sends this document to your organisation on Spec0, so it needs an
             account. Everything else in Studio (this spec, its operations, your environments
             and history) keeps working without one.
           </p>
           <button className="btn primary" style={{ marginTop: 14 }} onClick={onSignIn}>
-            Sign in to spec0
+            Sign in to Spec0
           </button>
         </>
       ) : outcome ? (
@@ -144,7 +144,7 @@ export function PublishDialog({
               style={{ marginTop: 14 }}
               onClick={() => onOpenPublished(result.apiId!)}
             >
-              Open on spec0 <ExternalLink size={12} />
+              Open on Spec0 <ExternalLink size={12} />
             </button>
           )}
         </>
@@ -217,7 +217,7 @@ export function PublishDialog({
 
           {error && (
             <div className="error-box" style={{ marginTop: 12 }}>
-              <div className="error-head">spec0 declined this publish</div>
+              <div className="error-head">Spec0 declined this publish</div>
               <pre className="error-detail">{error}</pre>
             </div>
           )}
