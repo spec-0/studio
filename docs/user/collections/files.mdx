@@ -86,13 +86,13 @@ steps:
       status: "404"
 ```
 
-- **Specs are referred to, not copied.** A spec from a file is written as a path relative to the
+- Specs are referred to, not copied. A spec from a file is written as a path relative to the
   collection file, so the pair works on a colleague's machine too. A spec from a URL is written as
   its URL, and one from Spec0 by its Spec0 name.
-- **A step names its operation** by `operationId`, with the method and path as a fallback.
-- **A target** is `mock`, `local-mock`, `{ server: <url> }` or `{ url: <url> }`. With no target, the
+- A step names its operation by `operationId`, with the method and path as a fallback.
+- A target is `mock`, `local-mock`, `{ server: <url> }` or `{ url: <url> }`. With no target, the
   step uses the API's first server.
-- **Links** are `{{steps.<key>...}}` references. See [Passing values between steps](/collections/chaining).
+- Links are `{{steps.<key>...}}` references. See [Passing values between steps](/collections/chaining).
 
 When a colleague opens the file, each API has to be in their library too. Studio finds it by where
 it came from.

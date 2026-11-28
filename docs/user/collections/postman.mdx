@@ -35,7 +35,7 @@ Read the summary, choose what to do with the collection's variables, and press *
 </Step>
 </Steps>
 
-The Postman collection becomes **one** Studio collection. Folders are flattened in order, and each
+The Postman collection becomes one Studio collection. Folders are flattened in order, and each
 step is named after its folder and request, such as "Orders / Create order". It's one collection
 rather than one per folder because a Postman collection is usually run from top to bottom, and a
 value set in one folder is often used in the next.
@@ -45,13 +45,12 @@ value set in one folder is often used in the next.
 Each request is matched to an operation in your library by its method and path, against each
 spec's servers:
 
-- **Host matches.** The host matches a server in a spec. The step is linked to that operation,
-  and targets that server. A `{{baseUrl}}` is resolved from the collection's variables where it has a value.
-- **Host unknown.** The host is a variable with no value, or on your own computer (`localhost`).
-  The path decides on its own. The step keeps Postman's address as its target.
-- **Host doesn't match.** No spec declares that host, and Studio doesn't guess. The request is
-  kept as a plain request.
-- **Several matches.** A literal path segment beats a placeholder, so `/pet/findByStatus`
+- If the host matches a server in a spec, the step is linked to that operation and targets that
+  server. A `{{baseUrl}}` is resolved from the collection's variables where it has a value.
+- If the host is a variable with no value, or on your own computer (`localhost`), the path decides
+  on its own, and the step keeps Postman's address as its target.
+- If no spec declares the host, Studio doesn't guess, and the request is kept as a plain request.
+- If several operations match, a literal path segment beats a placeholder, so `/pet/findByStatus`
   wins over `/pet/{petId}`. A request that still matches operations in more than one API stays
   unlinked, and its note says which APIs.
 
@@ -110,14 +109,14 @@ After the import, a summary shows what happened:
 Each step also keeps a note of anything that needs your attention, shown above its request.
 
 <Callout title="Good to know">
-- **Scripts don't run.** Only the two kinds above are converted. Pre-request scripts, and
+- Scripts don't run. Only the two kinds above are converted. Pre-request scripts, and
   collection and folder scripts, are listed in the summary but not converted. A value a script
   works out (with `.length`, arithmetic or string building) stays a `{{variable}}`.
-- **Some auth isn't converted.** OAuth 2, digest and other Postman auth types are noted on the
+- Some auth isn't converted: OAuth 2, digest and other Postman auth types are noted on the
   step, not converted. Basic auth built from variables can't be encoded when the spec has no basic
   scheme; the step's note says so.
-- **Some bodies aren't converted.** The body mode that sends a whole file isn't brought across. A
+- Some bodies aren't converted. The body mode that sends a whole file isn't brought across. A
   multipart body on a step that isn't linked is kept, but only sent once the step is linked.
-- **Other formats.** Insomnia and Bruno files, Postman v1 collections, and Postman environment
+- Insomnia and Bruno files, Postman v1 collections, and Postman environment
   files aren't supported yet. Studio recognises them and says so.
 </Callout>

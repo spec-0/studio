@@ -32,13 +32,13 @@ The graph opens on the schema with the most links. **Focus** in the toolbar cent
 one. It doesn't draw every schema at once, because a
 large spec can have hundreds.
 
-- **Click a schema** to expand it. Its neighbours, the schemas it refers to and the schemas that
+- Click a schema to expand it. Its neighbours, the schemas it refers to and the schemas that
   refer to it, are added to the canvas.
-- **The side panel** shows the schema you clicked: its fields, what it uses, what uses it, and an
+- The side panel shows the schema you clicked: its fields, what it uses, what uses it, and an
   example. It is the same view as the **Schemas** tab. You can drag its edge to make it wider, or
   close it to give the canvas the whole window.
-- **Zoom and pan** with the controls in the bottom-right corner, your trackpad, or the mouse wheel.
-- **Drag a box** to move it. The lines follow it, running straight to wherever you put it.
+- Zoom and pan with the controls in the bottom-right corner, your trackpad, or the mouse wheel.
+- Drag a box to move it. The lines follow it, running straight to wherever you put it.
   **Tidy up** in the toolbar puts the boxes back and lays the graph out again.
 
 <Clip
@@ -81,12 +81,13 @@ The toolbar sits along the top of the canvas.
 
 ## When it's useful
 
-- **Learning a large spec.** Start from the most-connected schema and follow the links. It is
-  often quicker than reading the YAML top to bottom.
-- **Finding what a change affects.** Before you change a schema, choose **With operations** and click
-  it. You see the schemas that include it and the operations that send or return it.
-- **Spotting recursive models.** A model that refers back to itself is marked on the canvas, which
-  is easy to miss in a file.
+To learn a large spec, start from the most-connected schema and follow the links. It's often
+quicker than reading the YAML top to bottom.
+
+To see what a change affects, choose **With operations** and click the schema before you change
+it. You see the schemas that include it and the operations that send or return it.
+
+A model that refers back to itself is marked on the canvas. In a file, that's easy to miss.
 
 ## Limits
 

@@ -81,7 +81,7 @@ result, much as with code. So an API tool has to work for both of them.
 |---|---|
 | The agent can't use a click-only tool, so it falls back to `curl` and guesses | A local MCP server gives it the APIs open in Studio: it sends requests, runs collections and starts mocks, and you approve where its requests go |
 | Someone has to review each change quickly, without reading a YAML diff | Collections show the values passing between steps, every run has a log, and a step that no longer matches a changed spec is marked |
-| Judging a change needs a map of the domain, not a list of endpoints | The Graph tab shows which schemas refer to which, and which operations use them |
+| Judging a change needs a map of how the domain fits together | The Graph tab shows which schemas refer to which, and which operations use them |
 | Tests fall behind when the API changes with every prompt | One click starts a local mock, and a collection can be re-run after every change |
 | Requests, mocks and checks drift away from the spec | All of them are built from the spec, and every JSON response is checked against the schema it declares |
 

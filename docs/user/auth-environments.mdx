@@ -4,9 +4,8 @@ description: Authenticate requests, keep values in environments, and keep secret
 docType: how-to
 ---
 
-This page covers how Studio authenticates requests, and where tokens and other values are kept.
-The short version: put credentials in an environment as secret variables, and refer to them as
-`{{name}}`.
+Put credentials in an environment as secret variables, and refer to them as `{{name}}`. The rest
+of this page covers how Studio authenticates requests, and where tokens and other values are kept.
 
 ## Environments
 
@@ -14,8 +13,8 @@ An **environment** in Studio is a named set of variables, such as `baseUrl`, `to
 `customerId`. Use a variable as `{{name}}` in the base URL, parameters, headers, auth and body.
 
 - Pick the active environment in the top bar. Manage them with `⌘E` (`Ctrl+E`).
-- Switching environment switches every value at once, so staging and production are two
-  environments, not two setups.
+- Switching environment switches every value at once, so staging and production can be two
+  environments you switch between.
 - **Shared variables** apply in every environment, and when no environment is chosen. They're at
   the top of the Environments dialog. Most values are the same everywhere, so set them once there
   and give an environment only the values that differ. An environment's own value wins over a
@@ -26,7 +25,7 @@ An **environment** in Studio is a named set of variables, such as `baseUrl`, `to
   and is secret, but not its value, so the file is safe to commit.
 
 <Callout>
-**Two things share the word "environment".** A Studio environment is your own set of variables and
+Two things share the word "environment". A Studio environment is your own set of variables and
 never leaves your computer. A [Spec0 environment](/connect#environments) is a place
 your API is deployed, shown as a target in the address bar. You'll often use both at once: one says
 where the request goes, the other fills in the blanks. See
@@ -60,11 +59,11 @@ Choose **OAuth 2.0** and Studio gets the token for you. Two grants are supported
 
 If the spec declares its `oauth2` flows, the token URL, authorize URL and scopes are filled in.
 
-- **The client secret is a reference.** Enter `{{clientSecret}}` and keep the secret itself in an
+- The client secret is a reference. Enter `{{clientSecret}}` and keep the secret itself in an
   environment. Each environment then has its own credentials and its own token.
-- **Tokens refresh themselves** shortly before they expire. They're cached per API and environment,
+- Tokens refresh themselves shortly before they expire. They're cached per API and environment,
   and never written into the spec, the library or a collection.
-- **Errors say what's wrong**: a rejected client id or secret, a scope the client isn't allowed, a
+- Errors say what's wrong: a rejected client id or secret, a scope the client isn't allowed, a
   token URL that can't be reached, or a URL that answered with an HTML sign-in page (usually the
   wrong URL).
 

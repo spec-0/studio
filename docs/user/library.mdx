@@ -76,13 +76,11 @@ request without a spec. You can also drop a spec anywhere on the window.
 Studio opens **Swagger 2.0** specs, in JSON or YAML, by converting them to OpenAPI 3.0 when you open
 them. The conversion runs on your computer and makes no network requests.
 
-- **Raw shows the original.** The [Document](/document) view's Raw tab shows the file as
-  you added it. Everything else uses the converted spec.
-- **It says so.** The API bar shows "Converted from Swagger 2.0 when opened".
-- **Known gaps are listed.** Studio says where the conversion may not be exact. For example, a
-  `tsv` or other non-comma list format has no OpenAPI 3 equivalent.
-- **Publishing uses the conversion.** If you publish a converted API to Spec0, the OpenAPI 3.0
-  version is published.
+The [Document](/document) view's Raw tab shows the file as you added it, and everything else uses
+the converted spec. The API bar shows "Converted from Swagger 2.0 when opened", and Studio lists the
+places where the conversion may not be exact. For example, a `tsv` or other non-comma list format
+has no OpenAPI 3 equivalent. If you publish a converted API to Spec0, the OpenAPI 3.0 version is
+published.
 
 Older formats, such as Swagger 1.2, don't open, and the error says why.
 

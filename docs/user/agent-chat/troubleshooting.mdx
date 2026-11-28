@@ -37,13 +37,13 @@ claude.ai or Claude Code sign-in. See [Claude Agent](/agent-chat/setup#claude-ag
 
 Check the line at the top of the chat.
 
-- **It says the tools are gone, with Reconnect.** Studio's MCP server stopped or restarted while
+- If it says the tools are gone and offers **Reconnect**, Studio's MCP server stopped or restarted while
   the chat was open, for example after **Stop agents**, a new token or a new port. Press
   **Reconnect**. The agent starts a new session and doesn't see the earlier messages.
-- **It offers Start it and reconnect.** The server couldn't start, often because its port is taken.
+- If it offers **Start it and reconnect**, the server couldn't start, often because its port is taken.
   See [The MCP server started on a different port](/troubleshooting#the-mcp-server-started-on-a-different-port),
   then press the button.
-- **It says Studio's tools are turned off.** **Studio's tools** is off in
+- If it says Studio's tools are turned off, **Studio's tools** is off in
   **Settings → Agent chat**. Turn it on and start a new chat.
 
 ## The agent doesn't use Studio's tools
@@ -78,8 +78,8 @@ refused by **Stop agents** under **Missed**. See [Approving what agents do](/mcp
 
 ## The agent can't change a collection
 
-Agents can change only the drafts they created. Once you keep a draft, or for a collection you made,
-the agent can read and run it, or copy it into a new draft.
+Agents can change only the drafts they created. Once you keep a draft it's treated like a collection
+you made: the agent can read and run it, or copy it into a new draft.
 
 ## The agent stopped unexpectedly
 

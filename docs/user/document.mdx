@@ -9,7 +9,7 @@ choose **Document** (`⌘4`).
 
 ## Raw and Reference
 
-Two tabs, because the two readings answer different questions.
+There are two tabs because they answer different questions.
 
 **Raw** is the document exactly as you imported it (YAML stays YAML, JSON stays JSON), with line
 numbers and syntax highlighting. This is what you want when you are about to edit the file, or
@@ -19,7 +19,7 @@ line count and which syntax it is.
 **Reference** renders the same document the way the Spec0 dashboard renders it: grouped operations,
 expandable schemas, and per-language code samples.
 
-Both work with **no account and no network**. They render the text Studio already holds, so they
+Both work with no account and no network. They render the text Studio already holds, so they
 work offline and can never disagree with each other about what the spec says.
 
 <Callout type="info" title="Nothing is fetched to render a reference">
@@ -37,7 +37,7 @@ When you open a spec from a file that lives in a git working tree, Studio shows 
 short commit id, and the commit subject. Hovering gives the full sentence, including the repository
 root.
 
-If the file has uncommitted changes, the chip says **uncommitted**, and it means something specific:
+If the file has uncommitted changes, the chip says **uncommitted**. That means
 the commit id no longer describes the bytes you are reading.
 
 <Callout type="warn" title="This describes the file, not a deployment">
@@ -54,10 +54,10 @@ A spec you opened from a file or a URL can be published to your organisation fro
 It's the same operation `spec0 push` performs from CI.
 
 You choose the API name, the team, and the version. Studio pre-fills the name from the document
-title and the version from `info.version`, and **never increments a version for you**: the number
+title and the version from `info.version`, and never increments a version for you: the number
 you publish is one you chose.
 
-The result tells you what actually happened, which is not always "published":
+The result tells you what happened, which is not always "published":
 
 | Outcome | What it means |
 |---|---|
@@ -65,8 +65,6 @@ The result tells you what actually happened, which is not always "published":
 | **Published** | A new version was added. |
 | **Already up to date** | The commit this file is on has already been published. Nothing was sent. |
 | **Version unchanged** | The spec changed but `info.version` did not, so this replaced the existing version rather than adding one. |
-
-**Version unchanged** means the published version was replaced in place.
 
 If the working file has uncommitted changes, Studio says so before you publish, and does not send
 the commit id along with the document. What you see is what gets published.
