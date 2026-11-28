@@ -63,8 +63,9 @@ statements, won't work on the site.
 - `<Screenshot>` for an image. It needs `src`, `alt`, `caption`, `width` and
   `height` (the image's size in pixels). `maxWidth` keeps a small capture from
   being stretched, and `minWidth` keeps a wide one readable on a phone.
-- `<Clip>` for a short screen recording. It needs `src` (an `.mp4`), `poster`
+- `<Clip>` for a screen recording. It needs `src` (an `.mp4`), `poster`
   (a still shown before it plays), `label`, `caption`, `width` and `height`.
+  It's muted unless you add `sound`, which only the demo video uses.
 - `<Cards>` with a `<Card>` for each link, as on the home page. A card needs a
   `title`, takes an `href` and an `icon` (one of the names in
   `site/components/home.tsx`, such as `send`, `check`, `mock` or `mcp`), and its

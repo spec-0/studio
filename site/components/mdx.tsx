@@ -41,10 +41,12 @@ interface ClipProps {
   caption: string;
   width: number;
   height: number;
+  /** The recording has a soundtrack worth hearing. Without it the clip is muted. */
+  sound?: boolean;
 }
 
-/** A short screen recording. It doesn't play until asked, and has no sound. */
-function Clip({ src, poster, label, caption, width, height }: ClipProps) {
+/** A screen recording. It doesn't play until asked, and is muted unless `sound` is set. */
+function Clip({ src, poster, label, caption, width, height, sound = false }: ClipProps) {
   return (
     <figure className="not-prose my-6">
       <video
@@ -54,7 +56,7 @@ function Clip({ src, poster, label, caption, width, height }: ClipProps) {
         width={width}
         height={height}
         controls
-        muted
+        muted={!sound}
         playsInline
         preload="none"
         className="block h-auto w-full rounded-lg border bg-fd-card"
