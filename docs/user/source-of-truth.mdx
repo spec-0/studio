@@ -12,7 +12,7 @@ In Studio, the OpenAPI spec is the one place an API is described. Everything els
   request form
 - [collection](/collections) steps, which point at operations in the spec instead of copying them
 
-Because nothing keeps its own copy of the API, nothing can quietly fall out of step with it. When
+Because nothing else keeps its own copy of the API, nothing can fall out of step with it. When
 the API changes, you change the spec, and the requests, mocks, checks and collections follow.
 
 ## Studio works from its own copy
@@ -38,11 +38,11 @@ None of these break anything, but each would be confusing if Studio said nothing
 
 ## What isn't built from a spec
 
-Two things work without one, and Studio says so where it matters:
+Some requests and steps work without one, and Studio says so where it matters:
 
 - [Scratch requests](/requests#scratch-requests) go to any URL, with no spec. Nothing checks their
   responses.
 - A collection step that isn't linked to an operation (a scratch request you added, or one imported
   from Postman) runs as a plain request, marked **not in any spec**, until you link it.
 
-Requests worth keeping are worth describing in the spec. That's what lets Studio check them.
+If a request is worth keeping, describe it in the spec so Studio can check it.

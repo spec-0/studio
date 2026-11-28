@@ -8,14 +8,14 @@ docType: concept
 
 The chat sends nothing until you send a message. Then:
 
-- **What you type and attach** goes to the agent you chose, and from there to its model provider:
+- What you type and attach goes to the agent you chose, and from there to its model provider:
   OpenAI for Codex, Anthropic for Claude Agent, Google for Gemini CLI. What happens to it there is
   up to that provider and your account with them.
-- **Secret values never go.** Your message, its attachments and the Studio context note have
+- Secret values never go. Your message, its attachments and the Studio context note have
   secret values replaced by their `{{name}}` first.
-- **Studio's instructions** go with the first message when the agent works in a folder you chose.
+- Studio's instructions go with the first message when the agent works in a folder you chose.
   They contain nothing about you or your APIs.
-- **Requests the agent sends through Studio** go to the hosts you allowed, like any request you
+- Requests the agent sends through Studio go to the hosts you allowed, like any request you
   send yourself.
 
 Studio doesn't send your chats anywhere else, and it never sees your sign-in to Codex or Gemini
@@ -35,21 +35,21 @@ Claude agent. If it ever shows up in what the agent writes, Studio shows `[hidde
 
 The agent can use Studio's tools, but Studio decides what each tool may do:
 
-- **You approve where requests go.** Studio asks before the agent's first request to each host,
+- You approve where requests go. Studio asks before the agent's first request to each host,
   and again before any `DELETE`, `PUT` or `PATCH` to a host that isn't on your computer. Starting a
   local mock and saving a file ask first too. Nothing is allowed by default, and an unanswered
   question is refused after five minutes.
-- **You can block hosts.** Hosts under **Blocked hosts** in the MCP tab are refused without asking.
+- You can block hosts. Hosts under **Blocked hosts** in the MCP tab are refused without asking.
   Use it for production.
-- **There's a request limit.** **Requests a minute** caps how many requests all agents together can
+- **Requests a minute** caps how many requests all agents together can
   send. It's 60 unless you change it.
-- **Agents change only their own drafts.** They can read and run your collections, not edit them.
-- **The agent never sees secret values**, in requests, responses or run logs.
+- Agents change only their own drafts. They can read and run your collections, not edit them.
+- The agent never sees secret values, in requests, responses or run logs.
 - **Stop agents** in the MCP tab stops everything at once: it refuses anything waiting, cancels
   agents' runs, forgets this session's approvals and stops the server. A chat that's open then
   offers **Reconnect**.
 
-These limits are enforced by Studio, not by asking the agent nicely. The
+Studio enforces these limits itself. The
 [instructions](/agent-chat/instructions) help the agent work well, but an agent that
 ignores them still can't get past an approval. See [Local MCP server](/mcp) for the full
 list of tools and approvals.

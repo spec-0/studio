@@ -27,7 +27,7 @@ the exact code first (`404`), then its range (`4XX`), then `default`.
 Each finding points at the exact JSON path, such as `items[0].sku`. What a match does and doesn't
 prove is in [What a response check means](/response-checks).
 
-The extra-fields result is the one to watch. A response that has quietly grown a field is often
+The extra-fields result is the one to watch. A response that has grown a new field is often
 the first sign that an API and its spec have drifted apart, and most API clients won't tell you.
 
 The result is saved in [History](/requests#history) with the request. You can
@@ -47,15 +47,14 @@ this still match the spec?". **Run** in the API bar opens **Run against the spec
 every operation in a tag, or in the whole spec, and checks each response.
 
 Each operation gets a result: matched, mismatched (with the differences), errored, or skipped.
-Nobody writes the checks: they're the same schema check, so they stay right as the spec changes.
+You don't write any checks. They're the same schema check, so they stay right as the spec
+changes.
 
-It's careful by design:
-
-- **No invented values.** Required parameters come from your active environment, by name. An
-  operation whose values aren't there is skipped, and the row says which variable to set.
-- **Read-only by default.** `POST`, `PUT`, `PATCH` and `DELETE` run only
-  if you tick **Include methods that change state**, and the count is shown before you start.
-- **One request at a time.** You can cancel at any point.
+A run never invents values. Required parameters come from your active environment, by name, and
+an operation whose values aren't there is skipped, with the row saying which variable to set. It's
+read-only by default: `POST`, `PUT`, `PATCH` and `DELETE` run only if you tick **Include methods
+that change state**, and the count is shown before you start. Requests go one at a time, and you
+can cancel at any point.
 
 **Copy report** gives Markdown for a pull request or an issue, with skipped operations listed.
 Every request is also in History, tagged with its run.
