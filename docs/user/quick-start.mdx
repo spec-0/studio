@@ -12,14 +12,16 @@ and it sends no telemetry.
 This page gets you from download to a checked request, a mock, a small test flow and a coding
 agent that can use your APIs. Each step links to the full page if you want more.
 
-<Screenshot
-  src="/images/product/studio-request-check.webp"
-  alt="Studio with a POST /orders request from the Orders API: the request editor on the left, and a 201 Created response on the right with 'Matches Order' at the top."
-  caption="A request built from the spec and sent. 'Matches Order' at the top of the response is the schema check."
-  width={1600}
-  height={847}
-  priority
-  minWidth={640}
+If you'd rather watch first, this is the same ground in two and a half minutes:
+
+<Clip
+  src="/media/studio-demo.mp4"
+  poster="/media/studio-demo-poster.webp"
+  label="A tour of Spec0 Studio in eight parts: the API library, a request built from the spec and checked against it, the schema graph, a local mock, a collection run, connecting Claude Code over MCP, a coding agent writing and running tests through Studio, and the run history."
+  caption="A tour of Studio, from opening a spec to a coding agent testing an API through it. 2½ minutes, with sound."
+  width={1920}
+  height={1080}
+  sound
 />
 
 ## 1. Download
@@ -74,6 +76,15 @@ The response appears on the right. At its top, Studio says whether it **matches*
 spec declares for that status, and if not, which fields are wrong, missing or not in the spec at
 all. The request editor's **Docs** tab shows everything the spec says about the operation.
 More in [Sending requests](/requests) and [Checking responses](/checking-responses).
+
+<Screenshot
+  src="/images/product/studio-request-check.webp"
+  alt="Studio with a POST /orders request from the Orders API: the request editor on the left, and a 201 Created response on the right with 'Matches Order' at the top."
+  caption="A request built from the spec and sent. 'Matches Order' at the top of the response is the schema check."
+  width={1600}
+  height={847}
+  minWidth={640}
+/>
 
 ## 4. Start a mock
 
