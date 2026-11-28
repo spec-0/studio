@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="#download"><b>Download</b></a> ·
+  <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="https://studio-docs.spec0.io/">User guide</a> ·
   <a href="#how-it-differs">Compared with Postman, Bruno…</a> ·
   <a href="#privacy">Privacy</a> ·
@@ -32,6 +32,44 @@
   <img alt="Starting a local mock of the sample Orders API, choosing it as the target, and sending GET /orders: the response comes back 200 OK and matches the spec" src=".github/assets/readme/hero-local-mock.gif" width="960"><br>
   <sub>Starting a local mock from a spec and sending a request to it. The response is checked against the spec.</sub>
 </p>
+
+## Quick start
+
+<a id="download"></a>Download Studio for your platform. These links always point to the newest version:
+
+| Platform | File | Notes |
+|---|---|---|
+| macOS 11 or later | [spec0-studio-macos-universal.dmg](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-macos-universal.dmg) | Apple silicon and Intel. Signed and notarized by Apple. |
+| Windows 10 and 11, x64 | [spec0-studio-windows-x64-setup.exe](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-windows-x64-setup.exe) | Installs for your user only, no admin rights needed. Not code-signed, see the note below. |
+| Linux x86_64 | [spec0-studio-linux-x86_64.AppImage](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-x86_64.AppImage) | Most distributions. Run `chmod +x` on it, then run it. |
+| Debian, Ubuntu, x86_64 | [spec0-studio-linux-amd64.deb](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-amd64.deb) | `sudo apt install ./spec0-studio-linux-amd64.deb` |
+
+Checksums, WebView2 on Windows and the Linux requirements are in
+[Install](https://studio-docs.spec0.io/install/). Studio updates itself when you
+ask (*Check for Updates…*), and every update is signed.
+
+Then, in Studio:
+
+1. Press `⌘O` (`Ctrl+O` on Windows and Linux) and choose **URL**. Paste
+   `https://petstore3.swagger.io/api/v3/openapi.json` to try it with a public spec, or open
+   one of your own.
+2. Pick an operation, such as `GET /pet/findByStatus`, and press `⌘↵` (`Ctrl+Enter`) to send
+   it. At the top of the response, Studio says whether it matches the schema in the spec, and
+   if not, which fields are wrong.
+3. Press **Local mock** in the API's bar. Studio starts a mock of the spec on your computer,
+   and you can send the same request to it straight away.
+
+The [quick start guide](https://studio-docs.spec0.io/quick-start/) goes on from there to
+collections and connecting a coding agent, in about ten minutes.
+
+> [!TIP]
+> No account needed. Requests, response checks, collections, local mocks and the
+> MCP server all run on your computer, without signing in.
+
+> [!NOTE]
+> The Windows installer isn't code-signed yet, so SmartScreen will probably warn you. Click
+> **More info**, then **Run anyway**, or see [Install](https://studio-docs.spec0.io/install/) to
+> check the download first.
 
 ## Why Studio
 
@@ -152,30 +190,6 @@ The console, with requests, a collection run, a local mock request and MCP tool 
 </p>
 
 </details>
-
-## Download
-
-These links always point to the newest version:
-
-| Platform | File | Notes |
-|---|---|---|
-| macOS 11 or later | [spec0-studio-macos-universal.dmg](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-macos-universal.dmg) | Apple silicon and Intel. Signed and notarized by Apple. |
-| Windows 10 and 11, x64 | [spec0-studio-windows-x64-setup.exe](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-windows-x64-setup.exe) | Installs for your user only, no admin rights needed. Not code-signed, see the note below. |
-| Linux x86_64 | [spec0-studio-linux-x86_64.AppImage](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-x86_64.AppImage) | Most distributions. Run `chmod +x` on it, then run it. |
-| Debian, Ubuntu, x86_64 | [spec0-studio-linux-amd64.deb](https://github.com/spec-0/studio/releases/latest/download/spec0-studio-linux-amd64.deb) | `sudo apt install ./spec0-studio-linux-amd64.deb` |
-
-Checksums, WebView2 on Windows and the Linux requirements are in
-[Install](https://studio-docs.spec0.io/install/). Studio updates itself when you
-ask (*Check for Updates…*), and every update is signed.
-
-> [!TIP]
-> No account needed. Requests, response checks, collections, local mocks and the
-> MCP server all run on your computer, without signing in.
-
-> [!NOTE]
-> The Windows installer isn't code-signed yet, so SmartScreen will probably warn you. Click
-> **More info**, then **Run anyway**, or see [Install](https://studio-docs.spec0.io/install/) to
-> check the download first.
 
 ## How it differs
 
